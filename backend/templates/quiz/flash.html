@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log Academy — {{ title }}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #f0fafa;
+  --navy: #1a2e4a;
+  --teal: #3dbdaa;
+  --teal-dark: #2a9e8c;
+  --teal-light: #c8f0ea;
+  --white: #ffffff;
+  --gray: #6a8aaa;
+  --radius: 20px;
+}
+html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--navy); }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+header { padding: 1rem 2.5rem; display: flex; align-items: center; gap: 14px; background: var(--white); border-bottom: 2px solid var(--teal-light); }
+.logo-icon { width: 44px; height: 44px; }
+.logo-text { font-size: 1.25rem; font-weight: 800; letter-spacing: 0.03em; color: var(--navy); }
+.logo-text span { color: var(--teal); }
+footer { padding: 0.6rem 2rem; text-align: center; font-size: 0.78rem; color: var(--gray); background: var(--white); border-top: 1px solid var(--teal-light); }
+main { flex: 1; display: flex; align-items: stretch; }
+.screen { display: none; width: 100%; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 4rem; gap: 2rem; }
+.screen.active { display: flex; }
+#screen-title { background: var(--bg); }
+#screen-title h1 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 900; line-height: 1.1; color: var(--navy); }
+#screen-title h1 em { font-style: normal; color: var(--teal); }
+#screen-title p { font-size: clamp(1.1rem, 2vw, 1.5rem); color: var(--gray); }
+.btn-start { background: var(--teal); color: var(--white); border: none; border-radius: var(--radius); padding: 1rem 3.5rem; font-size: clamp(1.1rem, 2vw, 1.4rem); font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+.btn-start:hover { background: var(--teal-dark); }
+.btn-start:active { transform: scale(0.97); }
+.progress-wrap { width: 100%; max-width: 900px; }
+.progress-bar { width: 100%; height: 6px; background: var(--teal-light); border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--teal); border-radius: 6px; transition: width 0.4s ease; }
+.progress-label { font-size: 0.85rem; color: var(--gray); margin-top: 5px; text-align: right; }
+#screen-question { background: var(--bg); }
+.q-header { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; }
+.q-num { font-size: clamp(1rem, 1.8vw, 1.3rem); color: var(--gray); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.timer-wrap { position: relative; width: 80px; height: 80px; }
+.timer-svg { transform: rotate(-90deg); width: 80px; height: 80px; }
+.timer-bg { fill: none; stroke: var(--teal-light); stroke-width: 6; }
+.timer-arc { fill: none; stroke: var(--teal); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 226.19; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
+.timer-arc.urgent { stroke: #e05050; }
+.timer-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: var(--navy); }
+.timer-num.urgent { color: #e05050; }
+.q-card { background: var(--white); border: 2px solid var(--teal-light); border-radius: 28px; padding: 3.5rem 4rem; width: 100%; max-width: 900px; box-shadow: 0 4px 32px rgba(61,189,170,0.08); }
+.q-category { display: inline-block; background: var(--teal-light); color: var(--teal-dark); border-radius: 8px; padding: 4px 16px; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 1.5rem; }
+.q-text { font-size: clamp(1.6rem, 3.5vw, 2.8rem); font-weight: 800; line-height: 1.3; color: var(--navy); }
+.nav-row { display: flex; gap: 12px; justify-content: center; }
+.btn-nav { background: var(--white); color: var(--navy); border: 2px solid var(--teal-light); border-radius: 12px; padding: 0.7rem 1.8rem; font-size: clamp(0.9rem, 1.5vw, 1.1rem); font-weight: 700; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; }
+.btn-nav:hover { border-color: var(--teal); background: var(--teal-light); color: var(--teal-dark); }
+.btn-nav:disabled { opacity: 0.3; cursor: default; }
+#screen-blank { background: var(--navy); cursor: pointer; gap: 1.5rem; }
+#screen-blank .big-label { font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; color: var(--white); }
+.tap-hint { font-size: clamp(1rem, 2vw, 1.5rem); color: var(--teal); animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+#screen-blank .nav-row .btn-nav { background: transparent; border-color: #3a5070; color: var(--gray); }
+#screen-blank .nav-row .btn-nav:hover { border-color: var(--teal); background: rgba(61,189,170,0.1); color: var(--teal); }
+#screen-answer { background: var(--bg); }
+.a-label { font-size: clamp(0.85rem, 1.5vw, 1rem); letter-spacing: 0.12em; text-transform: uppercase; color: var(--teal-dark); font-weight: 800; }
+.a-card { background: var(--white); border: 2px solid #b6e8c8; border-radius: 28px; padding: 3rem 4rem; width: 100%; max-width: 900px; box-shadow: 0 4px 32px rgba(61,189,120,0.08); }
+.a-question { font-size: clamp(1rem, 1.8vw, 1.3rem); color: var(--gray); margin-bottom: 1.5rem; line-height: 1.5; font-style: italic; }
+.a-text { font-size: clamp(1.5rem, 3vw, 2.5rem); font-weight: 800; color: #1a7a4a; line-height: 1.35; }
+#screen-finish { background: var(--bg); }
+#screen-finish h2 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 900; color: var(--navy); }
+#screen-finish h2 em { font-style: normal; color: var(--teal); }
+#screen-finish p { font-size: clamp(1rem, 2vw, 1.4rem); color: var(--gray); }
+</style>
+</head>
+<body>
+<header>
+  <!-- LOGO -->
+  <div class="logo-text">Log <span>Academy</span></div>
+</header>
+<main>
+  <section class="screen active" id="screen-title">
+    <h1>{{ title }}<br><em>{{ topic }}</em></h1>
+    <p>{{ questions_count }} вопросов</p>
+    <button class="btn-start" onclick="startQuiz()">Начать викторину</button>
+  </section>
+  <section class="screen" id="screen-question">
+    <div class="q-header">
+      <div class="q-num" id="q-num">Вопрос 1 / {{ questions_count }}</div>
+      <div class="timer-wrap">
+        <svg class="timer-svg" viewBox="0 0 80 80">
+          <circle class="timer-bg" cx="40" cy="40" r="36"/>
+          <circle class="timer-arc" id="timer-arc" cx="40" cy="40" r="36"/>
+        </svg>
+        <div class="timer-num" id="timer-num">60</div>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label">0 из {{ questions_count }} пройдено</div>
+    </div>
+    <div class="q-card">
+      <div class="q-category">{{ topic }}</div>
+      <div class="q-text" id="q-text"></div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-nav" id="btn-prev" onclick="prevQuestion()">← Назад</button>
+      <button class="btn-nav" onclick="skipToBlank()">Закрыть вопрос ⏩</button>
+    </div>
+  </section>
+  <section class="screen" id="screen-blank">
+    <div class="big-label">⏱ Время вышло!</div>
+    <div class="tap-hint">Нажми куда угодно, чтобы увидеть ответ</div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="prevQuestion()">← Назад</button>
+      <button class="btn-nav" onclick="showAnswer()">Показать ответ →</button>
+    </div>
+  </section>
+  <section class="screen" id="screen-answer">
+    <div class="a-label">✓ Правильный ответ</div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill-a"></div></div>
+      <div class="progress-label" id="progress-label-a">1 из {{ questions_count }} пройдено</div>
+    </div>
+    <div class="a-card">
+      <div class="a-question" id="a-question-text"></div>
+      <div class="a-text" id="a-text"></div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="prevQuestion()">← Назад</button>
+      <button class="btn-nav" id="btn-next" onclick="nextQuestion()">Следующий вопрос →</button>
+    </div>
+  </section>
+  <section class="screen" id="screen-finish">
+    <h2>Молодец! <em>🎉</em></h2>
+    <p>Все вопросы пройдены!</p>
+    <button class="btn-start" onclick="startQuiz()" style="margin-top:1rem">Начать заново</button>
+  </section>
+</main>
+<footer>автор Log Academy</footer>
+
+<script>
+const QUESTIONS = {{ questions_json }};
+const CIRCUMFERENCE = 2 * Math.PI * 36;
+
+let currentIndex = 0;
+let timerInterval = null;
+let timeLeft = 60;
+let totalTime = 60;
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz() {
+  currentIndex = 0;
+  showQuestion();
+}
+
+function showQuestion() {
+  clearInterval(timerInterval);
+  if (currentIndex >= QUESTIONS.length) { show('screen-finish'); return; }
+
+  const q = QUESTIONS[currentIndex];
+  totalTime = q.time || 60;
+  timeLeft = totalTime;
+
+  document.getElementById('q-num').textContent = `Вопрос ${currentIndex + 1} / ${QUESTIONS.length}`;
+  document.getElementById('q-text').textContent = q.question;
+  document.getElementById('progress-fill').style.width = (currentIndex / QUESTIONS.length * 100) + '%';
+  document.getElementById('progress-label').textContent = `${currentIndex} из ${QUESTIONS.length} пройдено`;
+  document.getElementById('btn-prev').disabled = currentIndex === 0;
+
+  show('screen-question');
+  startTimer();
+}
+
+function startTimer() {
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      show('screen-blank');
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const numEl = document.getElementById('timer-num');
+  const arc = document.getElementById('timer-arc');
+  numEl.textContent = timeLeft;
+  const progress = totalTime > 0 ? (1 - timeLeft / totalTime) : 0;
+  arc.style.strokeDashoffset = CIRCUMFERENCE * progress;
+  const urgent = timeLeft <= 10;
+  arc.classList.toggle('urgent', urgent);
+  numEl.classList.toggle('urgent', urgent);
+}
+
+function skipToBlank() {
+  clearInterval(timerInterval);
+  show('screen-blank');
+}
+
+function showAnswer() {
+  clearInterval(timerInterval);
+  const q = QUESTIONS[currentIndex];
+  document.getElementById('a-question-text').textContent = q.question;
+  document.getElementById('a-text').textContent = q.answer;
+  document.getElementById('progress-fill-a').style.width = ((currentIndex + 1) / QUESTIONS.length * 100) + '%';
+  document.getElementById('progress-label-a').textContent = `${currentIndex + 1} из ${QUESTIONS.length} пройдено`;
+  document.getElementById('btn-next').textContent =
+    currentIndex >= QUESTIONS.length - 1 ? 'Завершить →' : 'Следующий вопрос →';
+  show('screen-answer');
+}
+
+function nextQuestion() {
+  currentIndex++;
+  showQuestion();
+}
+
+function prevQuestion() {
+  if (currentIndex > 0) currentIndex--;
+  showQuestion();
+}
+
+document.getElementById('screen-blank').addEventListener('click', function(e) {
+  if (e.target === this || e.target.classList.contains('big-label') || e.target.classList.contains('tap-hint')) {
+    showAnswer();
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  const activeScreen = document.querySelector('.screen.active');
+  if (!activeScreen) return;
+
+  const key = e.key;
+  const isForward = key === ' ' || key === 'Space' || key === 'Enter' || key === 'ArrowRight';
+  const isBackward = key === 'ArrowLeft';
+
+  if (isForward) {
+    e.preventDefault();
+    const id = activeScreen.id;
+    if (id === 'screen-title') {
+      document.querySelector('#screen-title .btn-start')?.click();
+    } else if (id === 'screen-question') {
+      const btn = document.querySelector('#screen-question .btn-nav:not(#btn-prev)');
+      if (btn) btn.click();
+    } else if (id === 'screen-blank') {
+      const btn = document.querySelector('#screen-blank .btn-nav:last-child');
+      if (btn) btn.click();
+    } else if (id === 'screen-answer') {
+      document.querySelector('#btn-next')?.click();
+    } else if (id === 'screen-finish') {
+      document.querySelector('#screen-finish .btn-start')?.click();
+    }
+  } else if (isBackward) {
+    e.preventDefault();
+    if (typeof prevQuestion === 'function') {
+      prevQuestion();
+    }
+  }
+});
+</script>
+</body>
+</html>
