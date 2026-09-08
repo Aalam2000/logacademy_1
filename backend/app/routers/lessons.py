@@ -116,13 +116,9 @@ async def get_my_lessons(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    # Для admin — группы всех педагогов, для teacher — только свои
-    if current_user.role == "admin":
-        groups_result = await db.execute(select(Group))
-    else:
-        groups_result = await db.execute(
-            select(Group).where(Group.teacher_id == current_user.id)
-        )
+    groups_result = await db.execute(
+        select(Group).where(Group.teacher_id == current_user.id)
+    )
     group_ids = [g.id for g in groups_result.scalars().all()]
     if not group_ids:
         return []

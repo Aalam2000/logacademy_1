@@ -26,12 +26,9 @@ async def get_my_groups(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    if current_user.role == "admin":
-        result = await db.execute(select(Group))
-    else:
-        result = await db.execute(
-            select(Group).where(Group.teacher_id == current_user.id)
-        )
+    result = await db.execute(
+        select(Group).where(Group.teacher_id == current_user.id)
+    )
     return result.scalars().all()
 
 
