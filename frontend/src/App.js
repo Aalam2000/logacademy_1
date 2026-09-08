@@ -9,6 +9,7 @@ import { useI18n } from './context/I18nContext';
 import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
+import LessonPage from './pages/LessonPage';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -33,6 +34,7 @@ function App() {
           <Route path="add-quiz/:id" element={<AddQuizPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="admin" element={<AdminPage />} />
+          <Route path="lessons/:lessonId" element={<LessonPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>

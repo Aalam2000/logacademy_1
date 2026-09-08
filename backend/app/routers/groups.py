@@ -26,9 +26,12 @@ async def get_my_groups(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    result = await db.execute(
-        select(Group).where(Group.teacher_id == current_user.id)
-    )
+    if current_user.role == "admin":
+        result = await db.execute(select(Group))
+    else:
+        result = await db.execute(
+            select(Group).where(Group.teacher_id == current_user.id)
+        )
     return result.scalars().all()
 
 
@@ -39,10 +42,12 @@ async def get_group_students(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    # Проверяем что группа принадлежит этому педагогу
-    group = await db.execute(
-        select(Group).where(Group.id == group_id, Group.teacher_id == current_user.id)
-    )
+    # Для admin доступ к любой группе, для teacher — только к своей
+    group_query = select(Group).where(Group.id == group_id)
+    if current_user.role != "admin":
+        group_query = group_query.where(Group.teacher_id == current_user.id)
+
+    group = await db.execute(group_query)
     if not group.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="Нет доступа к этой группе")
 
