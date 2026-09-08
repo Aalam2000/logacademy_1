@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useI18n } from '../context/I18nContext';
 
-function Navigation() {
+function Navigation({ user }) {
   const { t } = useI18n();
   return (
     <nav style={styles.nav}>
@@ -27,6 +27,22 @@ function Navigation() {
             🃏 {t('nav_cards', 'Квизы')}
           </NavLink>
         </li>
+        <li style={styles.item}>
+          <NavLink to="/dashboard/profile"
+            style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}>
+            👤 {t('nav_profile', 'Профиль')}
+          </NavLink>
+        </li>
+        {user?.role === 'admin' && (
+          <li style={styles.item}>
+            <NavLink
+              to="/dashboard/admin"
+              style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
+            >
+              ⚙️ {t('nav_admin', 'Админ')}
+            </NavLink>
+          </li>
+        )}
       </ul>
     </nav>
   );

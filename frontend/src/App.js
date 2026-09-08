@@ -6,6 +6,9 @@ import CardsPage from './pages/CardsPage';
 import AddQuizPage from './pages/AddQuizPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useI18n } from './context/I18nContext';
+import AdminPage from './pages/AdminPage';
+import ProfilePage from './pages/ProfilePage';
+import HomePage from './pages/HomePage';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -24,14 +27,12 @@ function App() {
             <Dashboard />
           </PrivateRoute>
         }>
-          <Route index element={
-            <div style={{padding: '2rem', textAlign: 'center', fontSize: '1.2rem', color: '#1a2e4a'}}>
-              {t('dashboard_welcome_description', 'Log Academy — платформа для создания и проведения интерактивных квизов. Выберите раздел, чтобы начать работу')}
-            </div>
-          } />
+          <Route index element={<HomePage />} />
           <Route path="cards" element={<CardsPage />} />
           <Route path="add-quiz" element={<AddQuizPage />} />
           <Route path="add-quiz/:id" element={<AddQuizPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>

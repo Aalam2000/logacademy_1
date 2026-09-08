@@ -29,3 +29,15 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+# Dependency для роутов только для admin
+async def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Только для администратора")
+    return current_user
+
+# Dependency для роутов только для teacher (и admin тоже может)
+async def require_teacher(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Только для преподавателя")
+    return current_user

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine
 from .models import Base
-from .routers import auth, quizzes, i18n
+from .routers import auth, quizzes, i18n, admin, groups, lessons
 import threading
 import time
 import logging
@@ -24,6 +24,9 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(quizzes.router)
 app.include_router(i18n.router)
+app.include_router(admin.router)
+app.include_router(groups.router)
+app.include_router(lessons.router)
 
 def start_translation_worker():
     def worker_loop():
