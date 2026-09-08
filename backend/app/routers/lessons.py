@@ -176,6 +176,18 @@ async def update_lesson(
     return lesson
 
 
+@router.delete("/{lesson_id}")
+async def delete_lesson(
+    lesson_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher)
+):
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    await db.delete(lesson)
+    await db.commit()
+    return {"ok": True}
+
+
 # Копировать урок в другую группу
 @router.post("/{lesson_id}/copy")
 async def copy_lesson(

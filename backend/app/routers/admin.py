@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from pydantic import BaseModel
 from ..database import get_db
 from ..models import User, Course, Group, GroupMember, Lesson
 from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut
@@ -9,6 +10,13 @@ from ..dependencies import require_admin
 import secrets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+class GroupUpdate(BaseModel):
+    name: str
+    course_id: int
+    teacher_id: int
+    telegram_chat_id: str
 
 # ── ПЕДАГОГИ ──
 
@@ -128,6 +136,12 @@ async def get_groups(db: AsyncSession = Depends(get_db), admin: User = Depends(r
 
 @router.post("/groups", response_model=GroupOut)
 async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
+    teacher_result = await db.execute(
+        select(User).where(User.id == data.teacher_id, User.role.in_(["teacher", "admin"]))
+    )
+    if not teacher_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Выберите корректного педагога")
+
     invite_code = secrets.token_urlsafe(8)
     group = Group(
         name=data.name,
@@ -137,6 +151,37 @@ async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), ad
         telegram_chat_id=data.telegram_chat_id
     )
     db.add(group)
+    await db.commit()
+    await db.refresh(group)
+    return group
+
+
+@router.patch("/groups/{group_id}", response_model=GroupOut)
+async def update_group(
+    group_id: int,
+    data: GroupUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    group_result = await db.execute(select(Group).where(Group.id == group_id))
+    group = group_result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Группа не найдена")
+
+    teacher_result = await db.execute(
+        select(User).where(User.id == data.teacher_id, User.role.in_(["teacher", "admin"]))
+    )
+    if not teacher_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Выберите корректного педагога")
+
+    course_result = await db.execute(select(Course).where(Course.id == data.course_id))
+    if not course_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Выберите корректный курс")
+
+    group.name = data.name
+    group.course_id = data.course_id
+    group.teacher_id = data.teacher_id
+    group.telegram_chat_id = data.telegram_chat_id
     await db.commit()
     await db.refresh(group)
     return group

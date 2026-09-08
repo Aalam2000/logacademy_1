@@ -59,6 +59,8 @@ class GroupOut(BaseModel):
     id: int
     name: str
     course_id: int
+    teacher_id: int
+    telegram_chat_id: Optional[str]
     status: str
     invite_code: str
     created_at: datetime

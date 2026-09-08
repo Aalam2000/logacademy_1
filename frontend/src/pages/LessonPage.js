@@ -15,6 +15,7 @@ function LessonPage() {
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isTogglingOpen, setIsTogglingOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -73,6 +74,22 @@ function LessonPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!lesson || isDeleting) return;
+    const confirmed = window.confirm(t('lesson_delete_confirm', 'Удалить этот урок?'));
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setError('');
+    try {
+      await api.delete(`/lessons/${lesson.id}`);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('lesson_delete_error', 'Не удалось удалить урок'));
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return <div style={s.wrap}>{t('loading', 'Загрузка...')}</div>;
   }
@@ -124,6 +141,9 @@ function LessonPage() {
                 ? t('lesson_close_btn', 'Закрыть урок')
                 : t('lesson_open_btn', 'Открыть урок')}
           </button>
+          <button type="button" style={s.btnDelete} onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? t('saving', 'Сохранение...') : t('delete', 'Удалить')}
+          </button>
         </div>
       </form>
 
@@ -152,6 +172,7 @@ const s = {
   actions: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   btn: { padding: '8px 20px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
   btnOpen: { padding: '8px 20px', background: '#2E5FA3', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  btnDelete: { padding: '8px 20px', background: '#e05050', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
   error: { marginTop: '0.8rem', color: '#B91C1C', fontSize: '0.9rem' },
 };
 

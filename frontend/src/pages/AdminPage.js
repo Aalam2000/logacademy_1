@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
@@ -20,12 +20,28 @@ function AdminPage() {
   const [newAdmin,   setNewAdmin]   = useState(emptyAdmin);
   const [newCourse,  setNewCourse]  = useState(emptyCourse);
   const [newGroup,   setNewGroup]   = useState(emptyGroup);
+  const [editingGroupId, setEditingGroupId] = useState(null);
+  const [editingGroupDraft, setEditingGroupDraft] = useState(emptyGroup);
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
+  const groupsTableRef = useRef(null);
 
   const [error, setError] = useState('');
 
   useEffect(() => {
     loadAll();
   }, []);
+
+  useEffect(() => {
+    const handleDocumentMouseDown = (event) => {
+      if (tab !== 'groups' || editingGroupId === null || isSavingGroup) return;
+      if (!groupsTableRef.current?.contains(event.target)) {
+        saveEditingGroup();
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentMouseDown);
+    return () => document.removeEventListener('mousedown', handleDocumentMouseDown);
+  }, [tab, editingGroupId, editingGroupDraft, isSavingGroup]);
 
   const loadAll = () => {
     loadTeachers();
@@ -43,6 +59,17 @@ function AdminPage() {
     setError(e.response?.data?.detail || t('error_unknown', 'Ошибка'));
     setTimeout(() => setError(''), 4000);
   };
+
+  const areAllGroupFieldsFilled = (groupData) => {
+    return (
+      groupData.name.trim() !== ''
+      && String(groupData.course_id).trim() !== ''
+      && String(groupData.teacher_id).trim() !== ''
+      && String(groupData.telegram_chat_id).trim() !== ''
+    );
+  };
+
+  const isNewGroupValid = areAllGroupFieldsFilled(newGroup);
 
   const createTeacher = async () => {
     try {
@@ -81,6 +108,12 @@ function AdminPage() {
   };
 
   const createGroup = async () => {
+    if (!isNewGroupValid) {
+      setError(t('group_required_all_fields', 'Заполните все поля группы'));
+      setTimeout(() => setError(''), 4000);
+      return;
+    }
+
     try {
       await api.post('/admin/groups', {
         ...newGroup,
@@ -96,12 +129,60 @@ function AdminPage() {
     catch(e) { handleError(e); }
   };
 
+  const startEditGroup = (group) => {
+    if (isSavingGroup) return;
+    setEditingGroupId(group.id);
+    setEditingGroupDraft({
+      name: group.name || '',
+      course_id: String(group.course_id || ''),
+      teacher_id: String(group.teacher_id || ''),
+      telegram_chat_id: group.telegram_chat_id || '',
+    });
+  };
+
+  const saveEditingGroup = async () => {
+    if (editingGroupId === null || isSavingGroup) return;
+
+    if (!areAllGroupFieldsFilled(editingGroupDraft)) {
+      setError(t('group_required_all_fields', 'Заполните все поля группы'));
+      setTimeout(() => setError(''), 4000);
+      return;
+    }
+
+    try {
+      setIsSavingGroup(true);
+      const payload = {
+        name: editingGroupDraft.name.trim(),
+        course_id: parseInt(editingGroupDraft.course_id),
+        teacher_id: parseInt(editingGroupDraft.teacher_id),
+        telegram_chat_id: editingGroupDraft.telegram_chat_id.trim(),
+      };
+      const res = await api.patch(`/admin/groups/${editingGroupId}`, payload);
+      setGroups(prev => prev.map(g => g.id === editingGroupId ? res.data : g));
+      setEditingGroupId(null);
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setIsSavingGroup(false);
+    }
+  };
+
   const tabs = [
     { key: 'teachers', label: t('admin_tab_teachers', 'Педагоги') },
     { key: 'admins',   label: t('admin_tab_admins',   'Админы') },
     { key: 'courses',  label: t('admin_tab_courses',  'Курсы') },
     { key: 'groups',   label: t('admin_tab_groups',   'Группы') },
   ];
+
+  const teachersForGroups = [...teachers, ...admins].filter(
+    (user, index, arr) => arr.findIndex(u => u.id === user.id) === index
+  );
+
+  const courseLabelById = (courseId) => courses.find(c => c.id === courseId)?.title || `#${courseId}`;
+  const teacherLabelById = (teacherId) => {
+    const user = teachersForGroups.find(u => u.id === teacherId);
+    return user?.full_name || user?.username || `#${teacherId}`;
+  };
 
   const userFields = (data, setData) => [
     ['username',          t('field_username', 'Логин'),    'text'],
@@ -242,35 +323,82 @@ function AdminPage() {
             <select style={s.input} value={newGroup.teacher_id}
               onChange={e => setNewGroup({ ...newGroup, teacher_id: e.target.value })}>
               <option value="">{t('field_select_teacher', '— Педагог —')}</option>
-              {teachers.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
+              {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
             </select>
             <input placeholder={t('field_tg_chat', 'Telegram chat_id')} style={s.input}
               autoComplete="off"
               value={newGroup.telegram_chat_id}
               onChange={e => setNewGroup({ ...newGroup, telegram_chat_id: e.target.value })}
             />
-            <button style={s.btn} onClick={createGroup}>{t('admin_add', '+ Добавить')}</button>
+            <button
+              style={{ ...s.btn, ...(isNewGroupValid ? {} : s.btnDisabled) }}
+              onClick={createGroup}
+              disabled={!isNewGroupValid}
+            >
+              {t('admin_add', '+ Добавить')}
+            </button>
           </div>
           <h3>{t('admin_groups_list', 'Список групп')}</h3>
+          <div ref={groupsTableRef}>
           <table style={s.table}>
             <thead><tr>
               <th>{t('field_group_name',   'Название')}</th>
               <th>{t('field_course_title', 'Курс')}</th>
               <th>{t('field_teacher',      'Педагог')}</th>
+              <th>{t('field_tg_chat',      'Telegram chat_id')}</th>
               <th>{t('field_invite',       'Invite-код')}</th>
               <th>{t('field_status',       'Статус')}</th>
               <th></th>
             </tr></thead>
             <tbody>
               {groups.map(g => (
-                <tr key={g.id}>
-                  <td>{g.name}</td>
-                  <td>{courses.find(c => c.id === g.course_id)?.title}</td>
-                  <td>{teachers.find(tc => tc.id === g.teacher_id)?.full_name || teachers.find(tc => tc.id === g.teacher_id)?.username}</td>
+                <tr key={g.id} onClick={() => startEditGroup(g)} style={s.groupRow}>
+                  <td>
+                    {editingGroupId === g.id ? (
+                      <input
+                        style={s.input}
+                        value={editingGroupDraft.name}
+                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, name: e.target.value })}
+                      />
+                    ) : g.name}
+                  </td>
+                  <td>
+                    {editingGroupId === g.id ? (
+                      <select
+                        style={s.input}
+                        value={editingGroupDraft.course_id}
+                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, course_id: e.target.value })}
+                      >
+                        <option value="">{t('field_select_course', '— Курс —')}</option>
+                        {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                      </select>
+                    ) : courseLabelById(g.course_id)}
+                  </td>
+                  <td>
+                    {editingGroupId === g.id ? (
+                      <select
+                        style={s.input}
+                        value={editingGroupDraft.teacher_id}
+                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
+                      >
+                        <option value="">{t('field_select_teacher', '— Педагог —')}</option>
+                        {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
+                      </select>
+                    ) : teacherLabelById(g.teacher_id)}
+                  </td>
+                  <td>
+                    {editingGroupId === g.id ? (
+                      <input
+                        style={s.input}
+                        value={editingGroupDraft.telegram_chat_id}
+                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, telegram_chat_id: e.target.value })}
+                      />
+                    ) : g.telegram_chat_id}
+                  </td>
                   <td><code>{g.invite_code}</code></td>
                   <td>{g.status}</td>
                   <td>
-                    <button style={s.btnDel} onClick={() => deleteGroup(g.id)}>
+                    <button style={s.btnDel} onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }}>
                       {t('admin_delete', 'Удалить')}
                     </button>
                   </td>
@@ -278,6 +406,7 @@ function AdminPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -293,7 +422,9 @@ const s = {
   form:      { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '1.5rem', alignItems: 'center' },
   input:     { padding: '8px 12px', border: '1px solid #c8f0ea', borderRadius: '8px', fontSize: '0.9rem', minWidth: '160px' },
   btn:       { padding: '8px 20px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  btnDisabled: { opacity: 0.6, cursor: 'not-allowed' },
   btnDel:    { padding: '4px 12px', background: '#e05050', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+  groupRow: { cursor: 'pointer' },
   table:     { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
 };
 
