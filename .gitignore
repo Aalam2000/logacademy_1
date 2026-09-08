@@ -1,5 +1,7 @@
 tmp/
+translations/
 node_modules/
+frontend/node_modules
 __pycache__/
 .env
 .DS_Store
