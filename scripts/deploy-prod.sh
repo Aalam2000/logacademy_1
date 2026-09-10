@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BRANCH="${1:-main}"
+BRANCH="${1:-master}"
 PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 
 cd "$PROJECT_DIR"
@@ -12,10 +12,10 @@ echo "[deploy] project dir: $PROJECT_DIR"
 git fetch origin
 git reset --hard "origin/$BRANCH"
 
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --remove-orphans
+docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
 echo "[deploy] running containers"
-docker compose --env-file .env.prod -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 echo "[deploy] current revision"
 git rev-parse --short HEAD

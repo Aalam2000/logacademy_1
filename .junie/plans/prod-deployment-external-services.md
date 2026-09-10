@@ -93,25 +93,26 @@ sessionId: session-260908-181501-111n
 
 # Delivery Steps
 
-### ✓ Step 1: Поднять Postgres и MinIO на прод-сервере вне compose приложения
+### ✓ Step 1: Исправить локально 2 env и 2 compose и удалить старые файлы
+Результат: локальная схема `dev/prod` подготовлена, старые `demo`/legacy файлы удалены.
+- Создать/использовать `docker-compose.dev.yml` для локального запуска с `postgres` и `minio` контейнерами.
+- Обновить `docker-compose.prod.yml` под запуск только приложения с внешними сервисами.
+- Использовать `.env.dev.example` и `.env.prod.example` как шаблоны, без реальных секретов.
+- Удалить старые файлы `docker-compose.yml`, `docker-compose.demo.yml`, `.env.demo.example`.
+
+### ✓ Step 2: Поднять и проверить Postgres и MinIO на прод-сервере вне compose приложения
 Результат: на прод-хосте работают отдельные сервисы `Postgres` и `MinIO` с автозапуском и доступом для backend.
 - Добавить операционные артефакты/инструкции для server-side запуска `Postgres` и `MinIO` (systemd/native), включая каталоги данных и restart policy.
 - Зафиксировать сетевые параметры (`bind`, порты, доступы), чтобы `backend` мог подключаться локально/по приватной сети.
 - Описать минимальные проверки здоровья сервисов перед деплоем приложения.
 
-### ✓ Step 2: Разделить prod/demo compose и подключить серверные сервисы
-Результат: `docker-compose.prod.yml` запускает только приложение, а `backend` подключается к Postgres/MinIO на сервере.
-- Создать `docker-compose.prod.yml` только с `backend` и `frontend`, без `db`/`minio` контейнеров и без dev bind-mount'ов.
-- Создать `docker-compose.demo.yml` с локальными `postgres` и `minio` контейнерами для демо-стенда.
-- Вынести переменные окружения в профильные env-файлы (`.env.prod.example`, `.env.demo.example`) и зафиксировать `DATABASE_URL`/`MINIO_*` для серверных сервисов.
+### ✓ Step 3: Настроить `.env.dev` и `.env.prod` с ручным переносом и исключить их из Git
+Результат: локальный и прод env разделены, реальные env не попадают в репозиторий.
+- Добавить/проверить `.gitignore` для `.env.dev` и `.env.prod`.
+- Оставить в репозитории только шаблоны `.env.dev.example` и `.env.prod.example`.
+- Зафиксировать в документации, что перенос `.env.*` на сервер выполняется только вручную.
 
-### ✓ Step 3: Привести контейнеры приложения к production-режиму
-Результат: образы `backend` и `frontend` запускаются как production-сервисы и корректно работают с внешними server-side зависимостями.
-- Обновить `backend/Dockerfile`: запуск без `--reload`, с production-параметрами `uvicorn`.
-- Обновить `frontend/Dockerfile`: production build + статический сервер вместо `npm start`.
-- Проверить, что `REACT_APP_API_URL` и backend env корректно задаются через prod-конфиг.
-
-### ✓ Step 4: Добавить прод-команду деплоя из Git и очистку образов
+### ✓ Step 4: Добавить/проверить прод-команду деплоя из Git и очистку образов
 Результат: одна команда обновляет прод до последнего кода, перезапускает контейнеры и оставляет только актуальные образы.
 - Добавить `scripts/deploy-prod.sh` с шагами `git fetch`, `git reset --hard origin/<branch>`, `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`.
 - В конец deploy-скрипта добавить очистку `docker image prune -af` и `docker builder prune -af`.

@@ -54,20 +54,20 @@
 
 > If any check fails, do not deploy app containers until fixed.
 
-## 2) Environment files
+## 2) Environment files (manual only)
 
-- Prod:
-  - `cp .env.prod.example .env.prod`
-  - set real values for `DATABASE_URL`, `MINIO_*`, `REACT_APP_API_URL`
-- Demo:
-  - `cp .env.demo.example .env.demo`
+- Local dev:
+  - create and fill `.env.dev` manually
+- Prod server:
+  - create and fill `.env.prod` manually
+- Do not store real secrets in Git.
 
 ## 3) Compose profiles
 
 - Prod (external Postgres/MinIO on server):
-  - `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build`
-- Demo (local Postgres/MinIO in containers):
-  - `docker compose --env-file .env.demo -f docker-compose.demo.yml up -d --build`
+  - `docker compose -f docker-compose.prod.yml up -d --build`
+- Dev (local Postgres/MinIO in containers):
+  - `docker compose -f docker-compose.dev.yml up -d --build`
 
 ## 4) Production deploy from Git
 
@@ -78,7 +78,7 @@
 - The script does:
   - `git fetch origin`
   - `git reset --hard origin/<branch>`
-  - `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --remove-orphans`
+  - `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
   - `docker image prune -af`
   - `docker builder prune -af`
 

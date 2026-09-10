@@ -1,7 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine
-from .models import Base
 from .routers import auth, quizzes, i18n, admin, groups, lessons
 import threading
 import time
@@ -45,6 +43,4 @@ def start_translation_worker():
 
 @app.on_event("startup")
 async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     start_translation_worker()
