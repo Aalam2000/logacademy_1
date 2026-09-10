@@ -7,3 +7,6 @@ __pycache__/
 .env.dev
 .env.prod
 .DS_Store
+
+insert_user.sql
+frontend/build/

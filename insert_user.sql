@@ -1,1 +1,0 @@
-INSERT INTO users (username, hashed_password, role) VALUES ('Andrei', 'scrypt:32768:8:1$jRYN0ayVE2IRdJeL$a29986a71eb52abcf719e2ef9d07bf9c91f7ea024481d3a791dccab17165ec597c33676133e85bf766e3212af152e75c3286a650481b01615313d96acb4f2f10', 'admin');
