@@ -13,7 +13,7 @@ services:
     build:
       context: ./frontend
       args:
-        REACT_APP_API_URL: http://192.168.0.9:8000
+        REACT_APP_API_URL: http://192.168.0.9/api
     restart: unless-stopped
     ports:
       - "3000:3000"
