@@ -10,11 +10,12 @@ services:
       - "host.docker.internal:host-gateway"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_URL: http://192.168.0.9:8000
     restart: unless-stopped
     ports:
       - "3000:3000"
-    env_file:
-      - .env.prod
     depends_on:
       - backend
