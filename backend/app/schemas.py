@@ -20,6 +20,7 @@ class UserCreate(BaseModel):
 class StudentRegister(BaseModel):
     username: str
     password: str
+    full_name: Optional[str] = None
     email: Optional[str] = None
     invite_code: str  # код группы из QR
 
@@ -64,9 +65,16 @@ class GroupOut(BaseModel):
     status: str
     invite_code: str
     created_at: datetime
+    student_count: int = 0
+    teacher_name: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class GroupInviteOut(BaseModel):
+    id: int
+    name: str
+    course_title: Optional[str] = None
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None

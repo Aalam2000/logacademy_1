@@ -78,6 +78,7 @@ async def register_student(data: StudentRegister, db: AsyncSession = Depends(get
         username=data.username,
         hashed_password=get_password_hash(data.password),
         email=data.email,
+        full_name=data.full_name,
         role="student"
     )
     db.add(student)

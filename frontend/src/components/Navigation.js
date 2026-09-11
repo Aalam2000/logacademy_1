@@ -19,14 +19,16 @@ function Navigation({ user }) {
             📊 {t('nav_dashboard', 'Главная')}
           </NavLink>
         </li>
-        <li style={styles.item}>
-          <NavLink
-            to="/dashboard/cards"
-            style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
-          >
-            🃏 {t('nav_cards', 'Квизы')}
-          </NavLink>
-        </li>
+        {user?.role !== 'student' && (
+          <li style={styles.item}>
+            <NavLink
+              to="/dashboard/cards"
+              style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
+            >
+              🃏 {t('nav_cards', 'Квизы')}
+            </NavLink>
+          </li>
+        )}
         <li style={styles.item}>
           <NavLink to="/dashboard/profile"
             style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}>

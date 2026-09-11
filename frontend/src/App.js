@@ -10,6 +10,8 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
 import LessonPage from './pages/LessonPage';
+import GroupPage from './pages/GroupPage';
+import JoinGroupPage from './pages/JoinGroupPage';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -23,6 +25,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/join/:inviteCode" element={<JoinGroupPage />} />
         <Route path="/dashboard" element={
           <PrivateRoute>
             <Dashboard />
@@ -35,6 +38,7 @@ function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="admin" element={<AdminPage />} />
           <Route path="lessons/:lessonId" element={<LessonPage />} />
+          <Route path="groups/:groupId" element={<GroupPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>
