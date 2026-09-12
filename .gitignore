@@ -1,12 +1,13 @@
 tmp/
 translations/
 node_modules/
-frontend/node_modules
+.junie/
 __pycache__/
 .env
 .env.dev
 .env.prod
 .DS_Store
-
+docker-compose.dev.yml
 insert_user.sql
 frontend/build/
+frontend/node_modules
