@@ -1,6 +1,7 @@
 tmp/
 translations/
 node_modules/
+.idea/
 .junie/
 __pycache__/
 .env
