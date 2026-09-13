@@ -1,9 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useI18n } from '../context/I18nContext';
 
 function Navigation({ user }) {
-  const { t } = useI18n();
   return (
     <nav style={styles.nav}>
       <div style={styles.logo}>
@@ -16,7 +14,7 @@ function Navigation({ user }) {
             end
             style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
           >
-            📊 {t('nav_dashboard', 'Главная')}
+            📊 {'Главная'}
           </NavLink>
         </li>
         {user?.role !== 'student' && (
@@ -25,14 +23,14 @@ function Navigation({ user }) {
               to="/dashboard/cards"
               style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
             >
-              🃏 {t('nav_cards', 'Квизы')}
+              🃏 {'Квизы'}
             </NavLink>
           </li>
         )}
         <li style={styles.item}>
           <NavLink to="/dashboard/profile"
             style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}>
-            👤 {t('nav_profile', 'Профиль')}
+            👤 {'Профиль'}
           </NavLink>
         </li>
         {user?.role === 'admin' && (
@@ -41,7 +39,7 @@ function Navigation({ user }) {
               to="/dashboard/admin"
               style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
             >
-              ⚙️ {t('nav_admin', 'Админ')}
+              ⚙️ {'Админ'}
             </NavLink>
           </li>
         )}

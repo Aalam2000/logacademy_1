@@ -384,7 +384,7 @@
 <body>
 <header>
     <!-- LOGO -->
-    <div style={styles.logo}>
+    <div>
         <img src="/assets/logo.svg" alt="Log Academy" width="120" height="40"/>
     </div>
 </header>
@@ -462,13 +462,6 @@
     let timeLeft = 60;
     let totalTime = 60;
 
-    function t(key, fallback) {
-        if (window.autoI18n && typeof window.autoI18n.translateKey === 'function') {
-            return window.autoI18n.translateKey(key, fallback);
-        }
-        return fallback;
-    }
-
     function show(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -491,11 +484,11 @@
         timeLeft = totalTime;
 
         document.getElementById('q-num').textContent =
-            t('question_number', `Вопрос ${currentIndex + 1} / ${QUESTIONS.length}`);
+            `Вопрос ${currentIndex + 1} / ${QUESTIONS.length}`;
         document.getElementById('q-text').textContent = q.question;
         document.getElementById('progress-fill').style.width = (currentIndex / QUESTIONS.length * 100) + '%';
         document.getElementById('progress-label').textContent =
-            t('progress_label', `${currentIndex} из ${QUESTIONS.length} пройдено`);
+            `${currentIndex} из ${QUESTIONS.length} пройдено`;
         document.getElementById('btn-prev').disabled = currentIndex === 0;
 
         show('screen-question');
@@ -537,11 +530,11 @@
         document.getElementById('a-text').textContent = q.answer;
         document.getElementById('progress-fill-a').style.width = ((currentIndex + 1) / QUESTIONS.length * 100) + '%';
         document.getElementById('progress-label-a').textContent =
-            t('progress_label_answer', `${currentIndex + 1} из ${QUESTIONS.length} пройдено`);
+            `${currentIndex + 1} из ${QUESTIONS.length} пройдено`;
         document.getElementById('btn-next').textContent =
             currentIndex >= QUESTIONS.length - 1
-                ? t('finish_button', 'Завершить →')
-                : t('next_button', 'Следующий вопрос →');
+                ? 'Завершить →'
+                : 'Следующий вопрос →';
         show('screen-answer');
     }
 

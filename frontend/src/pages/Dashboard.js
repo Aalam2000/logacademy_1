@@ -1,14 +1,12 @@
 import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useI18n } from '../context/I18nContext';
 import Navigation from '../components/Navigation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { t } = useI18n();
 
   return (
     <div style={styles.layout}>
@@ -16,7 +14,7 @@ function Dashboard() {
       <div style={styles.content}>
         <div style={styles.header}>
           <h2>
-            {t('dashboard_welcome', 'Добро пожаловать, {username}!').replace('{username}', user?.username || '')}
+            {`Добро пожаловать, ${user?.username || ''}!`}
             {user?.role && (
               <span style={{
                 marginLeft: '12px',
@@ -35,7 +33,7 @@ function Dashboard() {
           <div style={styles.headerRight}>
             <LanguageSwitcher />
             <button onClick={() => { logout(); navigate('/login'); }} style={styles.logoutBtn}>
-              {t('dashboard_logout', 'Выйти')}
+              {'Выйти'}
             </button>
           </div>
         </div>

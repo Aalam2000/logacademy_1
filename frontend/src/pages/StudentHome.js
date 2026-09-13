@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function StudentHome() {
-  const { t } = useI18n();
   const [lessons, setLessons] = useState([]);
 
   useEffect(() => {
@@ -12,18 +10,18 @@ function StudentHome() {
 
   return (
     <div style={s.wrap}>
-      <h2>{t('home_lessons', 'Мои уроки')}</h2>
+      <h2>{'Мои уроки'}</h2>
       <table style={s.table}>
         <thead>
           <tr>
-            <th>{t('lesson_date',  'Дата')}</th>
-            <th>{t('lesson_title', 'Тема')}</th>
+            <th>{'Дата'}</th>
+            <th>{'Тема'}</th>
           </tr>
         </thead>
         <tbody>
           {lessons.length === 0 && (
             <tr><td colSpan={2} style={{textAlign:'center', padding:'2rem', color:'#6B7280'}}>
-              {t('lesson_empty', 'Уроков нет')}
+              {'Уроков нет'}
             </td></tr>
           )}
           {lessons.map(l => (

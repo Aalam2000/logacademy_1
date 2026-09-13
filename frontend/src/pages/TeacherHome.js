@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function TeacherHome() {
-  const { t } = useI18n();
   const navigate = useNavigate();
   const [lessons,  setLessons]  = useState([]);
   const [groups,   setGroups]   = useState([]);
@@ -81,7 +79,7 @@ function TeacherHome() {
   const handleCreateLesson = async (e) => {
     e.preventDefault();
     if (!newLessonGroup || !newLessonDate) {
-      setCreateError(t('lesson_create_required', 'Выберите группу и дату/время начала урока'));
+      setCreateError('Выберите группу и дату/время начала урока');
       return;
     }
 
@@ -91,14 +89,14 @@ function TeacherHome() {
     try {
       const payload = {
         group_id: parseInt(newLessonGroup),
-        title: t('lesson_default_title', 'Урок'),
+        title: 'Урок',
         date: new Date(newLessonDate).toISOString(),
       };
       const created = await api.post('/lessons/', payload);
       setLessons(prev => [...prev, created.data]);
       closeCreateModal();
     } catch (err) {
-      setCreateError(err?.response?.data?.detail || t('lesson_create_error', 'Не удалось создать урок'));
+      setCreateError(err?.response?.data?.detail || 'Не удалось создать урок');
       setIsCreating(false);
     }
   };
@@ -106,36 +104,36 @@ function TeacherHome() {
   return (
     <div style={s.wrap}>
       <div style={s.toolbar}>
-        <h2 style={{margin:0}}>{t('home_lessons', 'Уроки')}</h2>
+        <h2 style={{margin:0}}>{'Уроки'}</h2>
         <div style={s.filters}>
           <select style={s.select} value={filterGroup} onChange={e => handleGroupChange(e.target.value)}>
-            <option value="">{t('filter_all_groups', '— Все группы —')}</option>
+            <option value="">{'— Все группы —'}</option>
             {availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
           <select style={s.select} value={filterCourse} onChange={e => { setFilterCourse(e.target.value); setFilterGroup(''); }}>
-            <option value="">{t('filter_all_courses', '— Все курсы —')}</option>
+            <option value="">{'— Все курсы —'}</option>
             {availableCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
           </select>
         </div>
         <button style={s.btn} onClick={openCreateModal}>
-          {t('lesson_add', '+ Урок')}
+          {'+ Урок'}
         </button>
       </div>
 
       <table style={s.table}>
         <thead>
           <tr>
-            <th>{t('lesson_date',   'Дата')}</th>
-            <th>{t('lesson_title',  'Тема урока')}</th>
-            <th>{t('lesson_group',  'Группа')}</th>
-            <th>{t('lesson_course', 'Курс')}</th>
-            <th>{t('lesson_status', 'Доступ')}</th>
+            <th>{'Дата'}</th>
+            <th>{'Тема урока'}</th>
+            <th>{'Группа'}</th>
+            <th>{'Курс'}</th>
+            <th>{'Доступ'}</th>
           </tr>
         </thead>
         <tbody>
           {visible.length === 0 && (
             <tr><td colSpan={5} style={{textAlign:'center', padding:'2rem', color:'#6B7280'}}>
-              {t('lesson_empty', 'Уроков нет')}
+              {'Уроков нет'}
             </td></tr>
           )}
           {visible.map(l => (
@@ -146,7 +144,7 @@ function TeacherHome() {
               <td>{courseName(l.group_id)}</td>
               <td>
                 <span style={{...s.badge, background: l.is_open ? '#3B6D11' : '#6B7280'}}>
-                  {l.is_open ? t('lesson_open', 'Открыт') : t('lesson_closed', 'Закрыт')}
+                  {l.is_open ? 'Открыт' : 'Закрыт'}
                 </span>
               </td>
             </tr>
@@ -157,23 +155,23 @@ function TeacherHome() {
       {isModalOpen && (
         <div style={s.modalBackdrop}>
           <div style={s.modal}>
-            <h3 style={s.modalTitle}>{t('lesson_create_title', 'Новый урок')}</h3>
+            <h3 style={s.modalTitle}>{'Новый урок'}</h3>
             <form onSubmit={handleCreateLesson} style={s.modalForm}>
               <label style={s.label}>
-                {t('lesson_group', 'Группа')}
+                {'Группа'}
                 <select
                   style={s.select}
                   value={newLessonGroup}
                   onChange={e => setNewLessonGroup(e.target.value)}
                   required
                 >
-                  <option value="">{t('lesson_select_group', '— Выберите группу —')}</option>
+                  <option value="">{'— Выберите группу —'}</option>
                   {availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </label>
 
               <label style={s.label}>
-                {t('lesson_start_datetime', 'Дата и время начала')}
+                {'Дата и время начала'}
                 <input
                   type="datetime-local"
                   style={s.input}
@@ -187,10 +185,10 @@ function TeacherHome() {
 
               <div style={s.modalActions}>
                 <button type="button" style={s.btnSecondary} onClick={closeCreateModal}>
-                  {t('cancel', 'Отмена')}
+                  {'Отмена'}
                 </button>
                 <button type="submit" style={s.btn} disabled={isCreating}>
-                  {isCreating ? t('saving', 'Сохранение...') : t('create', 'Создать')}
+                  {isCreating ? 'Сохранение...' : 'Создать'}
                 </button>
               </div>
             </form>

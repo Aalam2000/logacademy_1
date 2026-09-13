@@ -5,7 +5,6 @@ import Dashboard from './pages/Dashboard';
 import CardsPage from './pages/CardsPage';
 import AddQuizPage from './pages/AddQuizPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useI18n } from './context/I18nContext';
 import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
@@ -19,8 +18,6 @@ function PrivateRoute({ children }) {
 }
 
 function App() {
-  const { t } = useI18n();
-
   return (
     <AuthProvider>
       <Routes>

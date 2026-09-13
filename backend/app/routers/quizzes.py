@@ -27,10 +27,11 @@ def render_translated_template(template_type: str, lang: str, data: dict) -> str
     with open(template_path, "r", encoding="utf-8") as f:
         template_content = f.read()
 
-    # Сначала переводим уже готовый HTML
+    # Сначала переводим уже готовый HTML (текст, атрибуты и содержимое
+    # <script>, включая шаблонные строки вида `Вопрос ${i} / ${n}`)
     if lang != SOURCE_LANG:
         try:
-            template_content = translator.translate_html(template_content, lang, page_name=f"template_{template_type}")
+            template_content = translator.apply_to_html(template_content, lang)
         except Exception as e:
             print(f"❌ Ошибка перевода шаблона: {e}")
 

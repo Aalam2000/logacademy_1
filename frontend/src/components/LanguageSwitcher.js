@@ -1,25 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import api from '../api/auth';
-import { useI18n } from '../context/I18nContext';
+import React from 'react';
+import { useLang } from '../hooks/useLang';
 
 function LanguageSwitcher() {
-  const [languages, setLanguages] = useState([]);
-  const { lang, changeLanguage } = useI18n();
-
-  useEffect(() => {
-    const fetchLanguages = async () => {
-      try {
-        const res = await api.get('/i18n/languages');
-        setLanguages(res.data.languages);
-      } catch (err) {
-        // console.error('Failed to load languages');
-      }
-    };
-    fetchLanguages();
-  }, []);
+  const { lang, languages, changeLanguage } = useLang();
 
   const handleChange = (e) => {
     const newLang = e.target.value;
+    console.log('🔍[i18n-trace] 1. LanguageSwitcher.handleChange: клик, newLang =', newLang, 'текущий lang в этом хуке =', lang);
     changeLanguage(newLang);
   };
 

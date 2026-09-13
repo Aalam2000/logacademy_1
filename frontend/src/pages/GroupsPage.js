@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function GroupsPage() {
-  const { t } = useI18n();
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -23,23 +21,23 @@ function GroupsPage() {
         setGroups(groupsRes.data);
         setCourses(coursesRes.data);
       } catch (err) {
-        setError(err?.response?.data?.detail || t('groups_load_error', 'Не удалось загрузить группы'));
+        setError(err?.response?.data?.detail || 'Не удалось загрузить группы');
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [t]);
+  }, []);
 
   const courseName = (courseId) =>
     courses.find(c => c.id === courseId)?.title || '—';
 
-  if (loading) return <div style={s.wrap}>{t('loading', 'Загрузка...')}</div>;
+  if (loading) return <div style={s.wrap}>{'Загрузка...'}</div>;
 
   return (
     <div style={s.wrap}>
       <div style={s.toolbar}>
-        <h2 style={{ margin: 0 }}>{t('groups_my', 'Мои группы')}</h2>
+        <h2 style={{ margin: 0 }}>{'Мои группы'}</h2>
       </div>
 
       {error && <div style={s.error}>{error}</div>}
@@ -47,16 +45,16 @@ function GroupsPage() {
       <table style={s.table}>
         <thead>
           <tr>
-            <th>{t('group_name', 'Название группы')}</th>
-            <th>{t('group_course', 'Курс')}</th>
-            <th>{t('group_students', 'Учеников')}</th>
+            <th>{'Название группы'}</th>
+            <th>{'Курс'}</th>
+            <th>{'Учеников'}</th>
           </tr>
         </thead>
         <tbody>
           {groups.length === 0 && (
             <tr>
               <td colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
-                {t('groups_empty', 'Групп пока нет')}
+                {'Групп пока нет'}
               </td>
             </tr>
           )}

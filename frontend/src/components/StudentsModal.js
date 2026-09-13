@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function StudentsModal({ groupId, groupName, onClose }) {
-  const { t } = useI18n();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,38 +14,38 @@ function StudentsModal({ groupId, groupName, onClose }) {
         const res = await api.get(`/groups/${groupId}/students`);
         setStudents(res.data);
       } catch (err) {
-        setError(err?.response?.data?.detail || t('students_load_error', 'Не удалось загрузить учеников'));
+        setError(err?.response?.data?.detail || 'Не удалось загрузить учеников');
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [groupId, t]);
+  }, [groupId]);
 
   return (
     <div style={s.backdrop} onClick={onClose}>
       <div style={s.modal} onClick={e => e.stopPropagation()}>
         <h3 style={s.title}>
-          {t('group_students_btn', 'Ученики')} — {groupName}
+          {'Ученики'} — {groupName}
         </h3>
 
-        {loading && <p style={s.info}>{t('loading', 'Загрузка...')}</p>}
+        {loading && <p style={s.info}>{'Загрузка...'}</p>}
         {error && <p style={s.error}>{error}</p>}
 
         {!loading && !error && (
           <table style={s.table}>
             <thead>
               <tr>
-                <th style={s.th}>{t('student_name', 'Имя')}</th>
-                <th style={s.th}>{t('login_username', 'Логин')}</th>
-                <th style={s.th}>{t('student_registered', 'Дата регистрации')}</th>
+                <th style={s.th}>{'Имя'}</th>
+                <th style={s.th}>{'Логин'}</th>
+                <th style={s.th}>{'Дата регистрации'}</th>
               </tr>
             </thead>
             <tbody>
               {students.length === 0 && (
                 <tr>
                   <td colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
-                    {t('students_empty', 'Учеников пока нет')}
+                    {'Учеников пока нет'}
                   </td>
                 </tr>
               )}
@@ -64,7 +62,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
 
         <div style={s.actions}>
           <button style={s.closeBtn} onClick={onClose}>
-            {t('close', 'Закрыть')}
+            {'Закрыть'}
           </button>
         </div>
       </div>

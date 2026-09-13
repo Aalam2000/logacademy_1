@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useI18n } from '../context/I18nContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/auth';
 
 function ProfilePage() {
-  const { t } = useI18n();
   const { refreshUser } = useAuth();
   const [form, setForm] = useState({
     full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '',
@@ -33,12 +31,12 @@ function ProfilePage() {
   const save = async () => {
     try {
       await api.put('/auth/me', form);
-      setMsg(t('profile_saved', 'Сохранено!'));
+      setMsg('Сохранено!');
       refreshUser();
       setError('');
       setTimeout(() => setMsg(''), 3000);
     } catch(e) {
-      setError(e.response?.data?.detail || t('error_unknown', 'Ошибка'));
+      setError(e.response?.data?.detail || 'Ошибка');
       setMsg('');
     }
   };
@@ -55,28 +53,28 @@ function ProfilePage() {
 
   return (
     <div style={s.wrap}>
-      <h2>{t('profile_title', 'Мой профиль')}</h2>
+      <h2>{'Мой профиль'}</h2>
 
       <div style={s.row}>
-        <label style={s.label}>{t('field_username', 'Логин')}</label>
+        <label style={s.label}>{'Логин'}</label>
         <span style={s.readonly}>{username} <span style={{...s.badge, background: role === 'admin' ? '#e05050' : role === 'teacher' ? '#2E5FA3' : '#3B6D11'}}>{role}</span></span>
       </div>
 
-      {f('full_name',         t('field_fullname',  'Полное имя'))}
-      {f('email',             t('field_email',     'Email'))}
-      {f('phone',             t('field_phone',     'Телефон'))}
-      {f('telegram_username', t('field_telegram',  'Telegram'))}
-      {f('whatsapp',          t('field_whatsapp',  'WhatsApp'))}
+      {f('full_name',         'Полное имя')}
+      {f('email',             'Email')}
+      {f('phone',             'Телефон')}
+      {f('telegram_username', 'Telegram')}
+      {f('whatsapp',          'WhatsApp')}
 
       <hr style={s.hr}/>
-      <h3>{t('profile_change_password', 'Смена пароля')}</h3>
-      {f('old_password', t('field_old_password', 'Текущий пароль'), 'password')}
-      {f('new_password', t('field_new_password', 'Новый пароль'),   'password')}
+      <h3>{'Смена пароля'}</h3>
+      {f('old_password', 'Текущий пароль', 'password')}
+      {f('new_password', 'Новый пароль',   'password')}
 
       {msg   && <div style={s.success}>{msg}</div>}
       {error && <div style={s.error}>{error}</div>}
 
-      <button style={s.btn} onClick={save}>{t('profile_save', 'Сохранить')}</button>
+      <button style={s.btn} onClick={save}>{'Сохранить'}</button>
     </div>
   );
 }

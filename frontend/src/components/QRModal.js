@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useI18n } from '../context/I18nContext';
 
 function QRModal({ group, onClose }) {
-  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const baseUrl = process.env.REACT_APP_PUBLIC_URL || window.location.origin;
@@ -30,7 +28,7 @@ function QRModal({ group, onClose }) {
   return (
     <div style={s.backdrop} onClick={onClose}>
       <div style={s.modal} onClick={e => e.stopPropagation()}>
-        <h3 style={s.title}>{t('group_qr_title', 'Регистрация в группу')}</h3>
+        <h3 style={s.title}>{'Регистрация в группу'}</h3>
         <p style={s.groupName}>{group.name}</p>
 
         <div style={s.qrWrap}>
@@ -45,17 +43,17 @@ function QRModal({ group, onClose }) {
             onFocus={e => e.target.select()}
           />
           <button style={s.copyBtn} onClick={handleCopy}>
-            {copied ? t('copied', 'Скопировано') : t('copy', 'Копировать')}
+            {copied ? 'Скопировано' : 'Копировать'}
           </button>
         </div>
 
         <p style={s.hint}>
-          {t('group_qr_hint', 'Отправьте эту ссылку или QR-код ученикам для регистрации в группе')}
+          {'Отправьте эту ссылку или QR-код ученикам для регистрации в группе'}
         </p>
 
         <div style={s.actions}>
           <button style={s.closeBtn} onClick={onClose}>
-            {t('close', 'Закрыть')}
+            {'Закрыть'}
           </button>
         </div>
       </div>

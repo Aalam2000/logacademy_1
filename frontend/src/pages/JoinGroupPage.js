@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function JoinGroupPage() {
   const { inviteCode } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
 
   const [group, setGroup] = useState(null);
   const [loadingGroup, setLoadingGroup] = useState(true);
@@ -26,13 +24,13 @@ function JoinGroupPage() {
         const res = await api.get(`/groups/invite/${inviteCode}`);
         setGroup(res.data);
       } catch (err) {
-        setGroupError(err?.response?.data?.detail || t('join_invalid', 'Приглашение недействительно'));
+        setGroupError(err?.response?.data?.detail || 'Приглашение недействительно');
       } finally {
         setLoadingGroup(false);
       }
     };
     load();
-  }, [inviteCode, t]);
+  }, [inviteCode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,27 +48,27 @@ function JoinGroupPage() {
     } catch (err) {
       const detail = err?.response?.data?.detail;
       if (err?.response?.status === 400) {
-        setSubmitError(t('join_user_exists', 'Пользователь с таким логином уже существует'));
+        setSubmitError('Пользователь с таким логином уже существует');
       } else if (err?.response?.status === 404) {
-        setSubmitError(t('join_invalid', 'Приглашение недействительно'));
+        setSubmitError('Приглашение недействительно');
       } else {
-        setSubmitError(detail || t('join_error', 'Не удалось зарегистрироваться'));
+        setSubmitError(detail || 'Не удалось зарегистрироваться');
       }
       setIsSubmitting(false);
     }
   };
 
   if (loadingGroup) {
-    return <div style={s.wrap}>{t('loading', 'Загрузка...')}</div>;
+    return <div style={s.wrap}>{'Загрузка...'}</div>;
   }
 
   if (groupError) {
     return (
       <div style={s.wrap}>
         <div style={s.card}>
-          <h2 style={s.title}>{t('join_title', 'Регистрация ученика')}</h2>
+          <h2 style={s.title}>{'Регистрация ученика'}</h2>
           <p style={s.error}>{groupError}</p>
-          <Link to="/login" style={s.link}>{t('join_to_login', 'Перейти ко входу')}</Link>
+          <Link to="/login" style={s.link}>{'Перейти ко входу'}</Link>
         </div>
       </div>
     );
@@ -80,9 +78,9 @@ function JoinGroupPage() {
     <div style={s.wrap}>
       <div style={s.card}>
         <img src="/assets/logo.svg" alt="Log Academy" width="180" height="60" />
-        <h2 style={s.title}>{t('join_title', 'Регистрация ученика')}</h2>
+        <h2 style={s.title}>{'Регистрация ученика'}</h2>
         <p style={s.groupInfo}>
-          {t('join_group_label', 'Группа')}: <b>{group?.name}</b>
+          {'Группа'}: <b>{group?.name}</b>
           {group?.course_title && <> · {group.course_title}</>}
         </p>
 
@@ -90,14 +88,14 @@ function JoinGroupPage() {
           <input
             style={s.input}
             type="text"
-            placeholder={t('join_full_name', 'Имя и фамилия')}
+            placeholder={'Имя и фамилия'}
             value={fullName}
             onChange={e => setFullName(e.target.value)}
           />
           <input
             style={s.input}
             type="text"
-            placeholder={t('login_username', 'Логин')}
+            placeholder={'Логин'}
             value={username}
             onChange={e => setUsername(e.target.value)}
             required
@@ -105,20 +103,20 @@ function JoinGroupPage() {
           <input
             style={s.input}
             type="password"
-            placeholder={t('login_password', 'Пароль')}
+            placeholder={'Пароль'}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
           />
           <button style={s.btn} type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t('saving', 'Отправка...') : t('join_submit', 'Зарегистрироваться')}
+            {isSubmitting ? 'Отправка...' : 'Зарегистрироваться'}
           </button>
         </form>
 
         {submitError && <p style={s.error}>{submitError}</p>}
 
         <Link to="/login" style={s.link}>
-          {t('join_have_account', 'Уже есть аккаунт? Войти')}
+          {'Уже есть аккаунт? Войти'}
         </Link>
       </div>
     </div>

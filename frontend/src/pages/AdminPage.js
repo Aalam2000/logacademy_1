@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '' };
@@ -8,7 +7,6 @@ const emptyCourse  = { title: '' };
 const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '' };
 
 function AdminPage() {
-  const { t } = useI18n();
   const [tab, setTab] = useState('teachers');
 
   const [teachers, setTeachers] = useState([]);
@@ -56,7 +54,7 @@ function AdminPage() {
   const loadGroups   = async () => { const r = await api.get('/admin/groups');   setGroups(r.data); };
 
   const handleError = (e) => {
-    setError(e.response?.data?.detail || t('error_unknown', 'Ошибка'));
+    setError(e.response?.data?.detail || 'Ошибка');
     setTimeout(() => setError(''), 4000);
   };
 
@@ -109,7 +107,7 @@ function AdminPage() {
 
   const createGroup = async () => {
     if (!isNewGroupValid) {
-      setError(t('group_required_all_fields', 'Заполните все поля группы'));
+      setError('Заполните все поля группы');
       setTimeout(() => setError(''), 4000);
       return;
     }
@@ -144,7 +142,7 @@ function AdminPage() {
     if (editingGroupId === null || isSavingGroup) return;
 
     if (!areAllGroupFieldsFilled(editingGroupDraft)) {
-      setError(t('group_required_all_fields', 'Заполните все поля группы'));
+      setError('Заполните все поля группы');
       setTimeout(() => setError(''), 4000);
       return;
     }
@@ -168,10 +166,10 @@ function AdminPage() {
   };
 
   const tabs = [
-    { key: 'teachers', label: t('admin_tab_teachers', 'Педагоги') },
-    { key: 'admins',   label: t('admin_tab_admins',   'Админы') },
-    { key: 'courses',  label: t('admin_tab_courses',  'Курсы') },
-    { key: 'groups',   label: t('admin_tab_groups',   'Группы') },
+    { key: 'teachers', label: 'Педагоги' },
+    { key: 'admins',   label: 'Админы' },
+    { key: 'courses',  label: 'Курсы' },
+    { key: 'groups',   label: 'Группы' },
   ];
 
   const teachersForGroups = [...teachers, ...admins].filter(
@@ -185,12 +183,12 @@ function AdminPage() {
   };
 
   const userFields = (data, setData) => [
-    ['username',          t('field_username', 'Логин'),    'text'],
-    ['password',          t('field_password', 'Пароль'),   'password'],
-    ['full_name',         t('field_fullname', 'Полное имя'), 'text'],
-    ['email',             t('field_email',    'Email'),    'text'],
-    ['phone',             t('field_phone',    'Телефон'),  'text'],
-    ['telegram_username', t('field_telegram', 'Telegram'), 'text'],
+    ['username',          'Логин',    'text'],
+    ['password',          'Пароль',   'password'],
+    ['full_name',         'Полное имя', 'text'],
+    ['email',             'Email',    'text'],
+    ['phone',             'Телефон',  'text'],
+    ['telegram_username', 'Telegram', 'text'],
   ].map(([field, label, type]) => (
     <input key={field} placeholder={label} style={s.input}
       type={type} autoComplete={field === 'username' || field === 'password' ? 'new-password' : 'off'}
@@ -202,11 +200,11 @@ function AdminPage() {
   const userTable = (list, onDelete) => (
     <table style={s.table}>
       <thead><tr>
-        <th>{t('field_fullname', 'Имя')}</th>
-        <th>{t('field_username', 'Логин')}</th>
-        <th>{t('field_email',    'Email')}</th>
-        <th>{t('field_phone',    'Телефон')}</th>
-        <th>{t('field_telegram', 'Telegram')}</th>
+        <th>{'Имя'}</th>
+        <th>{'Логин'}</th>
+        <th>{'Email'}</th>
+        <th>{'Телефон'}</th>
+        <th>{'Telegram'}</th>
         <th></th>
       </tr></thead>
       <tbody>
@@ -219,7 +217,7 @@ function AdminPage() {
             <td>{u.telegram_username}</td>
             <td>
               <button style={s.btnDel} onClick={() => onDelete(u.id)}>
-                {t('admin_delete', 'Удалить')}
+                {'Удалить'}
               </button>
             </td>
           </tr>
@@ -230,7 +228,7 @@ function AdminPage() {
 
   return (
     <div style={s.wrap}>
-      <h2>{t('admin_title', 'Администрирование')}</h2>
+      <h2>{'Администрирование'}</h2>
 
       {error && <div style={s.error}>{error}</div>}
 
@@ -246,12 +244,12 @@ function AdminPage() {
       {/* ПЕДАГОГИ */}
       {tab === 'teachers' && (
         <div>
-          <h3>{t('admin_teachers_new', 'Новый педагог')}</h3>
+          <h3>{'Новый педагог'}</h3>
           <div style={s.form}>
             {userFields(newTeacher, setNewTeacher)}
-            <button style={s.btn} onClick={createTeacher}>{t('admin_add', '+ Добавить')}</button>
+            <button style={s.btn} onClick={createTeacher}>{'+ Добавить'}</button>
           </div>
-          <h3>{t('admin_teachers_list', 'Список педагогов')}</h3>
+          <h3>{'Список педагогов'}</h3>
           {userTable(teachers, deleteTeacher)}
         </div>
       )}
@@ -259,12 +257,12 @@ function AdminPage() {
       {/* АДМИНЫ */}
       {tab === 'admins' && (
         <div>
-          <h3>{t('admin_admins_new', 'Новый администратор')}</h3>
+          <h3>{'Новый администратор'}</h3>
           <div style={s.form}>
             {userFields(newAdmin, setNewAdmin)}
-            <button style={s.btn} onClick={createAdmin}>{t('admin_add', '+ Добавить')}</button>
+            <button style={s.btn} onClick={createAdmin}>{'+ Добавить'}</button>
           </div>
-          <h3>{t('admin_admins_list', 'Список администраторов')}</h3>
+          <h3>{'Список администраторов'}</h3>
           {userTable(admins, deleteAdmin)}
         </div>
       )}
@@ -272,20 +270,20 @@ function AdminPage() {
       {/* КУРСЫ */}
       {tab === 'courses' && (
         <div>
-          <h3>{t('admin_courses_new', 'Новый курс')}</h3>
+          <h3>{'Новый курс'}</h3>
           <div style={s.form}>
-            <input placeholder={t('field_course_title', 'Название курса')} style={s.input}
+            <input placeholder={'Название курса'} style={s.input}
               autoComplete="off"
               value={newCourse.title}
               onChange={e => setNewCourse({ title: e.target.value })}
             />
-            <button style={s.btn} onClick={createCourse}>{t('admin_add', '+ Добавить')}</button>
+            <button style={s.btn} onClick={createCourse}>{'+ Добавить'}</button>
           </div>
-          <h3>{t('admin_courses_list', 'Список курсов')}</h3>
+          <h3>{'Список курсов'}</h3>
           <table style={s.table}>
             <thead><tr>
               <th>#</th>
-              <th>{t('field_course_title', 'Название')}</th>
+              <th>{'Название'}</th>
               <th></th>
             </tr></thead>
             <tbody>
@@ -295,7 +293,7 @@ function AdminPage() {
                   <td>{c.title}</td>
                   <td>
                     <button style={s.btnDel} onClick={() => deleteCourse(c.id)}>
-                      {t('admin_delete', 'Удалить')}
+                      {'Удалить'}
                     </button>
                   </td>
                 </tr>
@@ -308,24 +306,24 @@ function AdminPage() {
       {/* ГРУППЫ */}
       {tab === 'groups' && (
         <div>
-          <h3>{t('admin_groups_new', 'Новая группа')}</h3>
+          <h3>{'Новая группа'}</h3>
           <div style={s.form}>
-            <input placeholder={t('field_group_name', 'Название группы')} style={s.input}
+            <input placeholder={'Название группы'} style={s.input}
               autoComplete="off"
               value={newGroup.name}
               onChange={e => setNewGroup({ ...newGroup, name: e.target.value })}
             />
             <select style={s.input} value={newGroup.course_id}
               onChange={e => setNewGroup({ ...newGroup, course_id: e.target.value })}>
-              <option value="">{t('field_select_course', '— Курс —')}</option>
+              <option value="">{'— Курс —'}</option>
               {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
             <select style={s.input} value={newGroup.teacher_id}
               onChange={e => setNewGroup({ ...newGroup, teacher_id: e.target.value })}>
-              <option value="">{t('field_select_teacher', '— Педагог —')}</option>
+              <option value="">{'— Педагог —'}</option>
               {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
             </select>
-            <input placeholder={t('field_tg_chat', 'Telegram chat_id')} style={s.input}
+            <input placeholder={'Telegram chat_id'} style={s.input}
               autoComplete="off"
               value={newGroup.telegram_chat_id}
               onChange={e => setNewGroup({ ...newGroup, telegram_chat_id: e.target.value })}
@@ -335,19 +333,19 @@ function AdminPage() {
               onClick={createGroup}
               disabled={!isNewGroupValid}
             >
-              {t('admin_add', '+ Добавить')}
+              {'+ Добавить'}
             </button>
           </div>
-          <h3>{t('admin_groups_list', 'Список групп')}</h3>
+          <h3>{'Список групп'}</h3>
           <div ref={groupsTableRef}>
           <table style={s.table}>
             <thead><tr>
-              <th>{t('field_group_name',   'Название')}</th>
-              <th>{t('field_course_title', 'Курс')}</th>
-              <th>{t('field_teacher',      'Педагог')}</th>
-              <th>{t('field_tg_chat',      'Telegram chat_id')}</th>
-              <th>{t('field_invite',       'Invite-код')}</th>
-              <th>{t('field_status',       'Статус')}</th>
+              <th>{'Название'}</th>
+              <th>{'Курс'}</th>
+              <th>{'Педагог'}</th>
+              <th>{'Telegram chat_id'}</th>
+              <th>{'Invite-код'}</th>
+              <th>{'Статус'}</th>
               <th></th>
             </tr></thead>
             <tbody>
@@ -369,7 +367,7 @@ function AdminPage() {
                         value={editingGroupDraft.course_id}
                         onChange={e => setEditingGroupDraft({ ...editingGroupDraft, course_id: e.target.value })}
                       >
-                        <option value="">{t('field_select_course', '— Курс —')}</option>
+                        <option value="">{'— Курс —'}</option>
                         {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                       </select>
                     ) : courseLabelById(g.course_id)}
@@ -381,7 +379,7 @@ function AdminPage() {
                         value={editingGroupDraft.teacher_id}
                         onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
                       >
-                        <option value="">{t('field_select_teacher', '— Педагог —')}</option>
+                        <option value="">{'— Педагог —'}</option>
                         {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
                       </select>
                     ) : teacherLabelById(g.teacher_id)}
@@ -399,7 +397,7 @@ function AdminPage() {
                   <td>{g.status}</td>
                   <td>
                     <button style={s.btnDel} onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }}>
-                      {t('admin_delete', 'Удалить')}
+                      {'Удалить'}
                     </button>
                   </td>
                 </tr>

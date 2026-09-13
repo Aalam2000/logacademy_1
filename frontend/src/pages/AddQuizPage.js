@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useI18n } from '../context/I18nContext';
+import { useLang } from '../hooks/useLang';
 import api from '../api/auth';
 
 function AddQuizPage() {
@@ -11,7 +11,7 @@ function AddQuizPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams();
-  const { t, lang } = useI18n();
+  const { lang } = useLang();
 
   console.log('🌐 Текущий язык в AddQuizPage:', lang);
 
@@ -33,13 +33,13 @@ function AddQuizPage() {
             setQuestions([{ question: '', time: 60, answer: '' }]);
           }
         } catch (err) {
-          alert(t('add_quiz_load_error', 'Ошибка загрузки квиза'));
+          alert('Ошибка загрузки квиза');
           navigate('/dashboard/cards');
         }
       };
       fetchQuiz();
     }
-  }, [id, navigate, t]);
+  }, [id, navigate]);
 
   const addQuestion = () => {
     setQuestions([...questions, { question: '', time: 60, answer: '' }]);
@@ -65,9 +65,9 @@ function AddQuizPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim()) { alert(t('add_quiz_title_required', 'Введите название')); return; }
+    if (!title.trim()) { alert('Введите название'); return; }
     if (questions.some(q => !q.question.trim() || !q.answer.trim())) {
-      alert(t('add_quiz_fields_required', 'Все вопросы и ответы должны быть заполнены'));
+      alert('Все вопросы и ответы должны быть заполнены');
       return;
     }
     setLoading(true);
@@ -89,19 +89,19 @@ function AddQuizPage() {
       navigate('/dashboard/cards');
     } catch (err) {
       console.error('❌ Ошибка сохранения:', err.response?.data || err.message);
-      alert(t('add_quiz_save_error', 'Ошибка сохранения'));
+      alert('Ошибка сохранения');
       setLoading(false);
     }
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>{id ? t('add_quiz_edit_title', 'Редактировать квиз') : t('add_quiz_new_title', 'Создать новый квиз')}</h1>
+      <h1 style={styles.title}>{id ? 'Редактировать квиз' : 'Создать новый квиз'}</h1>
       <form onSubmit={handleSubmit} style={styles.form}>
-        <label style={styles.label}>{t('add_quiz_name', 'Название')}</label>
+        <label style={styles.label}>{'Название'}</label>
         <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={styles.input} required />
 
-        <label style={styles.label}>{t('add_quiz_topic', 'Тема')}</label>
+        <label style={styles.label}>{'Тема'}</label>
         <input type="text" value={topic} onChange={e => setTopic(e.target.value)} style={styles.input} />
 
         <label style={styles.label}>Тип квиза</label>
@@ -112,8 +112,8 @@ function AddQuizPage() {
         </select>
 
         <div style={styles.questionsHeader}>
-          <h3>{t('add_quiz_questions', 'Вопросы')}</h3>
-          <button type="button" onClick={addQuestion} style={styles.addBtn}>+ {t('add_quiz_add_question', 'Добавить вопрос')}</button>
+          <h3>{'Вопросы'}</h3>
+          <button type="button" onClick={addQuestion} style={styles.addBtn}>+ {'Добавить вопрос'}</button>
         </div>
 
         {questions.map((q, index) => (
@@ -121,7 +121,7 @@ function AddQuizPage() {
             <div style={styles.questionRow}>
               <input
                 type="text"
-                placeholder={t('add_quiz_question_placeholder', 'Вопрос')}
+                placeholder={'Вопрос'}
                 value={q.question}
                 onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
                 style={{...styles.input, flex: 2}}
@@ -129,7 +129,7 @@ function AddQuizPage() {
               />
               <input
                 type="number"
-                placeholder={t('add_quiz_time_placeholder', 'Время (сек)')}
+                placeholder={'Время (сек)'}
                 value={q.time}
                 onChange={(e) => handleQuestionChange(index, 'time', e.target.value)}
                 style={{...styles.input, width: '120px'}}
@@ -138,7 +138,7 @@ function AddQuizPage() {
               />
               <input
                 type="text"
-                placeholder={t('add_quiz_answer_placeholder', 'Ответ')}
+                placeholder={'Ответ'}
                 value={q.answer}
                 onChange={(e) => handleQuestionChange(index, 'answer', e.target.value)}
                 style={{...styles.input, flex: 2}}
@@ -151,10 +151,10 @@ function AddQuizPage() {
 
         <div style={styles.buttons}>
           <button type="submit" style={styles.submitBtn} disabled={loading}>
-            {loading ? t('add_quiz_saving', 'Сохранение...') : t('add_quiz_save', 'Сохранить')}
+            {loading ? 'Сохранение...' : 'Сохранить'}
           </button>
           <button type="button" onClick={() => navigate('/dashboard/cards')} style={styles.cancelBtn}>
-            {t('add_quiz_cancel', 'Отмена')}
+            {'Отмена'}
           </button>
         </div>
       </form>

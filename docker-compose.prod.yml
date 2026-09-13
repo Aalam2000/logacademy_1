@@ -10,6 +10,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./translations:/app/translations
+      - ./frontend/src:/app/frontend/src:ro
+      - ./.env.prod:/app/.env
 
   frontend:
     build:

@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function LessonPage() {
   const { lessonId } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
 
   const [lesson, setLesson] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -30,14 +28,14 @@ function LessonPage() {
         setGroups(groupsRes.data);
         setDateValue(toInputDateTime(lessonRes.data?.date));
       } catch (err) {
-        setError(err?.response?.data?.detail || t('lesson_load_error', 'Не удалось загрузить урок'));
+        setError(err?.response?.data?.detail || 'Не удалось загрузить урок');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [lessonId, t]);
+  }, [lessonId]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -53,7 +51,7 @@ function LessonPage() {
       setLesson(res.data);
       setDateValue(toInputDateTime(res.data?.date));
     } catch (err) {
-      setError(err?.response?.data?.detail || t('lesson_save_error', 'Не удалось сохранить изменения'));
+      setError(err?.response?.data?.detail || 'Не удалось сохранить изменения');
     } finally {
       setIsSaving(false);
     }
@@ -68,7 +66,7 @@ function LessonPage() {
       const res = await api.patch(`/lessons/${lesson.id}/open`);
       setLesson(prev => ({ ...prev, is_open: res.data.is_open }));
     } catch (err) {
-      setError(err?.response?.data?.detail || t('lesson_open_error', 'Не удалось изменить доступ к уроку'));
+      setError(err?.response?.data?.detail || 'Не удалось изменить доступ к уроку');
     } finally {
       setIsTogglingOpen(false);
     }
@@ -76,7 +74,7 @@ function LessonPage() {
 
   const handleDelete = async () => {
     if (!lesson || isDeleting) return;
-    const confirmed = window.confirm(t('lesson_delete_confirm', 'Удалить этот урок?'));
+    const confirmed = window.confirm('Удалить этот урок?');
     if (!confirmed) return;
 
     setIsDeleting(true);
@@ -85,19 +83,19 @@ function LessonPage() {
       await api.delete(`/lessons/${lesson.id}`);
       navigate('/dashboard');
     } catch (err) {
-      setError(err?.response?.data?.detail || t('lesson_delete_error', 'Не удалось удалить урок'));
+      setError(err?.response?.data?.detail || 'Не удалось удалить урок');
       setIsDeleting(false);
     }
   };
 
   if (loading) {
-    return <div style={s.wrap}>{t('loading', 'Загрузка...')}</div>;
+    return <div style={s.wrap}>{'Загрузка...'}</div>;
   }
 
   if (!lesson) {
     return (
       <div style={s.wrap}>
-        {error || t('lesson_not_found', 'Урок не найден')}
+        {error || 'Урок не найден'}
       </div>
     );
   }
@@ -107,21 +105,21 @@ function LessonPage() {
   return (
     <div style={s.wrap}>
       <button style={s.backBtn} onClick={() => navigate('/dashboard')}>
-        {t('back', 'Назад')}
+        {'Назад'}
       </button>
 
       <h2 style={{ marginTop: '0.75rem' }}>{lesson.title}</h2>
 
       <div style={s.meta}>
-        <span>{t('lesson_group', 'Группа')}: {groupName}</span>
+        <span>{'Группа'}: {groupName}</span>
         <span style={{ ...s.badge, background: lesson.is_open ? '#3B6D11' : '#6B7280' }}>
-          {lesson.is_open ? t('lesson_open', 'Открыт') : t('lesson_closed', 'Закрыт')}
+          {lesson.is_open ? 'Открыт' : 'Закрыт'}
         </span>
       </div>
 
       <form onSubmit={handleSave} style={s.form}>
         <label style={s.label}>
-          {t('lesson_start_datetime', 'Дата и время начала')}
+          {'Дата и время начала'}
           <input
             type="datetime-local"
             style={s.input}
@@ -132,17 +130,17 @@ function LessonPage() {
 
         <div style={s.actions}>
           <button type="submit" style={s.btn} disabled={isSaving}>
-            {isSaving ? t('saving', 'Сохранение...') : t('save', 'Сохранить')}
+            {isSaving ? 'Сохранение...' : 'Сохранить'}
           </button>
           <button type="button" style={s.btnOpen} onClick={handleToggleOpen} disabled={isTogglingOpen}>
             {isTogglingOpen
-              ? t('saving', 'Сохранение...')
+              ? 'Сохранение...'
               : lesson.is_open
-                ? t('lesson_close_btn', 'Закрыть урок')
-                : t('lesson_open_btn', 'Открыть урок')}
+                ? 'Закрыть урок'
+                : 'Открыть урок'}
           </button>
           <button type="button" style={s.btnDelete} onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? t('saving', 'Сохранение...') : t('delete', 'Удалить')}
+            {isDeleting ? 'Сохранение...' : 'Удалить'}
           </button>
         </div>
       </form>

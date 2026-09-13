@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import { useI18n } from '../context/I18nContext';
 import api from '../api/auth';
 
 function CardsPage() {
@@ -9,7 +8,6 @@ function CardsPage() {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { t, lang } = useI18n();
 
   useEffect(() => {
     fetchCards();
@@ -20,19 +18,19 @@ function CardsPage() {
       const res = await api.get('/quizzes/');
       setCards(res.data);
     } catch (err) {
-      alert(t('cards_load_error', 'Ошибка загрузки списка'));
+      alert('Ошибка загрузки списка');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t('cards_delete_confirm', 'Удалить квиз?'))) return;
+    if (!window.confirm('Удалить квиз?')) return;
     try {
       await api.delete(`/quizzes/${id}`);
       fetchCards();
     } catch (err) {
-      alert(t('cards_delete_error', 'Ошибка удаления'));
+      alert('Ошибка удаления');
     }
   };
 
@@ -43,7 +41,7 @@ function CardsPage() {
       win.document.write(res.data.html);
       win.document.close();
     } catch (err) {
-      alert(t('cards_open_error', 'Ошибка загрузки HTML'));
+      alert('Ошибка загрузки HTML');
     }
   };
 
@@ -57,36 +55,36 @@ function CardsPage() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>{t('cards_title', 'Квизы')}</h1>
+      <h1 style={styles.title}>{'Квизы'}</h1>
       <div style={styles.toolbar}>
         <input
           type="text"
-          placeholder={t('cards_filter_placeholder', 'Фильтр по названию...')}
+          placeholder={'Фильтр по названию...'}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           style={styles.filterInput}
         />
         <Button onClick={() => navigate('/dashboard/add-quiz')} style={styles.addBtn}>
-          ➕ {t('cards_add_button', 'Добавить')}
+          ➕ {'Добавить'}
         </Button>
       </div>
       <div style={styles.tableWrapper}>
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={{ width: '150px' }}>{t('cards_table_created', 'Дата создания')}</th>
-              <th>{t('cards_table_title', 'Название')}</th>
-              <th>{t('cards_table_topic', 'Тема')}</th>
-              <th style={{ width: '100px' }}>{t('cards_table_open', 'Открыть')}</th>
-              <th style={{ width: '100px' }}>{t('cards_table_edit', 'Редактировать')}</th>
-              <th style={{ width: '80px' }}>{t('cards_table_delete', 'Удалить')}</th>
+              <th style={{ width: '150px' }}>{'Дата создания'}</th>
+              <th>{'Название'}</th>
+              <th>{'Тема'}</th>
+              <th style={{ width: '100px' }}>{'Открыть'}</th>
+              <th style={{ width: '100px' }}>{'Редактировать'}</th>
+              <th style={{ width: '80px' }}>{'Удалить'}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" style={styles.empty}>{t('cards_loading', 'Загрузка...')}</td></tr>
+              <tr><td colSpan="6" style={styles.empty}>{'Загрузка...'}</td></tr>
             ) : filteredCards.length === 0 ? (
-              <tr><td colSpan="6" style={styles.empty}>{t('cards_empty', 'Нет опросников')}</td></tr>
+              <tr><td colSpan="6" style={styles.empty}>{'Нет опросников'}</td></tr>
             ) : (
               filteredCards.map(card => (
                 <tr key={card.id}>

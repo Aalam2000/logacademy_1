@@ -1,41 +1,63 @@
-from fastapi import APIRouter, HTTPException
-import os
-import json
+import logging
+from fastapi import APIRouter, Request, Response
 from autoi18n import Translator
-from dotenv import load_dotenv
 
-load_dotenv()
+logger = logging.getLogger("i18n-trace")
 
 router = APIRouter(prefix="/i18n", tags=["i18n"])
 
-translator = Translator(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    source_lang=os.getenv("SOURCE_LANG", "ru"),
-    target_langs=os.getenv("AUTO_I18N_TARGET_LANGS", "en,uk,az,tr").split(','),
-    cache_dir=os.getenv("AUTO_I18N_TRANSLATIONS_DIR", "./translations"),
-)
+# Единый экземпляр Translator для всего backend (используется также в
+# routers/quizzes.py для перевода HTML-шаблонов квизов).
+translator = Translator(env_path=".env")
+
 
 @router.get("/languages")
 async def get_languages():
-    target_langs = os.getenv("AUTO_I18N_TARGET_LANGS", "en,uk,az,tr").split(',')
-    source_lang = os.getenv("SOURCE_LANG", "ru")
     return {
-        "languages": [{"code": lang, "name": lang} for lang in [source_lang] + target_langs],
-        "default": source_lang
+        "languages": [
+            {"code": lang, "name": lang}
+            for lang in [translator.source_lang] + translator.get_target_langs()
+        ],
+        "default": translator.source_lang,
     }
+
 
 @router.get("/translations")
 async def get_translations(lang: str = "ru"):
-    file_path = os.path.join("translations", f"{lang}.json")
-    if os.path.isfile(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+    """Плоский словарь {оригинальный_текст: перевод} — именно его ждёт
+    клиентский рантайм (window.autoI18n.setLanguage) при смене языка."""
+    result = translator.get_translations_dict(lang)
+    logger.info(f"🔍[i18n-trace] 3f-BACKEND. GET /i18n/translations?lang={lang} -> {len(result)} переводов")
+    return result
 
-@router.post("/translate")
-async def translate_text(text: str, target_lang: str):
-    try:
-        translated = translator.translate_text(text, target_lang, page_name="api")
-        return {"translated": translated}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/runtime.js")
+async def get_runtime_js(request: Request, lang: str = "ru"):
+    """
+    Клиентский JS-рантайм для React-фронтенда — подключается один раз
+    в точке входа (frontend/src/index.js), без правок кода компонентов.
+
+    URL для смены языка внутри рантайма делаем абсолютным (а не
+    относительным) — сам скрипт выполняется в контексте страницы на
+    origin фронтенда (localhost:3000 в dev), а не на origin backend'а,
+    откуда он был загружен. Относительный fetch('/i18n/translations...')
+    ушёл бы на фронтенд-сервер и получил бы обратно его index.html вместо
+    JSON. Берём origin прямо из входящего запроса — так работает и в dev,
+    и при любой конфигурации reverse-proxy в проде.
+    """
+    base = str(request.base_url).rstrip("/")
+    translations_url_template = f"{base}/i18n/translations?lang={{lang}}"
+    logger.info(f"🔍[i18n-trace] 0-BACKEND. GET /i18n/runtime.js?lang={lang} | translations_url_template={translations_url_template}")
+    script = translator.build_runtime(
+        lang,
+        dynamic_dom_enabled=True,
+        translations_url_template=translations_url_template,
+    )
+    return Response(content=script, media_type="application/javascript")
+
+
+@router.post("/languages")
+async def add_language(lang: str):
+    """Добавить целевой язык 'на лету' (для будущей админки): дописывает
+    .env и сразу переводит на него весь известный реестр фраз."""
+    return translator.add_target_lang(lang)
