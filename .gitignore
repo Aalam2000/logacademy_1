@@ -4,6 +4,7 @@ node_modules/
 .idea/
 .junie/
 __pycache__/
+.pytest_cache/
 .env
 .env.dev
 .env.prod
@@ -12,3 +13,6 @@ docker-compose.dev.yml
 insert_user.sql
 frontend/build/
 frontend/node_modules
+frontend/certs/*.crt
+frontend/certs/*.key
+Claude outputs/

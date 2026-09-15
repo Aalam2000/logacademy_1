@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..database import get_db
-from ..models import Quiz, User
+from ..models import Quiz, User, Lesson, Group
 from ..schemas import QuizCreate, QuizOut
 from ..dependencies import get_current_user
 from .i18n import translator
@@ -15,6 +15,23 @@ router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 
 SOURCE_LANG = os.getenv("SOURCE_LANG", "ru")
 TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates" / "quiz"
+
+
+async def _verify_lesson_access(lesson_id: int, db: AsyncSession, current_user: User) -> None:
+    # Та же проверка владения, что и в routers/lessons.py: admin — любой
+    # урок, teacher — только урок своей группы.
+    result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
+    lesson = result.scalar_one_or_none()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Урок не найден")
+
+    group_query = select(Group).where(Group.id == lesson.group_id)
+    if current_user.role != "admin":
+        group_query = group_query.where(Group.teacher_id == current_user.id)
+
+    group = await db.execute(group_query)
+    if not group.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="Нет доступа к этому уроку")
 
 
 
@@ -49,6 +66,9 @@ async def get_quizzes(db: AsyncSession = Depends(get_db), current_user: User = D
 
 @router.post("/", response_model=QuizOut)
 async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if quiz_data.lesson_id is not None:
+        await _verify_lesson_access(quiz_data.lesson_id, db, current_user)
+
     print(f"📥 Received lang: {quiz_data.lang}")
     template_type = quiz_data.template_type or "flash"
     questions_dict = [q.model_dump() for q in quiz_data.questions]
@@ -68,7 +88,8 @@ async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db),
         template_type=template_type,
         html_content=html,
         html_translations={},
-        created_by=current_user.id
+        created_by=current_user.id,
+        lesson_id=quiz_data.lesson_id
     )
     db.add(new_quiz)
     await db.commit()

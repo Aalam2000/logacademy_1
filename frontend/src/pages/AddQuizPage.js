@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLang } from '../hooks/useLang';
+import Button from '../components/Button';
 import api from '../api/auth';
 
 function AddQuizPage() {
@@ -11,7 +12,13 @@ function AddQuizPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const lessonId = searchParams.get('lessonId');
   const { lang } = useLang();
+
+  // Куда возвращаться после сохранения/отмены: если пришли из урока — назад
+  // в урок (квиз уже будет привязан), иначе — в общий список квизов.
+  const returnPath = lessonId ? `/dashboard/lessons/${lessonId}` : '/dashboard/cards';
 
   console.log('🌐 Текущий язык в AddQuizPage:', lang);
 
@@ -77,7 +84,8 @@ function AddQuizPage() {
         topic,
         template_type: templateType,
         questions,
-        lang  // <-- передаём текущий язык
+        lang,  // <-- передаём текущий язык
+        ...(!id && lessonId ? { lesson_id: Number(lessonId) } : {}),
       };
       console.log('📤 Отправка payload:', payload);
 
@@ -86,7 +94,7 @@ function AddQuizPage() {
       } else {
         await api.post('/quizzes/', payload);
       }
-      navigate('/dashboard/cards');
+      navigate(returnPath);
     } catch (err) {
       console.error('❌ Ошибка сохранения:', err.response?.data || err.message);
       alert('Ошибка сохранения');
@@ -95,36 +103,39 @@ function AddQuizPage() {
   };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>{id ? 'Редактировать квиз' : 'Создать новый квиз'}</h1>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <label style={styles.label}>{'Название'}</label>
-        <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={styles.input} required />
+    <div className="page page--wide">
+      <h1 className="page-title">{id ? 'Редактировать квиз' : 'Создать новый квиз'}</h1>
+      {!id && lessonId && (
+        <p className="hint-text">{'Квиз будет автоматически привязан к этому уроку.'}</p>
+      )}
+      <form onSubmit={handleSubmit} className="form-stack">
+        <label className="form-label">{'Название'}</label>
+        <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="input input--lg" required />
 
-        <label style={styles.label}>{'Тема'}</label>
-        <input type="text" value={topic} onChange={e => setTopic(e.target.value)} style={styles.input} />
+        <label className="form-label">{'Тема'}</label>
+        <input type="text" value={topic} onChange={e => setTopic(e.target.value)} className="input input--lg" />
 
-        <label style={styles.label}>Тип квиза</label>
-        <select value={templateType} onChange={e => setTemplateType(e.target.value)} style={styles.input}>
+        <label className="form-label">Тип квиза</label>
+        <select value={templateType} onChange={e => setTemplateType(e.target.value)} className="input input--lg">
           <option value="flash">Flash (вопрос-ответ)</option>
           <option value="live">Live (голосование)</option>
           <option value="sprint">Sprint (скоростной)</option>
         </select>
 
-        <div style={styles.questionsHeader}>
+        <div className="questions-header">
           <h3>{'Вопросы'}</h3>
-          <button type="button" onClick={addQuestion} style={styles.addBtn}>+ {'Добавить вопрос'}</button>
+          <Button type="button" onClick={addQuestion} className="btn--pill">+ {'Добавить вопрос'}</Button>
         </div>
 
         {questions.map((q, index) => (
-          <div key={index} style={styles.questionBlock}>
-            <div style={styles.questionRow}>
+          <div key={index} className="question-card">
+            <div className="question-row">
               <input
                 type="text"
                 placeholder={'Вопрос'}
                 value={q.question}
                 onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
-                style={{...styles.input, flex: 2}}
+                className="input input--lg input--grow"
                 required
               />
               <input
@@ -132,7 +143,7 @@ function AddQuizPage() {
                 placeholder={'Время (сек)'}
                 value={q.time}
                 onChange={(e) => handleQuestionChange(index, 'time', e.target.value)}
-                style={{...styles.input, width: '120px'}}
+                className="input input--lg input--time"
                 min="5"
                 required
               />
@@ -141,41 +152,25 @@ function AddQuizPage() {
                 placeholder={'Ответ'}
                 value={q.answer}
                 onChange={(e) => handleQuestionChange(index, 'answer', e.target.value)}
-                style={{...styles.input, flex: 2}}
+                className="input input--lg input--grow"
                 required
               />
-              <button type="button" onClick={() => removeQuestion(index)} style={styles.removeBtn}>✕</button>
+              <Button type="button" onClick={() => removeQuestion(index)} variant="danger" className="btn--icon-circle">✕</Button>
             </div>
           </div>
         ))}
 
-        <div style={styles.buttons}>
-          <button type="submit" style={styles.submitBtn} disabled={loading}>
+        <div className="form-actions">
+          <Button type="submit" className="btn--pill" disabled={loading}>
             {loading ? 'Сохранение...' : 'Сохранить'}
-          </button>
-          <button type="button" onClick={() => navigate('/dashboard/cards')} style={styles.cancelBtn}>
+          </Button>
+          <Button type="button" onClick={() => navigate(returnPath)} variant="secondary" className="btn--pill">
             {'Отмена'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
   );
 }
-
-const styles = {
-  container: { padding: '2rem', maxWidth: '800px', margin: '0 auto' },
-  title: { fontSize: '2rem', fontWeight: '900', color: '#1a2e4a', marginBottom: '2rem' },
-  form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-  label: { fontWeight: 'bold', color: '#1a2e4a' },
-  input: { padding: '10px', borderRadius: '12px', border: '2px solid #c8f0ea', fontSize: '1rem' },
-  questionsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' },
-  addBtn: { background: '#3dbdaa', color: 'white', border: 'none', padding: '6px 16px', borderRadius: '20px', cursor: 'pointer' },
-  questionBlock: { background: '#f9fcfc', padding: '1rem', borderRadius: '12px', border: '1px solid #c8f0ea' },
-  questionRow: { display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' },
-  removeBtn: { background: '#e05050', color: 'white', border: 'none', borderRadius: '50%', width: '30px', height: '30px', fontSize: '1rem', cursor: 'pointer' },
-  buttons: { display: 'flex', gap: '1rem', marginTop: '1rem' },
-  submitBtn: { background: '#3dbdaa', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '20px', fontSize: '1rem', cursor: 'pointer' },
-  cancelBtn: { background: '#e0e0e0', color: '#333', border: 'none', padding: '10px 24px', borderRadius: '20px', fontSize: '1rem', cursor: 'pointer' },
-};
 
 export default AddQuizPage;

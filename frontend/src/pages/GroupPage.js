@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
+import Modal from '../components/Modal';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
 
@@ -97,15 +98,15 @@ function GroupPage() {
     }
   };
 
-  if (loading) return <div style={s.wrap}>{'Загрузка...'}</div>;
+  if (loading) return <div className="page page--group">{'Загрузка...'}</div>;
 
   if (!group) {
     return (
-      <div style={s.wrap}>
-        <button style={s.backBtn} onClick={() => navigate('/dashboard')}>
+      <div className="page page--group">
+        <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
           {'Назад'}
         </button>
-        <div style={{ marginTop: '1rem', color: '#B91C1C' }}>
+        <div className="error-text error-text--muted">
           {'Группа не найдена'}
         </div>
       </div>
@@ -113,43 +114,43 @@ function GroupPage() {
   }
 
   return (
-    <div style={s.wrap}>
-      <button style={s.backBtn} onClick={() => navigate('/dashboard')}>
+    <div className="page page--group">
+      <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
         {'Назад'}
       </button>
 
       {/* Шапка группы */}
-      <div style={s.header}>
+      <div className="group-header">
         <div>
-          <h2 style={{ margin: '0 0 0.25rem 0' }}>{group.name}</h2>
-          <div style={s.meta}>
+          <h2 className="group-header__title">{group.name}</h2>
+          <div className="meta-row">
             <span>{'Курс'}: <b>{courseName}</b></span>
             <span>·</span>
             <span>{'Преподаватель'}: <b>{group.teacher_name || '—'}</b></span>
           </div>
         </div>
-        <div style={s.headerActions}>
-          <button style={s.btnQR} onClick={() => setIsQRModalOpen(true)}>
+        <div className="button-row">
+          <button className="btn btn--info btn--compact" onClick={() => setIsQRModalOpen(true)}>
             {'QR для регистрации'}
           </button>
-          <button style={s.btnStudents} onClick={() => setIsStudentsModalOpen(true)}>
+          <button className="btn btn--compact" onClick={() => setIsStudentsModalOpen(true)}>
             {'Ученики'} ({group.student_count ?? 0})
           </button>
         </div>
       </div>
 
       {/* Тулбар уроков */}
-      <div style={s.toolbar}>
-        <h3 style={{ margin: 0 }}>{'Уроки'}</h3>
-        <button style={s.btn} onClick={openCreateModal}>
+      <div className="toolbar">
+        <h3 className="toolbar__title">{'Уроки'}</h3>
+        <button className="btn" onClick={openCreateModal}>
           {'+ Урок'}
         </button>
       </div>
 
-      {error && <div style={s.error}>{error}</div>}
+      {error && <div className="error-text error-text--top">{error}</div>}
 
       {/* Таблица уроков */}
-      <table style={s.table}>
+      <table className="table">
         <thead>
           <tr>
             <th>{'Дата'}</th>
@@ -160,7 +161,7 @@ function GroupPage() {
         <tbody>
           {visible.length === 0 && (
             <tr>
-              <td colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
+              <td colSpan={3} className="table__empty">
                 {'Уроков нет'}
               </td>
             </tr>
@@ -170,16 +171,16 @@ function GroupPage() {
             return (
               <tr
                 key={l.id}
-                style={{ ...s.row, background: today ? '#FFF3CD' : 'transparent' }}
+                className={`table__row--clickable${today ? ' table__row--today' : ''}`}
                 onClick={() => navigate(`/dashboard/lessons/${l.id}`)}
               >
                 <td>
                   {l.date ? new Date(l.date).toLocaleDateString('ru-RU') : '—'}
-                  {today && <span style={s.todayBadge}>{'Сегодня'}</span>}
+                  {today && <span className="badge badge--today badge--inline">{'Сегодня'}</span>}
                 </td>
                 <td>{l.title}</td>
                 <td>
-                  <span style={{ ...s.badge, background: l.is_open ? '#3B6D11' : '#6B7280' }}>
+                  <span className={`badge ${l.is_open ? 'badge--open' : 'badge--closed'}`}>
                     {l.is_open ? 'Открыт' : 'Закрыт'}
                   </span>
                 </td>
@@ -191,34 +192,35 @@ function GroupPage() {
 
       {/* Модалка создания урока */}
       {isModalOpen && (
-        <div style={s.modalBackdrop}>
-          <div style={s.modal}>
-            <h3 style={s.modalTitle}>{'Новый урок'}</h3>
-            <form onSubmit={handleCreateLesson} style={s.modalForm}>
-              <label style={s.label}>
-                {'Дата и время начала'}
-                <input
-                  type="datetime-local"
-                  style={s.input}
-                  value={newLessonDate}
-                  onChange={e => setNewLessonDate(e.target.value)}
-                  required
-                />
-              </label>
+        <Modal
+          title={'Новый урок'}
+          onClose={closeCreateModal}
+          footer={(
+            <>
+              <button type="button" className="btn btn--secondary" onClick={closeCreateModal}>
+                {'Отмена'}
+              </button>
+              <button type="submit" form="new-lesson-form" className="btn" disabled={isCreating}>
+                {isCreating ? 'Сохранение...' : 'Создать'}
+              </button>
+            </>
+          )}
+        >
+          <form id="new-lesson-form" onSubmit={handleCreateLesson} className="form-stack">
+            <label className="field-label">
+              {'Дата и время начала'}
+              <input
+                type="datetime-local"
+                className="input"
+                value={newLessonDate}
+                onChange={e => setNewLessonDate(e.target.value)}
+                required
+              />
+            </label>
 
-              {createError && <div style={s.error}>{createError}</div>}
-
-              <div style={s.modalActions}>
-                <button type="button" style={s.btnSecondary} onClick={closeCreateModal}>
-                  {'Отмена'}
-                </button>
-                <button type="submit" style={s.btn} disabled={isCreating}>
-                  {isCreating ? 'Сохранение...' : 'Создать'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            {createError && <div className="form-field__error">{createError}</div>}
+          </form>
+        </Modal>
       )}
       {isQRModalOpen && (
         <QRModal group={group} onClose={() => setIsQRModalOpen(false)} />
@@ -234,30 +236,5 @@ function GroupPage() {
     </div>
   );
 }
-
-const s = {
-  wrap: { padding: '2rem', maxWidth: '960px' },
-  backBtn: { padding: '6px 14px', border: '1px solid #c8f0ea', borderRadius: '8px', background: 'white', cursor: 'pointer', marginBottom: '1rem' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' },
-  meta: { display: 'flex', gap: '8px', fontSize: '0.9rem', color: '#4B5563' },
-  headerActions: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-  btnQR: { padding: '8px 16px', background: '#2E5FA3', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  btnStudents: { padding: '8px 16px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  toolbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
-  btn: { padding: '8px 20px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  btnSecondary: { padding: '8px 20px', background: '#e5e7eb', color: '#111827', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-  row: { borderBottom: '1px solid #e8f4f0', cursor: 'pointer' },
-  todayBadge: { marginLeft: '8px', padding: '2px 8px', borderRadius: '10px', background: '#F59E0B', color: 'white', fontSize: '0.7rem', fontWeight: 600 },
-  badge: { padding: '2px 10px', borderRadius: '10px', color: 'white', fontSize: '0.75rem', fontWeight: 600 },
-  error: { color: '#B91C1C', fontSize: '0.85rem', marginBottom: '0.75rem' },
-  modalBackdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { width: '100%', maxWidth: '420px', background: 'white', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 12px 32px rgba(0,0,0,0.2)' },
-  modalTitle: { margin: '0 0 1rem 0' },
-  modalForm: { display: 'flex', flexDirection: 'column', gap: '0.8rem' },
-  label: { display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.9rem', color: '#111827' },
-  input: { padding: '8px 12px', border: '1px solid #c8f0ea', borderRadius: '8px', fontSize: '0.9rem' },
-  modalActions: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '0.6rem' },
-};
 
 export default GroupPage;

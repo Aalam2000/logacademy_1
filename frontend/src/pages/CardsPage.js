@@ -54,46 +54,46 @@ function CardsPage() {
   );
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>{'Квизы'}</h1>
-      <div style={styles.toolbar}>
+    <div className="page page--full">
+      <h1 className="page-title">{'Квизы'}</h1>
+      <div className="toolbar toolbar--start">
         <input
           type="text"
           placeholder={'Фильтр по названию...'}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          style={styles.filterInput}
+          className="input input--filter"
         />
-        <Button onClick={() => navigate('/dashboard/add-quiz')} style={styles.addBtn}>
+        <Button onClick={() => navigate('/dashboard/add-quiz')} className="btn--pill btn--bold">
           ➕ {'Добавить'}
         </Button>
       </div>
-      <div style={styles.tableWrapper}>
-        <table style={styles.table}>
+      <div className="table-scroll">
+        <table className="table table--card">
           <thead>
             <tr>
-              <th style={{ width: '150px' }}>{'Дата создания'}</th>
+              <th className="table__col--date">{'Дата создания'}</th>
               <th>{'Название'}</th>
               <th>{'Тема'}</th>
-              <th style={{ width: '100px' }}>{'Открыть'}</th>
-              <th style={{ width: '100px' }}>{'Редактировать'}</th>
-              <th style={{ width: '80px' }}>{'Удалить'}</th>
+              <th className="table__col--action">{'Открыть'}</th>
+              <th className="table__col--action">{'Редактировать'}</th>
+              <th className="table__col--delete">{'Удалить'}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" style={styles.empty}>{'Загрузка...'}</td></tr>
+              <tr><td colSpan="6" className="table__empty">{'Загрузка...'}</td></tr>
             ) : filteredCards.length === 0 ? (
-              <tr><td colSpan="6" style={styles.empty}>{'Нет опросников'}</td></tr>
+              <tr><td colSpan="6" className="table__empty">{'Нет опросников'}</td></tr>
             ) : (
               filteredCards.map(card => (
                 <tr key={card.id}>
-                  <td style={{ whiteSpace: 'nowrap' }}>{new Date(card.created_at).toLocaleDateString()}</td>
+                  <td className="nowrap">{new Date(card.created_at).toLocaleDateString()}</td>
                   <td>{card.title}</td>
                   <td>{card.topic || '—'}</td>
-                  <td><Button onClick={() => handleOpen(card.id)} style={styles.smallBtn}>📂</Button></td>
-                  <td><Button onClick={() => handleEdit(card.id)} style={styles.smallBtn}>✏️</Button></td>
-                  <td><Button onClick={() => handleDelete(card.id)} style={{ ...styles.smallBtn, background: '#e05050' }}>🗑️</Button></td>
+                  <td><Button onClick={() => handleOpen(card.id)} className="btn--sm">📂</Button></td>
+                  <td><Button onClick={() => handleEdit(card.id)} className="btn--sm">✏️</Button></td>
+                  <td><Button onClick={() => handleDelete(card.id)} variant="danger" className="btn--sm">🗑️</Button></td>
                 </tr>
               ))
             )}
@@ -103,26 +103,5 @@ function CardsPage() {
     </div>
   );
 }
-
-const styles = {
-  container: { padding: '2rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' },
-  title: { fontSize: '2rem', fontWeight: '900', color: '#1a2e4a', marginBottom: '1.5rem' },
-  toolbar: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center', flexWrap: 'wrap' },
-  filterInput: { padding: '8px 12px', borderRadius: '12px', border: '2px solid #c8f0ea', fontSize: '1rem', flex: '1 1 200px' },
-  addBtn: { background: '#3dbdaa', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '20px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' },
-  tableWrapper: { overflowX: 'auto', width: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', minWidth: '600px' },
-  smallBtn: {
-    background: '#3dbdaa',
-    color: 'white',
-    border: 'none',
-    padding: '4px 8px',
-    borderRadius: '8px',
-    fontSize: '0.8rem',
-    cursor: 'pointer',
-    minWidth: '30px',
-  },
-  empty: { textAlign: 'center', padding: '2rem', color: '#6a8aaa' },
-};
 
 export default CardsPage;

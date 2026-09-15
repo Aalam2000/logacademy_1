@@ -32,17 +32,17 @@ function GroupsPage() {
   const courseName = (courseId) =>
     courses.find(c => c.id === courseId)?.title || '—';
 
-  if (loading) return <div style={s.wrap}>{'Загрузка...'}</div>;
+  if (loading) return <div className="page">{'Загрузка...'}</div>;
 
   return (
-    <div style={s.wrap}>
-      <div style={s.toolbar}>
-        <h2 style={{ margin: 0 }}>{'Мои группы'}</h2>
+    <div className="page">
+      <div className="toolbar">
+        <h2 className="toolbar__title">{'Мои группы'}</h2>
       </div>
 
-      {error && <div style={s.error}>{error}</div>}
+      {error && <div className="error-text error-text--top">{error}</div>}
 
-      <table style={s.table}>
+      <table className="table">
         <thead>
           <tr>
             <th>{'Название группы'}</th>
@@ -53,7 +53,7 @@ function GroupsPage() {
         <tbody>
           {groups.length === 0 && (
             <tr>
-              <td colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
+              <td colSpan={3} className="table__empty">
                 {'Групп пока нет'}
               </td>
             </tr>
@@ -61,7 +61,7 @@ function GroupsPage() {
           {groups.map(g => (
             <tr
               key={g.id}
-              style={s.row}
+              className="table__row--clickable"
               onClick={() => navigate(`/dashboard/groups/${g.id}`)}
             >
               <td>{g.name}</td>
@@ -74,14 +74,5 @@ function GroupsPage() {
     </div>
   );
 }
-
-const s = {
-  wrap:    { padding: '2rem' },
-  toolbar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
-  btn:     { padding: '8px 20px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-  row:     { borderBottom: '1px solid #e8f4f0', cursor: 'pointer' },
-  error:   { color: '#B91C1C', fontSize: '0.9rem', marginBottom: '1rem' },
-};
 
 export default GroupsPage;

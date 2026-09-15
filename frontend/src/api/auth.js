@@ -19,3 +19,21 @@ api.interceptors.request.use(
 );
 
 export default api;
+
+// --- Роутер /auth (backend/app/routers/auth.py) ---
+
+export function login(username, password) {
+  return api.post('/auth/login', { username, password }).then(res => res.data);
+}
+
+export function getMe() {
+  return api.get('/auth/me').then(res => res.data);
+}
+
+export function updateMe(data) {
+  return api.put('/auth/me', data).then(res => res.data);
+}
+
+export function registerStudent(data) {
+  return api.post('/auth/register/student', data).then(res => res.data);
+}

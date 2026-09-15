@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
+import Modal from '../components/Modal';
 
 function TeacherHome() {
   const navigate = useNavigate();
@@ -102,25 +103,25 @@ function TeacherHome() {
   };
 
   return (
-    <div style={s.wrap}>
-      <div style={s.toolbar}>
-        <h2 style={{margin:0}}>{'Уроки'}</h2>
-        <div style={s.filters}>
-          <select style={s.select} value={filterGroup} onChange={e => handleGroupChange(e.target.value)}>
+    <div className="page">
+      <div className="toolbar toolbar--start">
+        <h2 className="toolbar__title">{'Уроки'}</h2>
+        <div className="toolbar__filters">
+          <select className="input" value={filterGroup} onChange={e => handleGroupChange(e.target.value)}>
             <option value="">{'— Все группы —'}</option>
             {availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
-          <select style={s.select} value={filterCourse} onChange={e => { setFilterCourse(e.target.value); setFilterGroup(''); }}>
+          <select className="input" value={filterCourse} onChange={e => { setFilterCourse(e.target.value); setFilterGroup(''); }}>
             <option value="">{'— Все курсы —'}</option>
             {availableCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
           </select>
         </div>
-        <button style={s.btn} onClick={openCreateModal}>
+        <button className="btn" onClick={openCreateModal}>
           {'+ Урок'}
         </button>
       </div>
 
-      <table style={s.table}>
+      <table className="table">
         <thead>
           <tr>
             <th>{'Дата'}</th>
@@ -132,18 +133,18 @@ function TeacherHome() {
         </thead>
         <tbody>
           {visible.length === 0 && (
-            <tr><td colSpan={5} style={{textAlign:'center', padding:'2rem', color:'#6B7280'}}>
+            <tr><td colSpan={5} className="table__empty">
               {'Уроков нет'}
             </td></tr>
           )}
           {visible.map(l => (
-            <tr key={l.id} style={s.row} onClick={() => navigate(`/dashboard/lessons/${l.id}`)}>
+            <tr key={l.id} className="table__row--clickable" onClick={() => navigate(`/dashboard/lessons/${l.id}`)}>
               <td>{l.date ? new Date(l.date).toLocaleDateString('ru-RU') : '—'}</td>
               <td>{l.title}</td>
               <td>{groupName(l.group_id)}</td>
               <td>{courseName(l.group_id)}</td>
               <td>
-                <span style={{...s.badge, background: l.is_open ? '#3B6D11' : '#6B7280'}}>
+                <span className={`badge ${l.is_open ? 'badge--open' : 'badge--closed'}`}>
                   {l.is_open ? 'Открыт' : 'Закрыт'}
                 </span>
               </td>
@@ -153,70 +154,51 @@ function TeacherHome() {
       </table>
 
       {isModalOpen && (
-        <div style={s.modalBackdrop}>
-          <div style={s.modal}>
-            <h3 style={s.modalTitle}>{'Новый урок'}</h3>
-            <form onSubmit={handleCreateLesson} style={s.modalForm}>
-              <label style={s.label}>
-                {'Группа'}
-                <select
-                  style={s.select}
-                  value={newLessonGroup}
-                  onChange={e => setNewLessonGroup(e.target.value)}
-                  required
-                >
-                  <option value="">{'— Выберите группу —'}</option>
-                  {availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-              </label>
+        <Modal
+          title={'Новый урок'}
+          onClose={closeCreateModal}
+          footer={(
+            <>
+              <button type="button" className="btn btn--secondary" onClick={closeCreateModal}>
+                {'Отмена'}
+              </button>
+              <button type="submit" form="new-lesson-form" className="btn" disabled={isCreating}>
+                {isCreating ? 'Сохранение...' : 'Создать'}
+              </button>
+            </>
+          )}
+        >
+          <form id="new-lesson-form" onSubmit={handleCreateLesson} className="form-stack">
+            <label className="field-label">
+              {'Группа'}
+              <select
+                className="input"
+                value={newLessonGroup}
+                onChange={e => setNewLessonGroup(e.target.value)}
+                required
+              >
+                <option value="">{'— Выберите группу —'}</option>
+                {availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </label>
 
-              <label style={s.label}>
-                {'Дата и время начала'}
-                <input
-                  type="datetime-local"
-                  style={s.input}
-                  value={newLessonDate}
-                  onChange={e => setNewLessonDate(e.target.value)}
-                  required
-                />
-              </label>
+            <label className="field-label">
+              {'Дата и время начала'}
+              <input
+                type="datetime-local"
+                className="input"
+                value={newLessonDate}
+                onChange={e => setNewLessonDate(e.target.value)}
+                required
+              />
+            </label>
 
-              {createError && <div style={s.error}>{createError}</div>}
-
-              <div style={s.modalActions}>
-                <button type="button" style={s.btnSecondary} onClick={closeCreateModal}>
-                  {'Отмена'}
-                </button>
-                <button type="submit" style={s.btn} disabled={isCreating}>
-                  {isCreating ? 'Сохранение...' : 'Создать'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            {createError && <div className="form-field__error">{createError}</div>}
+          </form>
+        </Modal>
       )}
     </div>
   );
 }
-
-const s = {
-  wrap:    { padding: '2rem' },
-  toolbar: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
-  filters: { display: 'flex', gap: '8px' },
-  select:  { padding: '8px 12px', border: '1px solid #c8f0ea', borderRadius: '8px', fontSize: '0.9rem' },
-  btn:     { padding: '8px 20px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  btnSecondary: { padding: '8px 20px', background: '#e5e7eb', color: '#111827', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-  row:     { borderBottom: '1px solid #e8f4f0', cursor: 'pointer' },
-  badge:   { padding: '2px 10px', borderRadius: '10px', color: 'white', fontSize: '0.75rem', fontWeight: 600 },
-  modalBackdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { width: '100%', maxWidth: '420px', background: 'white', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 12px 32px rgba(0,0,0,0.2)' },
-  modalTitle: { margin: '0 0 1rem 0' },
-  modalForm: { display: 'flex', flexDirection: 'column', gap: '0.8rem' },
-  label: { display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.9rem', color: '#111827' },
-  input: { padding: '8px 12px', border: '1px solid #c8f0ea', borderRadius: '8px', fontSize: '0.9rem' },
-  error: { color: '#B91C1C', fontSize: '0.85rem' },
-  modalActions: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '0.6rem' },
-};
 
 export default TeacherHome;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import Modal from './Modal';
 
 function QRModal({ group, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -26,53 +27,30 @@ function QRModal({ group, onClose }) {
   };
 
   return (
-    <div style={s.backdrop} onClick={onClose}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
-        <h3 style={s.title}>{'Регистрация в группу'}</h3>
-        <p style={s.groupName}>{group.name}</p>
+    <Modal title={'Регистрация в группу'} onClose={onClose} centered>
+      <p className="text-muted">{group.name}</p>
 
-        <div style={s.qrWrap}>
-          <QRCodeSVG value={inviteLink} size={220} />
-        </div>
-
-        <div style={s.linkRow}>
-          <input
-            style={s.linkInput}
-            value={inviteLink}
-            readOnly
-            onFocus={e => e.target.select()}
-          />
-          <button style={s.copyBtn} onClick={handleCopy}>
-            {copied ? 'Скопировано' : 'Копировать'}
-          </button>
-        </div>
-
-        <p style={s.hint}>
-          {'Отправьте эту ссылку или QR-код ученикам для регистрации в группе'}
-        </p>
-
-        <div style={s.actions}>
-          <button style={s.closeBtn} onClick={onClose}>
-            {'Закрыть'}
-          </button>
-        </div>
+      <div className="qr-frame">
+        <QRCodeSVG value={inviteLink} size={220} />
       </div>
-    </div>
+
+      <div className="input-row">
+        <input
+          className="input input--soft"
+          value={inviteLink}
+          readOnly
+          onFocus={e => e.target.select()}
+        />
+        <button className="btn" onClick={handleCopy}>
+          {copied ? 'Скопировано' : 'Копировать'}
+        </button>
+      </div>
+
+      <p className="hint-text">
+        {'Отправьте эту ссылку или QR-код ученикам для регистрации в группе'}
+      </p>
+    </Modal>
   );
 }
-
-const s = {
-  backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { width: '100%', maxWidth: '420px', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 12px 32px rgba(0,0,0,0.2)', textAlign: 'center' },
-  title: { margin: '0 0 0.25rem 0' },
-  groupName: { margin: '0 0 1rem 0', color: '#4B5563', fontSize: '0.9rem' },
-  qrWrap: { display: 'flex', justifyContent: 'center', padding: '1rem', background: '#f8fdfc', borderRadius: '12px', border: '1px solid #e8f4f0' },
-  linkRow: { display: 'flex', gap: '8px', marginTop: '1rem' },
-  linkInput: { flex: 1, padding: '8px 12px', border: '1px solid #c8f0ea', borderRadius: '8px', fontSize: '0.85rem', background: '#f8fdfc' },
-  copyBtn: { padding: '8px 16px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' },
-  hint: { fontSize: '0.8rem', color: '#6B7280', marginTop: '0.75rem' },
-  actions: { marginTop: '1rem' },
-  closeBtn: { padding: '8px 24px', background: '#e5e7eb', color: '#111827', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-};
 
 export default QRModal;

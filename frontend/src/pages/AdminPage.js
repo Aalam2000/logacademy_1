@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Button from '../components/Button';
 import api from '../api/auth';
 
 const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '' };
@@ -190,7 +191,7 @@ function AdminPage() {
     ['phone',             'Телефон',  'text'],
     ['telegram_username', 'Telegram', 'text'],
   ].map(([field, label, type]) => (
-    <input key={field} placeholder={label} style={s.input}
+    <input key={field} placeholder={label} className="input input--min160"
       type={type} autoComplete={field === 'username' || field === 'password' ? 'new-password' : 'off'}
       value={data[field]}
       onChange={e => setData({ ...data, [field]: e.target.value })}
@@ -198,7 +199,7 @@ function AdminPage() {
   ));
 
   const userTable = (list, onDelete) => (
-    <table style={s.table}>
+    <table className="table">
       <thead><tr>
         <th>{'Имя'}</th>
         <th>{'Логин'}</th>
@@ -216,9 +217,9 @@ function AdminPage() {
             <td>{u.phone}</td>
             <td>{u.telegram_username}</td>
             <td>
-              <button style={s.btnDel} onClick={() => onDelete(u.id)}>
+              <Button onClick={() => onDelete(u.id)} variant="danger" className="btn--del-compact">
                 {'Удалить'}
-              </button>
+              </Button>
             </td>
           </tr>
         ))}
@@ -227,15 +228,15 @@ function AdminPage() {
   );
 
   return (
-    <div style={s.wrap}>
+    <div className="page">
       <h2>{'Администрирование'}</h2>
 
-      {error && <div style={s.error}>{error}</div>}
+      {error && <div className="banner banner--error">{error}</div>}
 
-      <div style={s.tabs}>
+      <div className="tabs-row">
         {tabs.map(tb => (
           <button key={tb.key} onClick={() => setTab(tb.key)}
-            style={{ ...s.tab, ...(tab === tb.key ? s.tabActive : {}) }}>
+            className={`tab${tab === tb.key ? ' tab--active' : ''}`}>
             {tb.label}
           </button>
         ))}
@@ -245,9 +246,9 @@ function AdminPage() {
       {tab === 'teachers' && (
         <div>
           <h3>{'Новый педагог'}</h3>
-          <div style={s.form}>
+          <div className="form-toolbar">
             {userFields(newTeacher, setNewTeacher)}
-            <button style={s.btn} onClick={createTeacher}>{'+ Добавить'}</button>
+            <Button onClick={createTeacher}>{'+ Добавить'}</Button>
           </div>
           <h3>{'Список педагогов'}</h3>
           {userTable(teachers, deleteTeacher)}
@@ -258,9 +259,9 @@ function AdminPage() {
       {tab === 'admins' && (
         <div>
           <h3>{'Новый администратор'}</h3>
-          <div style={s.form}>
+          <div className="form-toolbar">
             {userFields(newAdmin, setNewAdmin)}
-            <button style={s.btn} onClick={createAdmin}>{'+ Добавить'}</button>
+            <Button onClick={createAdmin}>{'+ Добавить'}</Button>
           </div>
           <h3>{'Список администраторов'}</h3>
           {userTable(admins, deleteAdmin)}
@@ -271,16 +272,16 @@ function AdminPage() {
       {tab === 'courses' && (
         <div>
           <h3>{'Новый курс'}</h3>
-          <div style={s.form}>
-            <input placeholder={'Название курса'} style={s.input}
+          <div className="form-toolbar">
+            <input placeholder={'Название курса'} className="input input--min160"
               autoComplete="off"
               value={newCourse.title}
               onChange={e => setNewCourse({ title: e.target.value })}
             />
-            <button style={s.btn} onClick={createCourse}>{'+ Добавить'}</button>
+            <Button onClick={createCourse}>{'+ Добавить'}</Button>
           </div>
           <h3>{'Список курсов'}</h3>
-          <table style={s.table}>
+          <table className="table">
             <thead><tr>
               <th>#</th>
               <th>{'Название'}</th>
@@ -292,9 +293,9 @@ function AdminPage() {
                   <td>{c.id}</td>
                   <td>{c.title}</td>
                   <td>
-                    <button style={s.btnDel} onClick={() => deleteCourse(c.id)}>
+                    <Button onClick={() => deleteCourse(c.id)} variant="danger" className="btn--del-compact">
                       {'Удалить'}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -307,38 +308,37 @@ function AdminPage() {
       {tab === 'groups' && (
         <div>
           <h3>{'Новая группа'}</h3>
-          <div style={s.form}>
-            <input placeholder={'Название группы'} style={s.input}
+          <div className="form-toolbar">
+            <input placeholder={'Название группы'} className="input input--min160"
               autoComplete="off"
               value={newGroup.name}
               onChange={e => setNewGroup({ ...newGroup, name: e.target.value })}
             />
-            <select style={s.input} value={newGroup.course_id}
+            <select className="input input--min160" value={newGroup.course_id}
               onChange={e => setNewGroup({ ...newGroup, course_id: e.target.value })}>
               <option value="">{'— Курс —'}</option>
               {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
-            <select style={s.input} value={newGroup.teacher_id}
+            <select className="input input--min160" value={newGroup.teacher_id}
               onChange={e => setNewGroup({ ...newGroup, teacher_id: e.target.value })}>
               <option value="">{'— Педагог —'}</option>
               {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
             </select>
-            <input placeholder={'Telegram chat_id'} style={s.input}
+            <input placeholder={'Telegram chat_id'} className="input input--min160"
               autoComplete="off"
               value={newGroup.telegram_chat_id}
               onChange={e => setNewGroup({ ...newGroup, telegram_chat_id: e.target.value })}
             />
-            <button
-              style={{ ...s.btn, ...(isNewGroupValid ? {} : s.btnDisabled) }}
+            <Button
               onClick={createGroup}
               disabled={!isNewGroupValid}
             >
               {'+ Добавить'}
-            </button>
+            </Button>
           </div>
           <h3>{'Список групп'}</h3>
           <div ref={groupsTableRef}>
-          <table style={s.table}>
+          <table className="table">
             <thead><tr>
               <th>{'Название'}</th>
               <th>{'Курс'}</th>
@@ -350,11 +350,11 @@ function AdminPage() {
             </tr></thead>
             <tbody>
               {groups.map(g => (
-                <tr key={g.id} onClick={() => startEditGroup(g)} style={s.groupRow}>
+                <tr key={g.id} onClick={() => startEditGroup(g)} className="table__row--clickable">
                   <td>
                     {editingGroupId === g.id ? (
                       <input
-                        style={s.input}
+                        className="input input--min160"
                         value={editingGroupDraft.name}
                         onChange={e => setEditingGroupDraft({ ...editingGroupDraft, name: e.target.value })}
                       />
@@ -363,7 +363,7 @@ function AdminPage() {
                   <td>
                     {editingGroupId === g.id ? (
                       <select
-                        style={s.input}
+                        className="input input--min160"
                         value={editingGroupDraft.course_id}
                         onChange={e => setEditingGroupDraft({ ...editingGroupDraft, course_id: e.target.value })}
                       >
@@ -375,7 +375,7 @@ function AdminPage() {
                   <td>
                     {editingGroupId === g.id ? (
                       <select
-                        style={s.input}
+                        className="input input--min160"
                         value={editingGroupDraft.teacher_id}
                         onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
                       >
@@ -387,7 +387,7 @@ function AdminPage() {
                   <td>
                     {editingGroupId === g.id ? (
                       <input
-                        style={s.input}
+                        className="input input--min160"
                         value={editingGroupDraft.telegram_chat_id}
                         onChange={e => setEditingGroupDraft({ ...editingGroupDraft, telegram_chat_id: e.target.value })}
                       />
@@ -396,9 +396,9 @@ function AdminPage() {
                   <td><code>{g.invite_code}</code></td>
                   <td>{g.status}</td>
                   <td>
-                    <button style={s.btnDel} onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }}>
+                    <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="danger" className="btn--del-compact">
                       {'Удалить'}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -410,20 +410,5 @@ function AdminPage() {
     </div>
   );
 }
-
-const s = {
-  wrap:      { padding: '2rem' },
-  error:     { background: '#fde8e8', color: '#c0392b', padding: '10px 16px', borderRadius: '8px', marginBottom: '1rem' },
-  tabs:      { display: 'flex', gap: '8px', marginBottom: '1.5rem' },
-  tab:       { padding: '8px 20px', border: '2px solid #c8f0ea', borderRadius: '20px', background: 'white', cursor: 'pointer', fontSize: '0.95rem' },
-  tabActive: { background: '#3dbdaa', color: 'white', border: '2px solid #3dbdaa' },
-  form:      { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '1.5rem', alignItems: 'center' },
-  input:     { padding: '8px 12px', border: '1px solid #c8f0ea', borderRadius: '8px', fontSize: '0.9rem', minWidth: '160px' },
-  btn:       { padding: '8px 20px', background: '#3dbdaa', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  btnDisabled: { opacity: 0.6, cursor: 'not-allowed' },
-  btnDel:    { padding: '4px 12px', background: '#e05050', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
-  groupRow: { cursor: 'pointer' },
-  table:     { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-};
 
 export default AdminPage;

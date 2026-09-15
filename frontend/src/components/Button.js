@@ -1,25 +1,14 @@
 // Кнопка
 import React from 'react';
 
-function Button({ children, onClick, style, ...props }) {
+function Button({ children, onClick, variant = 'primary', className = '', ...props }) {
+  const variantClass = variant && variant !== 'primary' ? ` btn--${variant}` : '';
+  const classes = `btn${variantClass}${className ? ' ' + className : ''}`;
   return (
-    <button onClick={onClick} style={{ ...styles.button, ...style }} {...props}>
+    <button onClick={onClick} className={classes} {...props}>
       {children}
     </button>
   );
 }
-
-const styles = {
-  button: {
-    background: '#3dbdaa',
-    color: 'white',
-    border: 'none',
-    padding: '6px 14px',
-    borderRadius: '12px',
-    fontSize: '0.9rem',
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-  },
-};
 
 export default Button;

@@ -59,41 +59,41 @@ function JoinGroupPage() {
   };
 
   if (loadingGroup) {
-    return <div style={s.wrap}>{'Загрузка...'}</div>;
+    return <div className="centered-page">{'Загрузка...'}</div>;
   }
 
   if (groupError) {
     return (
-      <div style={s.wrap}>
-        <div style={s.card}>
-          <h2 style={s.title}>{'Регистрация ученика'}</h2>
-          <p style={s.error}>{groupError}</p>
-          <Link to="/login" style={s.link}>{'Перейти ко входу'}</Link>
+      <div className="centered-page">
+        <div className="card">
+          <h2 className="card__title">{'Регистрация ученика'}</h2>
+          <p className="error-text error-text--sm">{groupError}</p>
+          <Link to="/login" className="link link--block">{'Перейти ко входу'}</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={s.wrap}>
-      <div style={s.card}>
+    <div className="centered-page">
+      <div className="card">
         <img src="/assets/logo.svg" alt="Log Academy" width="180" height="60" />
-        <h2 style={s.title}>{'Регистрация ученика'}</h2>
-        <p style={s.groupInfo}>
+        <h2 className="card__title">{'Регистрация ученика'}</h2>
+        <p className="card__meta">
           {'Группа'}: <b>{group?.name}</b>
           {group?.course_title && <> · {group.course_title}</>}
         </p>
 
-        <form onSubmit={handleSubmit} style={s.form}>
+        <form onSubmit={handleSubmit} className="form-stack">
           <input
-            style={s.input}
+            className="input input--lg"
             type="text"
             placeholder={'Имя и фамилия'}
             value={fullName}
             onChange={e => setFullName(e.target.value)}
           />
           <input
-            style={s.input}
+            className="input input--lg"
             type="text"
             placeholder={'Логин'}
             value={username}
@@ -101,38 +101,26 @@ function JoinGroupPage() {
             required
           />
           <input
-            style={s.input}
+            className="input input--lg"
             type="password"
             placeholder={'Пароль'}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
           />
-          <button style={s.btn} type="submit" disabled={isSubmitting}>
+          <button className="btn btn--pill btn--lg" type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Отправка...' : 'Зарегистрироваться'}
           </button>
         </form>
 
-        {submitError && <p style={s.error}>{submitError}</p>}
+        {submitError && <p className="error-text error-text--sm">{submitError}</p>}
 
-        <Link to="/login" style={s.link}>
+        <Link to="/login" className="link link--block">
           {'Уже есть аккаунт? Войти'}
         </Link>
       </div>
     </div>
   );
 }
-
-const s = {
-  wrap: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0fafa', padding: '1rem' },
-  card: { background: 'white', padding: '40px', borderRadius: '28px', boxShadow: '0 4px 32px rgba(61,189,170,0.08)', textAlign: 'center', border: '2px solid #c8f0ea', maxWidth: '420px', width: '100%' },
-  title: { margin: '1rem 0 0.5rem 0' },
-  groupInfo: { color: '#4B5563', fontSize: '0.95rem', marginBottom: '1.25rem' },
-  form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-  input: { padding: '12px', borderRadius: '12px', border: '2px solid #c8f0ea', fontSize: '1rem' },
-  btn: { background: '#3dbdaa', color: 'white', border: 'none', padding: '12px', borderRadius: '20px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' },
-  error: { color: '#e05050', marginTop: '0.75rem', fontSize: '0.9rem' },
-  link: { display: 'inline-block', marginTop: '1rem', color: '#2E5FA3', fontSize: '0.9rem', textDecoration: 'none' },
-};
 
 export default JoinGroupPage;

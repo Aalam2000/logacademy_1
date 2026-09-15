@@ -11,8 +11,8 @@ function LanguageSwitcher() {
   };
 
   return (
-    <div style={styles.container}>
-      <select value={lang} onChange={handleChange} style={styles.select}>
+    <div className="lang-switcher">
+      <select value={lang} onChange={handleChange} className="lang-switcher__select">
         {languages.map(lang => (
           <option key={lang.code} value={lang.code}>{lang.name}</option>
         ))}
@@ -20,17 +20,5 @@ function LanguageSwitcher() {
     </div>
   );
 }
-
-const styles = {
-  container: { display: 'inline-block' },
-  select: {
-    padding: '6px 12px',
-    borderRadius: '12px',
-    border: '2px solid #c8f0ea',
-    fontSize: '0.9rem',
-    background: 'white',
-    cursor: 'pointer',
-  },
-};
 
 export default LanguageSwitcher;

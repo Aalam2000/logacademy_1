@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean, UniqueConstraint
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -62,6 +62,51 @@ class Lesson(Base):
     is_open = Column(Boolean, nullable=False, default=False)  # педагог открывает доступ
     source = Column(String, nullable=True)  # academy | teacher
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Посещаемость + оценка + звёзды за урок. Одна строка на пару (урок, студент).
+class LessonMark(Base):
+    __tablename__ = "lesson_marks"
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    attendance_status = Column(String, nullable=True)  # in_person | online | excused | absent | NULL
+    is_late = Column(Boolean, nullable=False, default=False)  # независим от attendance_status
+    score = Column(Integer, nullable=True)  # 0..100
+    stars = Column(Integer, nullable=True)  # 0..3
+    comment = Column(Text, nullable=True)
+    marked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    marked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Материалы («База знаний») — файлы в MinIO. Загружает teacher/admin,
+# удаляет только admin (см. routers/materials.py). Хранится только
+# метаданные — сам файл лежит в MinIO под object_key.
+class Material(Base):
+    __tablename__ = "materials"
+    id = Column(Integer, primary_key=True, index=True)
+    object_key = Column(String, unique=True, nullable=False)
+    original_filename = Column(String, nullable=False)
+    content_type = Column(String, nullable=True)
+    size_bytes = Column(Integer, nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)  # каталог по темам — этап 2
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Привязка материала к уроку — один файл может быть в нескольких уроках
+# одновременно (много-ко-многим). Отвязка не удаляет сам Material.
+class LessonMaterial(Base):
+    __tablename__ = "lesson_materials"
+    __table_args__ = (
+        UniqueConstraint("lesson_id", "material_id", name="uq_lesson_materials_lesson_material"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
+    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False)
+    added_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    added_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 # Квизы — привязаны к уроку

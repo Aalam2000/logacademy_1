@@ -34,8 +34,13 @@ export function AuthProvider({ children }) {
     if (token) api.get('/auth/me').then(r => setUser(r.data));
   };
 
+  // Универсальная проверка роли — вместо user.role === 'admin' по всему
+  // проекту. Работает для любой роли, включая будущие (экзаменатор,
+  // консультант и т.д.) без изменений в самом контексте.
+  const hasRole = (...roles) => !!user && roles.includes(user.role);
+
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ token, user, login, logout, refreshUser, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

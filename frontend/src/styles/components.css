@@ -1,0 +1,386 @@
+/*
+ * components.css — классы UI-kit компонентов платформы (Log Academy).
+ *
+ * Сюда идёт всё, что раньше жило как `const styles = {...}` внутри
+ * Button.js/Input.js/FormField.js/Modal.js/Table.js/Navigation.js и
+ * копипастой в QRModal.js/StudentsModal.js/AdminPage.js и т.д.
+ * Значения (отступы/радиусы/цвета) — из tokens.css, взяты по факту
+ * реального использования в проекте, дизайн не меняется.
+ *
+ * Разделы: Buttons · Tabs · Inputs & Form field · Modal · Table · Badge ·
+ * Navigation · Language switcher.
+ */
+
+/* ===== Buttons =====
+ * В реальном коде было две устойчивые формы кнопки (не случайный разнобой):
+ *  - компактная (radius-sm, ~13 мест: GroupPage/TeacherHome/LessonPage/
+ *    AdminPage/StudentsModal/QRModal/Modal.js/ProfilePage) — база .btn;
+ *  - крупная "пилюля" (radius-lg, ~7 мест: Login/JoinGroup/AddQuiz/
+ *    CardsPage/Dashboard) — модификатор .btn--pill.
+ * Обе формы сохранены как есть, просто вынесены в классы.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--font-base);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn--secondary {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+}
+.btn--danger {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+.btn--info {
+  background: var(--color-info);
+  color: var(--color-white);
+}
+.btn--pill {
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg);
+}
+.btn--sm {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  min-width: 30px;
+}
+.btn--lg {
+  font-size: var(--font-lg);
+  font-weight: var(--weight-bold);
+}
+.btn--bold {
+  font-weight: var(--weight-bold);
+}
+.btn--icon-circle {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+}
+.btn--outline {
+  padding: 6px 14px; /* разовое значение (кнопка «Назад», LessonPage) */
+  background: var(--color-white);
+  color: var(--color-text);
+  border: 1px solid var(--color-primary-border);
+}
+.btn--compact {
+  padding: var(--space-2) var(--space-4); /* QR/«Ученики» в шапке группы (GroupPage) */
+}
+
+/* ===== Tabs (AdminPage) ===== */
+.tab {
+  padding: var(--space-2) var(--space-5);
+  border: 2px solid var(--color-primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+.tab--active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}
+
+/* ===== Inputs & form field =====
+ * Как и у кнопок — два реальных варианта: компактный (админка/дашборд,
+ * radius-sm) и крупный (формы логина/регистрации, radius-md).
+ */
+.input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  font-family: inherit;
+}
+.input--lg {
+  padding: var(--space-3);
+  border: 2px solid var(--color-primary-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
+}
+.input--filter {
+  padding: var(--space-2) var(--space-3); /* тоньше, чем input--lg (CardsPage) */
+  border: 2px solid var(--color-primary-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
+  flex: 1 1 200px;
+}
+.input--error {
+  border-color: var(--color-danger);
+}
+.input--soft {
+  background: var(--color-bg-soft); /* readonly-поле со ссылкой-приглашением (QRModal) */
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.form-field__label {
+  font-size: var(--font-sm);
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+.form-field__error {
+  font-size: var(--font-xs);
+  color: var(--color-danger-text);
+}
+.form-label {
+  font-weight: var(--weight-bold); /* AddQuizPage — обычная подпись поля, без уменьшения шрифта */
+  color: var(--color-text);
+}
+.question-card {
+  background: var(--color-bg-soft);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-primary-border);
+}
+.question-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.input--grow {
+  flex: 2;
+}
+.input--time {
+  width: 120px;
+}
+.input--min160 {
+  min-width: 160px; /* AdminPage — компактные поля форм/таблиц */
+}
+.input--sm-num {
+  width: 90px; /* LessonPage — оценка 0-100 в табличке студентов */
+}
+.star-picker {
+  display: inline-flex;
+  gap: 2px;
+}
+.star-picker__btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-lg);
+  line-height: 1;
+  padding: 0;
+  color: var(--color-bg-muted);
+}
+.star-picker__btn:disabled {
+  cursor: not-allowed;
+}
+.star-picker__btn--active {
+  color: var(--color-warning);
+}
+.btn--del-compact {
+  padding: 4px var(--space-3); /* AdminPage — текстовая кнопка «Удалить» в таблицах */
+  border-radius: var(--radius-sm);
+}
+
+/* ===== Modal =====
+ * Modal.js уже собирал этот паттерн, но QRModal/StudentsModal/TeacherHome/
+ * GroupPage дублировали его инлайном отдельно — теперь один источник.
+ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-window {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+}
+.modal-window--wide {
+  max-width: 560px; /* StudentsModal */
+}
+.modal-window--center {
+  text-align: center; /* информационные модалки без формы (QRModal) */
+}
+.modal-title {
+  margin: 0 0 var(--space-4) 0;
+}
+.modal-actions {
+  margin-top: var(--space-5);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.modal-actions--center {
+  justify-content: center;
+}
+.qr-frame {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+/* ===== Table =====
+ * th/td граница исправлена на --color-border-light (#e8f4f0) — в старом
+ * Table.js по ошибке стоял --color-primary-border (#c8f0ea), которого
+ * реально нигде для границ строк таблицы не использовали.
+ */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+}
+.table--card {
+  background: var(--color-white);
+  border-radius: 16px; /* только здесь: разовое значение из CardsPage, не входит в общую шкалу радиусов */
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  min-width: 600px; /* CardsPage — широкая таблица, скроллится в .table-scroll на узких экранах */
+}
+.table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 2px solid var(--color-border-light);
+  color: var(--color-muted);
+  font-weight: var(--weight-medium);
+}
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.table__row--clickable {
+  cursor: pointer;
+}
+.table__row--today {
+  background: var(--color-warning-bg);
+}
+.table__empty {
+  text-align: center;
+  padding: var(--space-7);
+  color: var(--color-muted);
+}
+.table__col--date {
+  width: 150px; /* CardsPage */
+}
+.table__col--action {
+  width: 100px; /* CardsPage */
+}
+.table__col--delete {
+  width: 80px; /* CardsPage */
+}
+
+/* ===== Badge (роль пользователя / статус урока) =====
+ * Один и тот же зелёный цвет в коде означает и роль "ученик", и статус
+ * "урок открыт" — совпадение значений, а не единый смысл, поэтому два
+ * набора модификаторов ниже указывают на один токен --color-role-student.
+ */
+.badge {
+  display: inline-block;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--color-white);
+  font-size: var(--font-xs);
+  font-weight: var(--weight-medium);
+}
+.badge--role {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge--inline {
+  margin-left: var(--space-3); /* бейдж рядом с текстом заголовка (Dashboard) */
+  vertical-align: middle;
+}
+.badge--admin {
+  background: var(--color-danger);
+}
+.badge--teacher {
+  background: var(--color-info);
+}
+.badge--student {
+  background: var(--color-role-student);
+}
+.badge--open {
+  background: var(--color-role-student);
+}
+.badge--closed {
+  background: var(--color-muted);
+}
+.badge--today {
+  background: var(--color-warning);
+}
+
+/* ===== Navigation (боковое меню) ===== */
+.nav {
+  width: 240px;
+  height: 100vh;
+  background: var(--color-white);
+  border-right: 2px solid var(--color-primary-border);
+  padding: var(--space-5) 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.nav__logo {
+  padding: 0 var(--space-5) var(--space-7) var(--space-5);
+  border-bottom: 1px solid var(--color-primary-border);
+  margin-bottom: var(--space-5);
+}
+.nav__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.nav__item {
+  margin: 0;
+}
+.nav__link {
+  display: block;
+  padding: var(--space-3) var(--space-5);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--font-base);
+  transition: background 0.2s;
+}
+.nav__link--active {
+  background: var(--color-primary-border);
+  font-weight: var(--weight-bold);
+  border-right: 4px solid var(--color-primary);
+}
+
+/* ===== Language switcher ===== */
+.lang-switcher {
+  display: inline-block;
+}
+.lang-switcher__select {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-primary-border);
+  font-size: var(--font-sm);
+  background: var(--color-white);
+  cursor: pointer;
+}

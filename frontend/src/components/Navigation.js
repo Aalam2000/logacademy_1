@@ -2,43 +2,41 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 function Navigation({ user }) {
+  const linkClass = ({ isActive }) => `nav__link${isActive ? ' nav__link--active' : ''}`;
+
   return (
-    <nav style={styles.nav}>
-      <div style={styles.logo}>
+    <nav className="nav">
+      <div className="nav__logo">
         <img src="/assets/logo.svg" alt="Log Academy" width="120" height="40" />
       </div>
-      <ul style={styles.list}>
-        <li style={styles.item}>
-          <NavLink
-            to="/dashboard"
-            end
-            style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
-          >
+      <ul className="nav__list">
+        <li className="nav__item">
+          <NavLink to="/dashboard" end className={linkClass}>
             📊 {'Главная'}
           </NavLink>
         </li>
         {user?.role !== 'student' && (
-          <li style={styles.item}>
-            <NavLink
-              to="/dashboard/cards"
-              style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
-            >
+          <li className="nav__item">
+            <NavLink to="/dashboard/cards" className={linkClass}>
               🃏 {'Квизы'}
             </NavLink>
           </li>
         )}
-        <li style={styles.item}>
-          <NavLink to="/dashboard/profile"
-            style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}>
+        {user?.role !== 'student' && (
+          <li className="nav__item">
+            <NavLink to="/dashboard/materials" className={linkClass}>
+              📚 {'База знаний'}
+            </NavLink>
+          </li>
+        )}
+        <li className="nav__item">
+          <NavLink to="/dashboard/profile" className={linkClass}>
             👤 {'Профиль'}
           </NavLink>
         </li>
         {user?.role === 'admin' && (
-          <li style={styles.item}>
-            <NavLink
-              to="/dashboard/admin"
-              style={({ isActive }) => ({ ...styles.link, ...(isActive ? styles.active : {}) })}
-            >
+          <li className="nav__item">
+            <NavLink to="/dashboard/admin" className={linkClass}>
               ⚙️ {'Админ'}
             </NavLink>
           </li>
@@ -47,44 +45,5 @@ function Navigation({ user }) {
     </nav>
   );
 }
-
-const styles = {
-  nav: {
-    width: '240px',
-    height: '100vh',
-    background: '#ffffff',
-    borderRight: '2px solid #c8f0ea',
-    padding: '20px 0',
-    display: 'flex',
-    flexDirection: 'column',
-    flexShrink: 0,
-  },
-  logo: {
-    padding: '0 20px 30px 20px',
-    borderBottom: '1px solid #c8f0ea',
-    marginBottom: '20px',
-  },
-  list: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-  },
-  item: {
-    margin: '0',
-  },
-  link: {
-    display: 'block',
-    padding: '12px 20px',
-    color: '#1a2e4a',
-    textDecoration: 'none',
-    fontSize: '1rem',
-    transition: 'background 0.2s',
-  },
-  active: {
-    background: '#c8f0ea',
-    fontWeight: 'bold',
-    borderRight: '4px solid #3dbdaa',
-  },
-};
 
 export default Navigation;

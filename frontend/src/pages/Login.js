@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/auth';
+import { login as loginRequest } from '../api/auth';
+import { getErrorMessage } from '../api/errors';
+import Input from '../components/Input';
+import Button from '../components/Button';
 
 function Login() {
   const navigate = useNavigate();
@@ -16,31 +19,41 @@ function Login() {
     e.preventDefault();
     setError('');
     try {
-      const res = await api.post('/auth/login', { username, password });
-      const token = res.data.access_token;
-      login(token);
+      const data = await loginRequest(username, password);
+      login(data.access_token);
       navigate('/dashboard');
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.detail) {
-        setError(err.response.data.detail);
-      } else {
-        setError('Ошибка соединения с сервером');
-      }
+      setError(getErrorMessage(err, 'Ошибка соединения с сервером'));
     }
   };
 
   return (
-    <div style={{display:'flex',justifyContent:'center',alignItems:'center',minHeight:'100vh',background:'#f0fafa'}}>
-      <div style={{background:'white',padding:'40px',borderRadius:'28px',boxShadow:'0 4px 32px rgba(61,189,170,0.08)',textAlign:'center',border:'2px solid #c8f0ea'}}>
+    <div className="centered-page">
+      <div className="card">
         <img src="/assets/logo.svg" alt="Log Academy" width="200" height="66" />
-        <form style={{display:'flex',flexDirection:'column',gap:'1rem',width:'280px',marginTop:'1.5rem'}} onSubmit={handleSubmit}>
-          <input style={{padding:'12px',borderRadius:'12px',border:'2px solid #c8f0ea',fontSize:'1rem'}} type="text" placeholder={'Логин'} value={username} onChange={e=>setUsername(e.target.value)} required />
-          <input style={{padding:'12px',borderRadius:'12px',border:'2px solid #c8f0ea',fontSize:'1rem'}} type="password" placeholder={'Пароль'} value={password} onChange={e=>setPassword(e.target.value)} required />
-          <button style={{background:'#3dbdaa',color:'white',border:'none',padding:'12px',borderRadius:'20px',fontSize:'1.2rem',fontWeight:'bold',cursor:'pointer'}} type="submit">{'Войти'}</button>
+        <form className="login-form" onSubmit={handleSubmit}>
+          <Input
+            className="input--lg"
+            type="text"
+            placeholder={'Логин'}
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            required
+          />
+          <Input
+            className="input--lg"
+            type="password"
+            placeholder={'Пароль'}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+          />
+          <Button className="btn--pill btn--lg" type="submit">{'Войти'}</Button>
         </form>
-        {error && <p style={{color:'#e05050', marginTop:'0.5rem'}}>{error}</p>}
+        {error && <p className="error-text">{error}</p>}
       </div>
     </div>
   );
 }
+
 export default Login;

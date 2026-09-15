@@ -1,0 +1,364 @@
+/*
+ * layout.css — переиспользуемые утилиты вёрстки страниц (Log Academy).
+ *
+ * Не про конкретные виджеты (это components.css), а про то, как
+ * расположены крупные блоки самой страницы: отступы вокруг контента,
+ * карточка по центру экрана, шапка дашборда, тулбар со кнопками и т.д.
+ * Значения — из реального кода (padding: 2rem почти на каждой странице
+ * и т.п.), дизайн не меняется.
+ */
+
+/* ===== Обёртка обычной страницы внутри дашборда =====
+ * padding: 2rem встречался почти дословно на 9 из 14 страниц —
+ * дашборд-страницы (TeacherHome/GroupPage/LessonPage/AdminPage/
+ * ProfilePage/CardsPage/AddQuizPage/StudentHome/GroupsPage).
+ */
+.page {
+  padding: var(--space-7);
+}
+.page--full {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.page--narrow {
+  max-width: 480px; /* ProfilePage */
+}
+.page--md {
+  max-width: 760px; /* LessonPage */
+}
+.page--wide {
+  max-width: 800px;
+  margin: 0 auto; /* AddQuizPage */
+}
+.page--group {
+  max-width: 960px; /* GroupPage */
+}
+.page-title {
+  font-size: var(--font-xl);
+  font-weight: var(--weight-black);
+  color: var(--color-text);
+  margin-bottom: var(--space-6);
+}
+.table-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ===== Центрированная страница (логин/регистрация) ===== */
+.centered-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--color-bg-soft);
+  padding: var(--space-4);
+}
+
+/* ===== Карточка (логин/регистрация) =====
+ * display:flex + align-items:center — иначе text-align:center центрирует
+ * только строчное содержимое (лого), а блочные элементы вроде <form>
+ * с явной шириной остаются прижаты влево (баг, найденный на Login.js).
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--color-white);
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glow);
+  text-align: center;
+  border: 2px solid var(--color-primary-border);
+  max-width: 420px;
+  width: 100%;
+}
+.card__title {
+  margin: var(--space-4) 0 var(--space-2) 0; /* JoinGroupPage */
+}
+.card__meta {
+  color: var(--color-muted);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-5);
+}
+
+/* ===== Каркас дашборда (Dashboard.js) ===== */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg-soft);
+  overflow: hidden;
+}
+.dashboard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dashboard-header {
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-white);
+  border-bottom: 2px solid var(--color-primary-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.dashboard-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-4); /* отступ от кнопки «Назад» (GroupPage) */
+  margin-bottom: var(--space-6);
+}
+.group-header__title {
+  margin: 0 0 var(--space-1) 0;
+}
+.dashboard-page-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ===== Тулбар (заголовок + кнопки действий над таблицей/списком) ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+.toolbar--start {
+  justify-content: flex-start;
+}
+.toolbar__title {
+  margin: 0; /* заголовок внутри тулбара — без стандартных отступов h2/h3 */
+}
+.toolbar__filters {
+  display: flex;
+  gap: var(--space-2);
+}
+.questions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-4); /* AddQuizPage */
+}
+.form-actions {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-4); /* AddQuizPage */
+}
+.tabs-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6); /* AdminPage */
+}
+
+/* ===== Формы ===== */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  gap: var(--space-3);
+}
+.form-row__label {
+  width: 160px; /* фиксированная колонка подписей (ProfilePage) */
+  font-size: var(--font-sm);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+.form-row__value {
+  flex: 1;
+}
+.form-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  align-items: center;
+}
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--color-text);
+}
+.page__heading {
+  margin-top: var(--space-3); /* заголовок сразу под кнопкой «Назад» (LessonPage) */
+}
+.inline-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--color-white);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.input--narrow {
+  width: 100%;
+  max-width: 280px;
+}
+.error-text--muted {
+  color: var(--color-danger-text);
+  font-size: var(--font-sm);
+  margin-top: var(--space-3);
+}
+.error-text--top {
+  color: var(--color-danger-text);
+  font-size: var(--font-sm);
+  margin-top: 0;
+  margin-bottom: var(--space-4); /* ошибка над таблицей (GroupsPage) */
+}
+
+/* ===== Строка метаданных (курс/преподаватель и т.п.) ===== */
+.meta-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--font-sm);
+  color: var(--color-muted);
+}
+
+/* ===== Вертикальные стопки ===== */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.stack--sm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ===== Разделитель (ProfilePage, смена пароля) ===== */
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-primary-border);
+  margin: var(--space-5) 0;
+}
+
+/* ===== Баннеры (ошибка/успех) ===== */
+.banner {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+}
+.banner--error {
+  background: var(--color-danger-bg-light);
+  color: var(--color-danger-text);
+}
+.banner--success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+/* ===== Прочие мелкие утилиты ===== */
+.readonly-text {
+  flex: 1;
+  padding: var(--space-2) 0;
+  font-size: var(--font-sm);
+  color: var(--color-muted);
+}
+.link {
+  color: var(--color-info);
+  font-size: var(--font-sm);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.link--block {
+  display: inline-block;
+  margin-top: var(--space-4);
+}
+.text-center {
+  text-align: center;
+}
+.text-muted {
+  color: var(--color-muted);
+  font-size: var(--font-sm);
+}
+.hint-text {
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-3);
+}
+.input-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.no-underline {
+  text-decoration: none;
+}
+.error-text {
+  color: var(--color-danger);
+  margin-top: var(--space-2);
+}
+.error-text--sm {
+  font-size: var(--font-sm);
+  margin-top: var(--space-3); /* JoinGroupPage — тот же цвет, что и base, но крупнее отступ/шрифт */
+}
+
+/* ===== Форма логина ===== */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 280px;
+  margin-top: var(--space-6);
+}
+
+/* ===== Страница 404 / доступ запрещён ===== */
+.notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 60vh;
+  text-align: center;
+  gap: var(--space-4);
+}
+.notfound__code {
+  font-size: var(--font-xl);
+  color: var(--color-primary);
+  margin: 0;
+}
+.notfound__text {
+  font-size: var(--font-base);
+  color: var(--color-muted);
+  margin: 0;
+}
