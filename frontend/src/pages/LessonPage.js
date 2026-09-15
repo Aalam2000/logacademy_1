@@ -95,7 +95,7 @@ function LessonPage() {
     if (view === 'lesson' && !quizzesLoaded) {
       loadQuizzes();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [view]);
 
   const loadMarks = async () => {
