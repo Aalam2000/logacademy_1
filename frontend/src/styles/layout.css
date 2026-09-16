@@ -149,6 +149,17 @@
   display: flex;
   gap: var(--space-2);
 }
+.lesson-toolbar__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.lesson-toolbar__group {
+  color: var(--color-text);
+  font-size: var(--font-sm);
+  white-space: nowrap;
+}
 .questions-header {
   display: flex;
   justify-content: space-between;
@@ -200,9 +211,6 @@
   gap: var(--space-1);
   font-size: var(--font-sm);
   color: var(--color-text);
-}
-.page__heading {
-  margin-top: var(--space-3); /* заголовок сразу под кнопкой «Назад» (LessonPage) */
 }
 .inline-row {
   display: flex;

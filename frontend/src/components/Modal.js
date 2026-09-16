@@ -4,7 +4,8 @@
 import React from 'react';
 
 function Modal({ title, onClose, children, footer, size, centered }) {
-  const windowClass = `modal-window${size === 'wide' ? ' modal-window--wide' : ''}${centered ? ' modal-window--center' : ''}`;
+  const sizeClass = size === 'wide' ? ' modal-window--wide' : size === 'xwide' ? ' modal-window--xwide' : '';
+  const windowClass = `modal-window${sizeClass}${centered ? ' modal-window--center' : ''}`;
   const actionsClass = `modal-actions${centered ? ' modal-actions--center' : ''}`;
   return (
     <div className="modal-backdrop" onClick={onClose}>

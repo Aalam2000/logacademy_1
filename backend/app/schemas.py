@@ -100,7 +100,6 @@ class QuizCreate(BaseModel):
     template_type: Optional[str] = None
     questions: List[QuestionSchema]
     lang: str
-    lesson_id: Optional[int] = None  # если создаётся сразу для урока
 
 class QuizOut(BaseModel):
     id: int
@@ -110,7 +109,6 @@ class QuizOut(BaseModel):
     template_type: str
     created_at: datetime
     created_by: int
-    lesson_id: Optional[int] = None
     html_translations: Optional[Dict[str, str]] = None
 
     class Config:

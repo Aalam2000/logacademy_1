@@ -5,6 +5,6 @@ asyncpg==0.29.0
 python-jose[cryptography]==3.3.0
 python-multipart==0.0.9
 werkzeug==3.0.1
-auto-i18n-lib==2.0.9
+auto-i18n-lib==2.1.1
 alembic==1.19.2
 minio==7.2.15

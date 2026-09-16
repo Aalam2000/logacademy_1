@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..database import get_db
-from ..models import Quiz, User, Lesson, Group
+from ..models import Quiz, User
 from ..schemas import QuizCreate, QuizOut
 from ..dependencies import get_current_user
+from ..resources import ensure_deletable
 from .i18n import translator
 import json
 import os
@@ -15,25 +16,6 @@ router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 
 SOURCE_LANG = os.getenv("SOURCE_LANG", "ru")
 TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates" / "quiz"
-
-
-async def _verify_lesson_access(lesson_id: int, db: AsyncSession, current_user: User) -> None:
-    # Та же проверка владения, что и в routers/lessons.py: admin — любой
-    # урок, teacher — только урок своей группы.
-    result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
-    lesson = result.scalar_one_or_none()
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Урок не найден")
-
-    group_query = select(Group).where(Group.id == lesson.group_id)
-    if current_user.role != "admin":
-        group_query = group_query.where(Group.teacher_id == current_user.id)
-
-    group = await db.execute(group_query)
-    if not group.scalar_one_or_none():
-        raise HTTPException(status_code=403, detail="Нет доступа к этому уроку")
-
-
 
 def render_translated_template(template_type: str, lang: str, data: dict) -> str:
     # Сначала читаем шаблон БЕЗ перевода
@@ -66,9 +48,6 @@ async def get_quizzes(db: AsyncSession = Depends(get_db), current_user: User = D
 
 @router.post("/", response_model=QuizOut)
 async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if quiz_data.lesson_id is not None:
-        await _verify_lesson_access(quiz_data.lesson_id, db, current_user)
-
     print(f"📥 Received lang: {quiz_data.lang}")
     template_type = quiz_data.template_type or "flash"
     questions_dict = [q.model_dump() for q in quiz_data.questions]
@@ -89,7 +68,6 @@ async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db),
         html_content=html,
         html_translations={},
         created_by=current_user.id,
-        lesson_id=quiz_data.lesson_id
     )
     db.add(new_quiz)
     await db.commit()
@@ -128,10 +106,18 @@ async def update_quiz(quiz_id: int, quiz_data: QuizCreate, db: AsyncSession = De
 
 @router.delete("/{quiz_id}")
 async def delete_quiz(quiz_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id, Quiz.created_by == current_user.id))
+    # Удалить может автор или admin — как у файлов/ссылок в общей «Базе
+    # знаний» (раньше было строго "только автор", решение Андрея 2026-09-15).
+    query = select(Quiz).where(Quiz.id == quiz_id)
+    if current_user.role != "admin":
+        query = query.where(Quiz.created_by == current_user.id)
+    result = await db.execute(query)
     quiz = result.scalar_one_or_none()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
+
+    await ensure_deletable(db, "quiz", quiz_id)
+
     await db.delete(quiz)
     await db.commit()
     return {"detail": "Deleted"}

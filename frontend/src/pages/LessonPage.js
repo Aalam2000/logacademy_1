@@ -1,20 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
+import DateTimePicker from '../components/DateTimePicker';
+import LibraryPickerModal from '../components/LibraryPickerModal';
+import TrashIcon from '../components/TrashIcon';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey } from '../utils/libraryItems';
+import { extractErrorMessage } from '../utils/errors';
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const ATTENDANCE_OPTIONS = [
-  { value: '', label: '—' },
-  { value: 'in_person', label: 'Пришёл' },
-  { value: 'online', label: 'Онлайн' },
-  { value: 'excused', label: 'Ув. причина' },
-  { value: 'absent', label: 'Не был' },
+// Кружки посещаемости вместо select'а. Пришёл/Онлайн/Уважительная —
+// взаимоисключающие («ИЛИ», attendance_status), «Опоздал» — независимый
+// модификатор («И» поверх Пришёл или Онлайн: is_late), недоступен при
+// Уважительной причине и при отсутствии отметки (см. решение Андрея,
+// 2026-09-15). Если не выбрано ничего из первых трёх — считаем пропуском.
+const ATTENDANCE_STATUS_BUTTONS = [
+  { kind: 'in_person', status: 'in_person', label: 'Пришёл' },
+  { kind: 'online', status: 'online', label: 'Онлайн' },
+  { kind: 'excused', status: 'excused', label: 'Уважительная причина' },
 ];
+const LATE_STATUSES = new Set(['in_person', 'online']);
 
 function LessonPage() {
   const { lessonId } = useParams();
@@ -24,46 +27,50 @@ function LessonPage() {
 
   const [lesson, setLesson] = useState(null);
   const [groups, setGroups] = useState([]);
-  const [dateValue, setDateValue] = useState('');
+  const [dateValue, setDateValue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDate, setIsSavingDate] = useState(false);
   const [isTogglingOpen, setIsTogglingOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lessonComment, setLessonComment] = useState('');
+  const [isSavingComment, setIsSavingComment] = useState(false);
 
   const [marksLoading, setMarksLoading] = useState(false);
   const [marksLoaded, setMarksLoaded] = useState(false);
   const [marksError, setMarksError] = useState('');
   const [marksLocked, setMarksLocked] = useState(false);
   const [marksRows, setMarksRows] = useState([]);
-  const [savingIds, setSavingIds] = useState(() => new Set());
   const [rowErrors, setRowErrors] = useState({});
   const [isSavingAll, setIsSavingAll] = useState(false);
   const marksRowsRef = useRef([]);
 
-  const [materialsLoading, setMaterialsLoading] = useState(false);
-  const [materialsLoaded, setMaterialsLoaded] = useState(false);
-  const [materialsError, setMaterialsError] = useState('');
-  const [lessonMaterials, setLessonMaterials] = useState([]);
-  const [libraryMaterials, setLibraryMaterials] = useState([]);
-  const [selectedLibraryId, setSelectedLibraryId] = useState('');
-  const [isAttaching, setIsAttaching] = useState(false);
-  const [detachingId, setDetachingId] = useState(null);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemsLoaded, setItemsLoaded] = useState(false);
+  const [itemsError, setItemsError] = useState('');
+  const [lessonItems, setLessonItems] = useState([]);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [detachingKey, setDetachingKey] = useState(null);
 
-  const [quizzesLoading, setQuizzesLoading] = useState(false);
-  const [quizzesLoaded, setQuizzesLoaded] = useState(false);
-  const [quizzesError, setQuizzesError] = useState('');
-  const [lessonQuizzes, setLessonQuizzes] = useState([]);
-  const [libraryQuizzes, setLibraryQuizzes] = useState([]);
-  const [selectedQuizId, setSelectedQuizId] = useState('');
-  const [isAttachingQuiz, setIsAttachingQuiz] = useState(false);
-  const [detachingQuizId, setDetachingQuizId] = useState(null);
+  const [isUploadingMaterial, setIsUploadingMaterial] = useState(false);
+  const materialInputRef = useRef(null);
+
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [isAddingLink, setIsAddingLink] = useState(false);
 
   useEffect(() => {
     marksRowsRef.current = marksRows;
   }, [marksRows]);
 
   useEffect(() => {
+    // Смена урока (переход по ссылке без ремаунта компонента) — сбрасываем
+    // кэш вкладок «Студенты»/«Урок», иначе показывались бы данные
+    // предыдущего урока, пока не потрогать их руками.
+    setMarksLoaded(false);
+    setItemsLoaded(false);
+
     const load = async () => {
       setLoading(true);
       setError('');
@@ -74,9 +81,10 @@ function LessonPage() {
         ]);
         setLesson(lessonRes.data);
         setGroups(groupsRes.data);
-        setDateValue(toInputDateTime(lessonRes.data?.date));
+        setDateValue(lessonRes.data?.date ? new Date(lessonRes.data.date) : null);
+        setLessonComment(lessonRes.data?.comment || '');
       } catch (err) {
-        setError(err?.response?.data?.detail || 'Не удалось загрузить урок');
+        setError(extractErrorMessage(err, 'Не удалось загрузить урок'));
       } finally {
         setLoading(false);
       }
@@ -89,14 +97,11 @@ function LessonPage() {
     if (view === 'students' && !marksLoaded) {
       loadMarks();
     }
-    if (view === 'lesson' && !materialsLoaded) {
-      loadMaterials();
-    }
-    if (view === 'lesson' && !quizzesLoaded) {
-      loadQuizzes();
+    if (view === 'lesson' && !itemsLoaded) {
+      loadItems();
     }
     // eslint-disable-next-line
-  }, [view]);
+  }, [view, lessonId]);
 
   const loadMarks = async () => {
     setMarksLoading(true);
@@ -115,128 +120,121 @@ function LessonPage() {
       })));
       setMarksLoaded(true);
     } catch (err) {
-      setMarksError(err?.response?.data?.detail || 'Не удалось загрузить студентов');
+      setMarksError(extractErrorMessage(err, 'Не удалось загрузить студентов'));
     } finally {
       setMarksLoading(false);
     }
   };
 
-  const loadMaterials = async () => {
-    setMaterialsLoading(true);
-    setMaterialsError('');
+  const loadItems = async () => {
+    setItemsLoading(true);
+    setItemsError('');
     try {
-      const [attachedRes, libraryRes] = await Promise.all([
-        api.get(`/lessons/${lessonId}/materials`),
-        api.get('/materials/'),
-      ]);
-      setLessonMaterials(attachedRes.data);
-      setLibraryMaterials(libraryRes.data);
-      setMaterialsLoaded(true);
+      const res = await api.get(`/lessons/${lessonId}/items`);
+      setLessonItems(res.data);
+      setItemsLoaded(true);
     } catch (err) {
-      setMaterialsError(err?.response?.data?.detail || 'Не удалось загрузить материалы');
+      setItemsError(extractErrorMessage(err, 'Не удалось загрузить материалы'));
     } finally {
-      setMaterialsLoading(false);
+      setItemsLoading(false);
     }
   };
 
-  const handleOpenMaterial = async (materialId, contentType) => {
-    setMaterialsError('');
+  // Окно под файл/квиз открываем сразу, синхронно по клику — если открыть
+  // его уже после await, браузер считает это всплывающим окном не по
+  // действию пользователя и блокирует.
+  const handleOpenItem = async (item) => {
+    setItemsError('');
+
+    if (item.resource_type === 'link') {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const win = window.open('', '_blank');
     try {
-      const res = await api.get(`/materials/${materialId}/download`, { responseType: 'blob' });
-      const type = res.headers?.['content-type'] || contentType || 'application/octet-stream';
-      const url = window.URL.createObjectURL(new Blob([res.data], { type }));
-      window.open(url, '_blank');
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      if (item.resource_type === 'material') {
+        const res = await api.get(`/materials/${item.resource_id}/download`, { responseType: 'blob' });
+        const type = res.headers?.['content-type'] || item.content_type || 'application/octet-stream';
+        const url = window.URL.createObjectURL(new Blob([res.data], { type }));
+        if (win) win.location.href = url;
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      } else {
+        const res = await api.get(`/quizzes/${item.resource_id}/html`);
+        if (win) {
+          win.document.write(res.data.html);
+          win.document.close();
+        }
+      }
     } catch (err) {
-      setMaterialsError(err?.response?.data?.detail || 'Не удалось открыть файл');
+      if (win) win.close();
+      setItemsError(extractErrorMessage(err, 'Не удалось открыть'));
     }
   };
 
-  const handleAttachMaterial = async () => {
-    if (!selectedLibraryId) return;
-    setIsAttaching(true);
-    setMaterialsError('');
+  const handleDetachItem = async (item) => {
+    const key = resourceKey(item.resource_type, item.resource_id);
+    setDetachingKey(key);
+    setItemsError('');
     try {
-      await api.post(`/lessons/${lessonId}/materials/${selectedLibraryId}`);
-      setSelectedLibraryId('');
-      await loadMaterials();
+      await api.delete(`/lessons/${lessonId}/items/${item.resource_type}/${item.resource_id}`);
+      setLessonItems(prev => prev.filter(i => resourceKey(i.resource_type, i.resource_id) !== key));
     } catch (err) {
-      setMaterialsError(err?.response?.data?.detail || 'Не удалось привязать файл');
+      setItemsError(extractErrorMessage(err, 'Не удалось открепить'));
     } finally {
-      setIsAttaching(false);
+      setDetachingKey(null);
     }
   };
 
-  const handleDetachMaterial = async (materialId) => {
-    setDetachingId(materialId);
-    setMaterialsError('');
+  // Загрузить новый файл и сразу привязать к уроку (в библиотеке он тоже
+  // остаётся — как и всё в «Базе знаний»)
+  const handlePickMaterial = () => materialInputRef.current?.click();
+
+  const handleUploadMaterial = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingMaterial(true);
+    setItemsError('');
     try {
-      await api.delete(`/lessons/${lessonId}/materials/${materialId}`);
-      setLessonMaterials(prev => prev.filter(m => m.material_id !== materialId));
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.post('/materials/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (materialInputRef.current) materialInputRef.current.value = '';
+      await api.post(`/lessons/${lessonId}/items`, {
+        resource_type: 'material',
+        resource_id: uploadRes.data.id,
+      });
+      await loadItems();
     } catch (err) {
-      setMaterialsError(err?.response?.data?.detail || 'Не удалось открепить файл');
+      setItemsError(extractErrorMessage(err, 'Не удалось загрузить файл'));
     } finally {
-      setDetachingId(null);
+      setIsUploadingMaterial(false);
     }
   };
 
-  const loadQuizzes = async () => {
-    setQuizzesLoading(true);
-    setQuizzesError('');
+  // Создать новую ссылку и сразу привязать к уроку
+  const handleAddLink = async () => {
+    if (!linkTitle.trim() || !linkUrl.trim()) return;
+
+    setIsAddingLink(true);
+    setItemsError('');
     try {
-      const [attachedRes, libraryRes] = await Promise.all([
-        api.get(`/lessons/${lessonId}/quizzes`),
-        api.get('/quizzes/'),
-      ]);
-      setLessonQuizzes(attachedRes.data);
-      // К уроку можно привязать только свободный квиз (ещё ни к какому
-      // уроку не привязан) — иначе непонятно, откуда его «отвязывает».
-      setLibraryQuizzes(libraryRes.data.filter(q => !q.lesson_id));
-      setQuizzesLoaded(true);
+      const res = await api.post('/links/', { title: linkTitle.trim(), url: linkUrl.trim() });
+      await api.post(`/lessons/${lessonId}/items`, {
+        resource_type: 'link',
+        resource_id: res.data.id,
+      });
+      setLinkTitle('');
+      setLinkUrl('');
+      setShowLinkForm(false);
+      await loadItems();
     } catch (err) {
-      setQuizzesError(err?.response?.data?.detail || 'Не удалось загрузить квизы');
+      setItemsError(extractErrorMessage(err, 'Не удалось добавить ссылку'));
     } finally {
-      setQuizzesLoading(false);
-    }
-  };
-
-  const handleOpenQuiz = async (quizId) => {
-    setQuizzesError('');
-    try {
-      const res = await api.get(`/quizzes/${quizId}/html`);
-      const win = window.open('', '_blank');
-      win.document.write(res.data.html);
-      win.document.close();
-    } catch (err) {
-      setQuizzesError(err?.response?.data?.detail || 'Не удалось открыть квиз');
-    }
-  };
-
-  const handleAttachQuiz = async () => {
-    if (!selectedQuizId) return;
-    setIsAttachingQuiz(true);
-    setQuizzesError('');
-    try {
-      await api.post(`/lessons/${lessonId}/quizzes/${selectedQuizId}`);
-      setSelectedQuizId('');
-      await loadQuizzes();
-    } catch (err) {
-      setQuizzesError(err?.response?.data?.detail || 'Не удалось привязать квиз');
-    } finally {
-      setIsAttachingQuiz(false);
-    }
-  };
-
-  const handleDetachQuiz = async (quizId) => {
-    setDetachingQuizId(quizId);
-    setQuizzesError('');
-    try {
-      await api.delete(`/lessons/${lessonId}/quizzes/${quizId}`);
-      setLessonQuizzes(prev => prev.filter(q => q.id !== quizId));
-    } catch (err) {
-      setQuizzesError(err?.response?.data?.detail || 'Не удалось открепить квиз');
-    } finally {
-      setDetachingQuizId(null);
+      setIsAddingLink(false);
     }
   };
 
@@ -256,21 +254,14 @@ function LessonPage() {
     const row = rowOverride || marksRowsRef.current.find(r => r.student_id === studentId);
     if (!row) return;
 
-    setSavingIds(prev => new Set(prev).add(studentId));
     setRowErrors(prev => ({ ...prev, [studentId]: '' }));
     try {
       await api.put(`/lessons/${lessonId}/marks/${studentId}`, buildPayload(row));
     } catch (err) {
-      setRowErrors(prev => ({ ...prev, [studentId]: err?.response?.data?.detail || 'Не удалось сохранить' }));
+      setRowErrors(prev => ({ ...prev, [studentId]: extractErrorMessage(err, 'Не удалось сохранить') }));
       if (err?.response?.status === 403) {
         setMarksLocked(true);
       }
-    } finally {
-      setSavingIds(prev => {
-        const next = new Set(prev);
-        next.delete(studentId);
-        return next;
-      });
     }
   };
 
@@ -293,15 +284,61 @@ function LessonPage() {
     saveRow(studentId);
   };
 
-  const handleSaveAll = async () => {
+  // Клик по кружку Пришёл/Онлайн/Уважительная — как и звёзды, сохраняется
+  // сразу, без blur. Повторный клик по уже активной кнопке снимает отметку
+  // (пропуск). «Опоздал» комбинируется только с Пришёл/Онлайн — при уходе
+  // на Уважительную или снятии отметки сбрасываем и его.
+  const handleAttendanceClick = (studentId, btn) => {
+    const current = marksRowsRef.current.find(r => r.student_id === studentId);
+    if (!current) return;
+    const isActive = current.attendance_status === btn.status;
+    const nextStatus = isActive ? '' : btn.status;
+    const updated = {
+      ...current,
+      attendance_status: nextStatus,
+      is_late: LATE_STATUSES.has(nextStatus) ? current.is_late : false,
+    };
+    setMarksRows(prev => prev.map(r => (r.student_id === studentId ? updated : r)));
+    saveRow(studentId, updated);
+  };
+
+  // «Опоздал» — независимый модификатор, доступен только поверх
+  // Пришёл/Онлайн (см. LATE_STATUSES).
+  const handleLateToggle = (studentId) => {
+    const current = marksRowsRef.current.find(r => r.student_id === studentId);
+    if (!current || !LATE_STATUSES.has(current.attendance_status)) return;
+    const updated = { ...current, is_late: !current.is_late };
+    setMarksRows(prev => prev.map(r => (r.student_id === studentId ? updated : r)));
+    saveRow(studentId, updated);
+  };
+
+  // Оценка 0..100 — то же ограничение стоит на бэке (Field(ge=0, le=100)).
+  // HTML min/max на <input type="number"> не мешает ввести 200 руками, а
+  // бэк на такое ответит 422 — подрезаем на blur, до отправки.
+  const handleScoreBlur = (studentId) => {
+    const current = marksRowsRef.current.find(r => r.student_id === studentId);
+    if (current && current.score !== '') {
+      const clamped = Math.max(0, Math.min(100, Number(current.score)));
+      if (clamped !== Number(current.score)) {
+        const updated = { ...current, score: clamped };
+        setMarksRows(prev => prev.map(r => (r.student_id === studentId ? updated : r)));
+        saveRow(studentId, updated);
+        return;
+      }
+    }
+    saveRow(studentId);
+  };
+
+  const saveAllRows = async (rowsOverride) => {
+    const rows = rowsOverride || marksRowsRef.current;
     setIsSavingAll(true);
     setMarksError('');
     try {
-      const items = marksRowsRef.current.map(r => ({ student_id: r.student_id, ...buildPayload(r) }));
+      const items = rows.map(r => ({ student_id: r.student_id, ...buildPayload(r) }));
       await api.put(`/lessons/${lessonId}/marks`, items);
       setRowErrors({});
     } catch (err) {
-      setMarksError(err?.response?.data?.detail || 'Не удалось сохранить таблицу');
+      setMarksError(extractErrorMessage(err, 'Не удалось сохранить таблицу'));
       if (err?.response?.status === 403) {
         setMarksLocked(true);
       }
@@ -310,23 +347,52 @@ function LessonPage() {
     }
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const handleSaveAll = () => saveAllRows();
+
+  // «Все пришли» — отмечает всех присутствующими очно (без опозданий) и
+  // сразу сохраняет всю таблицу разом.
+  const handleMarkAllPresent = () => {
+    if (marksLocked) return;
+    const updated = marksRowsRef.current.map(r => ({ ...r, attendance_status: 'in_person', is_late: false }));
+    setMarksRows(updated);
+    saveAllRows(updated);
+  };
+
+  const handleCommitDate = async () => {
     if (!lesson) return;
 
-    setIsSaving(true);
+    const originalTime = lesson.date ? new Date(lesson.date).getTime() : null;
+    const newTime = dateValue ? dateValue.getTime() : null;
+    if (originalTime === newTime) return;
+
+    setIsSavingDate(true);
     setError('');
     try {
-      const payload = {
-        date: dateValue ? new Date(dateValue).toISOString() : null,
-      };
+      const payload = { date: dateValue ? dateValue.toISOString() : null };
       const res = await api.patch(`/lessons/${lesson.id}`, payload);
       setLesson(res.data);
-      setDateValue(toInputDateTime(res.data?.date));
+      setDateValue(res.data?.date ? new Date(res.data.date) : null);
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось сохранить изменения');
+      setError(extractErrorMessage(err, 'Не удалось сохранить изменения'));
     } finally {
-      setIsSaving(false);
+      setIsSavingDate(false);
+    }
+  };
+
+  const handleCommitComment = async () => {
+    if (!lesson) return;
+    if ((lesson.comment || '') === lessonComment) return;
+
+    setIsSavingComment(true);
+    setError('');
+    try {
+      const res = await api.patch(`/lessons/${lesson.id}`, { comment: lessonComment });
+      setLesson(res.data);
+      setLessonComment(res.data?.comment || '');
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Не удалось сохранить комментарий'));
+    } finally {
+      setIsSavingComment(false);
     }
   };
 
@@ -339,7 +405,7 @@ function LessonPage() {
       const res = await api.patch(`/lessons/${lesson.id}/open`);
       setLesson(prev => ({ ...prev, is_open: res.data.is_open }));
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось изменить доступ к уроку');
+      setError(extractErrorMessage(err, 'Не удалось изменить доступ к уроку'));
     } finally {
       setIsTogglingOpen(false);
     }
@@ -356,7 +422,7 @@ function LessonPage() {
       await api.delete(`/lessons/${lesson.id}`);
       navigate('/dashboard');
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось удалить урок');
+      setError(extractErrorMessage(err, 'Не удалось удалить урок'));
       setIsDeleting(false);
     }
   };
@@ -378,9 +444,35 @@ function LessonPage() {
   return (
     <div className="page page--md">
       <div className="toolbar">
-        <button className="btn btn--outline" onClick={() => navigate(`/dashboard/groups/${lesson.group_id}`)}>
-          {'Назад'}
-        </button>
+        <div className="lesson-toolbar__info">
+          <button className="btn btn--outline" onClick={() => navigate(`/dashboard/groups/${lesson.group_id}`)}>
+            {'Назад'}
+          </button>
+          <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
+          <DateTimePicker
+            value={dateValue}
+            onChange={setDateValue}
+            onCommit={handleCommitDate}
+            disabled={isSavingDate}
+          />
+          <button
+            type="button"
+            className={`btn btn--sm${lesson.is_open ? '' : ' btn--muted'}`}
+            onClick={handleToggleOpen}
+            disabled={isTogglingOpen}
+          >
+            {isTogglingOpen ? '...' : (lesson.is_open ? 'Закрыть' : 'Открыть')}
+          </button>
+          <button
+            type="button"
+            className="btn btn--sm btn--outline"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            title="Удалить урок"
+          >
+            <TrashIcon size={16} />
+          </button>
+        </div>
         <div className="toolbar__filters">
           <button
             type="button"
@@ -399,213 +491,137 @@ function LessonPage() {
         </div>
       </div>
 
-      <h2 className="page__heading">{lesson.title}</h2>
-
-      <div className="inline-row">
-        <span>{'Группа'}: {groupName}</span>
-        <span className={`badge ${lesson.is_open ? 'badge--open' : 'badge--closed'}`}>
-          {lesson.is_open ? 'Открыт' : 'Закрыт'}
-        </span>
-      </div>
+      {error && <div className="error-text error-text--muted">{error}</div>}
 
       {view === 'lesson' && (
         <>
-          <form onSubmit={handleSave} className="form-card">
-            <label className="field-label">
-              {'Дата и время начала'}
-              <input
-                type="datetime-local"
-                className="input input--narrow"
-                value={dateValue}
-                onChange={e => setDateValue(e.target.value)}
-              />
-            </label>
+          <div className="form-toolbar">
+            <button type="button" className="btn btn--outline" onClick={() => setShowLibraryModal(true)}>
+              {'Добавить из базы'}
+            </button>
+            <input
+              type="file"
+              ref={materialInputRef}
+              onChange={handleUploadMaterial}
+              hidden
+            />
+            <button type="button" className="btn btn--outline" onClick={handlePickMaterial} disabled={isUploadingMaterial}>
+              {isUploadingMaterial ? 'Загрузка...' : '+ Файл'}
+            </button>
+            <button
+              type="button"
+              className="btn btn--outline"
+              onClick={() => navigate(`/dashboard/add-quiz?lessonId=${lessonId}`)}
+            >
+              {'+ Квиз'}
+            </button>
+            <button type="button" className="btn btn--outline" onClick={() => setShowLinkForm(v => !v)}>
+              {'+ Ссылка'}
+            </button>
+          </div>
 
-            <div className="button-row">
-              <button type="submit" className="btn" disabled={isSaving}>
-                {isSaving ? 'Сохранение...' : 'Сохранить'}
-              </button>
-              <button type="button" className="btn btn--info" onClick={handleToggleOpen} disabled={isTogglingOpen}>
-                {isTogglingOpen
-                  ? 'Сохранение...'
-                  : lesson.is_open
-                    ? 'Закрыть урок'
-                    : 'Открыть урок'}
-              </button>
-              <button type="button" className="btn btn--danger" onClick={handleDelete} disabled={isDeleting}>
-                {isDeleting ? 'Сохранение...' : 'Удалить'}
+          {showLinkForm && (
+            <div className="form-toolbar">
+              <input
+                type="text"
+                className="input"
+                placeholder={'Название ссылки'}
+                value={linkTitle}
+                onChange={e => setLinkTitle(e.target.value)}
+              />
+              <input
+                type="text"
+                className="input"
+                placeholder={'https://...'}
+                value={linkUrl}
+                onChange={e => setLinkUrl(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn"
+                onClick={handleAddLink}
+                disabled={isAddingLink || !linkTitle.trim() || !linkUrl.trim()}
+              >
+                {isAddingLink ? 'Добавление...' : 'Сохранить'}
               </button>
             </div>
-          </form>
+          )}
 
-          {error && <div className="error-text error-text--muted">{error}</div>}
+          {showLibraryModal && (
+            <LibraryPickerModal
+              lessonId={lessonId}
+              attachedKeys={new Set(lessonItems.map(i => resourceKey(i.resource_type, i.resource_id)))}
+              onAttached={loadItems}
+              onClose={() => setShowLibraryModal(false)}
+            />
+          )}
 
           <div className="toolbar">
             <h3 className="toolbar__title">{'Материалы урока'}</h3>
           </div>
 
-          {materialsLoading && <p className="text-muted">{'Загрузка...'}</p>}
-          {materialsError && <div className="error-text error-text--muted">{materialsError}</div>}
+          {itemsLoading && <p className="text-muted">{'Загрузка...'}</p>}
+          {itemsError && <div className="error-text error-text--muted">{itemsError}</div>}
 
-          {!materialsLoading && materialsLoaded && (
+          {!itemsLoading && itemsLoaded && (
             <>
               <div className="table-scroll">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>{'Имя файла'}</th>
-                      <th>{'Размер'}</th>
+                      <th>{'Тип'}</th>
+                      <th>{'Название'}</th>
+                      <th>{'Детали'}</th>
                       <th>{'Добавил'}</th>
                       <th>{'Дата'}</th>
                       <th>{'Открепить'}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {lessonMaterials.length === 0 ? (
-                      <tr><td colSpan="5" className="table__empty">{'К уроку не привязано файлов'}</td></tr>
+                    {lessonItems.length === 0 ? (
+                      <tr><td colSpan="6" className="table__empty">{'К уроку ничего не привязано'}</td></tr>
                     ) : (
-                      lessonMaterials.map(m => (
-                        <tr key={m.material_id}>
-                          <td>
-                            <button
-                              type="button"
-                              className="link"
-                              onClick={() => handleOpenMaterial(m.material_id, m.content_type)}
-                            >
-                              {m.original_filename}
-                            </button>
-                          </td>
-                          <td className="nowrap">{formatSize(m.size_bytes)}</td>
-                          <td>{m.added_by_name || '—'}</td>
-                          <td className="nowrap">{m.added_at ? new Date(m.added_at).toLocaleDateString('ru-RU') : '—'}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn btn--sm"
-                              onClick={() => handleDetachMaterial(m.material_id)}
-                              disabled={detachingId === m.material_id}
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      lessonItems.map(item => {
+                        const meta = TYPE_META[item.resource_type];
+                        const key = resourceKey(item.resource_type, item.resource_id);
+                        return (
+                          <tr key={key} className={`table__row--${item.resource_type}`}>
+                            <td>
+                              <span className={`type-badge type-badge--${item.resource_type}`}>
+                                {meta.icon} {subtypeLabel(item)}
+                              </span>
+                            </td>
+                            <td>
+                              <button type="button" className="link" onClick={() => handleOpenItem(item)}>
+                                {item.title}
+                              </button>
+                            </td>
+                            <td className="nowrap">
+                              {item.resource_type === 'material' && formatSize(item.size_bytes || 0)}
+                              {item.resource_type === 'quiz' && (item.topic || '—')}
+                              {item.resource_type === 'link' && (
+                                <span className="table__cell--truncate" title={item.url}>{item.url}</span>
+                              )}
+                            </td>
+                            <td>{item.added_by_name || '—'}</td>
+                            <td className="nowrap">{item.added_at ? new Date(item.added_at).toLocaleDateString('ru-RU') : '—'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn btn--sm"
+                                onClick={() => handleDetachItem(item)}
+                                disabled={detachingKey === key}
+                              >
+                                ✕
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
-
-              <div className="form-toolbar">
-                <select
-                  className="input"
-                  value={selectedLibraryId}
-                  onChange={e => setSelectedLibraryId(e.target.value)}
-                >
-                  <option value="">{'Выбрать файл из базы знаний...'}</option>
-                  {libraryMaterials
-                    .filter(lm => !lessonMaterials.some(am => am.material_id === lm.id))
-                    .map(lm => (
-                      <option key={lm.id} value={lm.id}>{lm.original_filename}</option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleAttachMaterial}
-                  disabled={!selectedLibraryId || isAttaching}
-                >
-                  {isAttaching ? 'Добавление...' : 'Добавить'}
-                </button>
-              </div>
-
-              {libraryMaterials.length === 0 && (
-                <p className="hint-text">{'В базе знаний пока нет файлов'}</p>
-              )}
-            </>
-          )}
-
-          <div className="toolbar">
-            <h3 className="toolbar__title">{'Квизы урока'}</h3>
-            <button
-              type="button"
-              className="btn btn--sm"
-              onClick={() => navigate(`/dashboard/add-quiz?lessonId=${lessonId}`)}
-            >
-              + {'Создать квиз для урока'}
-            </button>
-          </div>
-
-          {quizzesLoading && <p className="text-muted">{'Загрузка...'}</p>}
-          {quizzesError && <div className="error-text error-text--muted">{quizzesError}</div>}
-
-          {!quizzesLoading && quizzesLoaded && (
-            <>
-              <div className="table-scroll">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{'Название'}</th>
-                      <th>{'Тема'}</th>
-                      <th>{'Тип'}</th>
-                      <th>{'Открыть'}</th>
-                      <th>{'Открепить'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lessonQuizzes.length === 0 ? (
-                      <tr><td colSpan="5" className="table__empty">{'К уроку не привязано квизов'}</td></tr>
-                    ) : (
-                      lessonQuizzes.map(q => (
-                        <tr key={q.id}>
-                          <td>{q.title}</td>
-                          <td>{q.topic || '—'}</td>
-                          <td>{q.template_type}</td>
-                          <td>
-                            <button type="button" className="btn btn--sm" onClick={() => handleOpenQuiz(q.id)}>
-                              📂
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn btn--sm"
-                              onClick={() => handleDetachQuiz(q.id)}
-                              disabled={detachingQuizId === q.id}
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="form-toolbar">
-                <select
-                  className="input"
-                  value={selectedQuizId}
-                  onChange={e => setSelectedQuizId(e.target.value)}
-                >
-                  <option value="">{'Выбрать квиз из своей библиотеки...'}</option>
-                  {libraryQuizzes.map(lq => (
-                    <option key={lq.id} value={lq.id}>{lq.title}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleAttachQuiz}
-                  disabled={!selectedQuizId || isAttachingQuiz}
-                >
-                  {isAttachingQuiz ? 'Добавление...' : 'Добавить'}
-                </button>
-              </div>
-
-              {libraryQuizzes.length === 0 && (
-                <p className="hint-text">{'Нет свободных квизов для привязки — все уже привязаны к урокам, либо ещё не созданы'}</p>
-              )}
             </>
           )}
         </>
@@ -624,13 +640,20 @@ function LessonPage() {
                 </p>
               )}
 
+              {marksRows.length > 0 && (
+                <div className="button-row">
+                  <button type="button" className="btn btn--outline" onClick={handleMarkAllPresent} disabled={isSavingAll || marksLocked}>
+                    {'Все пришли'}
+                  </button>
+                </div>
+              )}
+
               <div className="table-scroll">
                 <table className="table">
                   <thead>
                     <tr>
                       <th>{'Имя'}</th>
                       <th>{'Посещаемость'}</th>
-                      <th>{'Опоздал'}</th>
                       <th>{'Оценка'}</th>
                       <th>{'Звёзды'}</th>
                       <th>{'Комментарий'}</th>
@@ -638,35 +661,31 @@ function LessonPage() {
                   </thead>
                   <tbody>
                     {marksRows.length === 0 ? (
-                      <tr><td colSpan="6" className="table__empty">{'В группе нет студентов'}</td></tr>
+                      <tr><td colSpan="5" className="table__empty">{'В группе нет студентов'}</td></tr>
                     ) : (
-                      marksRows.map(row => {
-                        const lateDisabled = marksLocked
-                          || !row.attendance_status
-                          || row.attendance_status === 'excused'
-                          || row.attendance_status === 'absent';
-                        return (
+                      marksRows.map(row => (
                           <tr key={row.student_id}>
                             <td>{row.full_name}</td>
                             <td>
-                              <select
-                                className="input"
-                                value={row.attendance_status}
-                                disabled={marksLocked}
-                                onChange={e => handleImmediateChange(row.student_id, 'attendance_status', e.target.value)}
-                              >
-                                {ATTENDANCE_OPTIONS.map(opt => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              <div className="attendance-group">
+                                {ATTENDANCE_STATUS_BUTTONS.map(btn => (
+                                  <button
+                                    key={btn.kind}
+                                    type="button"
+                                    className={`attendance-btn attendance-btn--${btn.kind}${row.attendance_status === btn.status ? ' attendance-btn--active' : ''}`}
+                                    title={btn.label}
+                                    disabled={marksLocked}
+                                    onClick={() => handleAttendanceClick(row.student_id, btn)}
+                                  />
                                 ))}
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={row.is_late}
-                                disabled={lateDisabled}
-                                onChange={e => handleImmediateChange(row.student_id, 'is_late', e.target.checked)}
-                              />
+                                <button
+                                  type="button"
+                                  className={`attendance-btn attendance-btn--late${row.is_late ? ' attendance-btn--active' : ''}`}
+                                  title={'Опоздал'}
+                                  disabled={marksLocked || !LATE_STATUSES.has(row.attendance_status)}
+                                  onClick={() => handleLateToggle(row.student_id)}
+                                />
+                              </div>
                             </td>
                             <td>
                               <input
@@ -677,7 +696,7 @@ function LessonPage() {
                                 value={row.score}
                                 disabled={marksLocked}
                                 onChange={e => updateRowField(row.student_id, 'score', e.target.value)}
-                                onBlur={() => handleBlurSave(row.student_id)}
+                                onBlur={() => handleScoreBlur(row.student_id)}
                               />
                             </td>
                             <td>
@@ -704,16 +723,12 @@ function LessonPage() {
                                 onChange={e => updateRowField(row.student_id, 'comment', e.target.value)}
                                 onBlur={() => handleBlurSave(row.student_id)}
                               />
-                              {savingIds.has(row.student_id) && (
-                                <div className="hint-text">{'Сохранение…'}</div>
-                              )}
                               {rowErrors[row.student_id] && (
                                 <div className="error-text--sm">{rowErrors[row.student_id]}</div>
                               )}
                             </td>
                           </tr>
-                        );
-                      })
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -730,17 +745,21 @@ function LessonPage() {
           )}
         </div>
       )}
+
+      <label className="field-label">
+        {'Комментарий к уроку'}
+        <textarea
+          className="input input--textarea"
+          value={lessonComment}
+          onChange={e => setLessonComment(e.target.value)}
+          onBlur={handleCommitComment}
+          disabled={isSavingComment}
+          placeholder={'Заметки педагога по уроку в целом — что обсудили, на что обратить внимание в следующий раз...'}
+        />
+        {isSavingComment && <span className="hint-text">{'Сохранение…'}</span>}
+      </label>
     </div>
   );
-}
-
-function toInputDateTime(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 export default LessonPage;

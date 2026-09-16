@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import aliased
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
 from typing import Optional
 from pydantic import BaseModel, Field
 from ..database import get_db
-from ..models import Lesson, Group, GroupMember, User, LessonMark, Material, LessonMaterial, Quiz
+from ..models import Lesson, Group, GroupMember, User, LessonMark, LessonResource
 from ..dependencies import require_teacher, get_current_user
+from ..resources import RESOURCE_MODELS, RESOURCE_NOT_FOUND, fetch_resource_details, resource_exists
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
 
@@ -28,6 +28,7 @@ class LessonUpdate(BaseModel):
     title: Optional[str] = None
     order: Optional[int] = None
     date: Optional[datetime] = None
+    comment: Optional[str] = None
 
 class LessonOut(BaseModel):
     id: int
@@ -37,6 +38,7 @@ class LessonOut(BaseModel):
     date: Optional[datetime]
     is_open: bool
     source: Optional[str]
+    comment: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -66,24 +68,22 @@ class LessonMarkOut(BaseModel):
     marked_at: Optional[datetime]
 
 
-class LessonMaterialOut(BaseModel):
-    material_id: int
-    original_filename: str
-    content_type: Optional[str]
-    size_bytes: int
-    added_by_name: Optional[str]
-    added_at: Optional[datetime]
-
-
-class LessonQuizOut(BaseModel):
-    id: int
+class LessonItemOut(BaseModel):
+    resource_type: str  # material | quiz | link
+    resource_id: int
     title: str
-    topic: Optional[str]
-    template_type: str
-    created_at: datetime
+    content_type: Optional[str] = None   # material
+    size_bytes: Optional[int] = None     # material
+    template_type: Optional[str] = None  # quiz
+    topic: Optional[str] = None          # quiz
+    url: Optional[str] = None            # link
+    added_by_name: Optional[str] = None
+    added_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+
+class LessonItemAttach(BaseModel):
+    resource_type: str  # material | quiz | link
+    resource_id: int
 
 
 def is_lesson_locked(lesson: Lesson) -> bool:
@@ -358,63 +358,89 @@ async def save_lesson_marks_bulk(
     return {"ok": True, "saved": len(data)}
 
 
-# Материалы урока: файлы, привязанные к уроку из общей «Базы знаний»
-@router.get("/{lesson_id}/materials", response_model=list[LessonMaterialOut])
-async def get_lesson_materials(
+# Материалы урока: всё привязанное (файл/квиз/ссылка) из общей «Базы
+# знаний» — группировка фиксированная: файлы → ссылки → квизы, внутри
+# группы — по дате привязки.
+_TYPE_ORDER = {"material": 0, "link": 1, "quiz": 2}
+
+
+@router.get("/{lesson_id}/items", response_model=list[LessonItemOut])
+async def get_lesson_items(
     lesson_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
     await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
 
-    added_by_user = aliased(User)
     rows = await db.execute(
-        select(LessonMaterial, Material, added_by_user.full_name, added_by_user.username)
-        .join(Material, Material.id == LessonMaterial.material_id)
-        .outerjoin(added_by_user, added_by_user.id == LessonMaterial.added_by)
-        .where(LessonMaterial.lesson_id == lesson_id)
-        .order_by(LessonMaterial.added_at)
+        select(LessonResource, User.full_name, User.username)
+        .outerjoin(User, User.id == LessonResource.added_by)
+        .where(LessonResource.lesson_id == lesson_id)
     )
+    attachments = rows.all()
 
-    return [
-        LessonMaterialOut(
-            material_id=material.id,
-            original_filename=material.original_filename,
-            content_type=material.content_type,
-            size_bytes=material.size_bytes,
+    ids_by_type: dict[str, set[int]] = {}
+    for attachment, _, _ in attachments:
+        ids_by_type.setdefault(attachment.resource_type, set()).add(attachment.resource_id)
+
+    details: dict[tuple[str, int], dict] = {}
+    for resource_type, ids in ids_by_type.items():
+        for row in await fetch_resource_details(db, resource_type, ids):
+            details[(resource_type, row["id"])] = row
+
+    items = []
+    for attachment, full_name, username in attachments:
+        detail = details.get((attachment.resource_type, attachment.resource_id))
+        if not detail:
+            continue  # ресурс удалён из библиотеки, привязка осиротела
+
+        items.append(LessonItemOut(
+            resource_type=detail["resource_type"],
+            resource_id=detail["id"],
+            title=detail["title"],
+            content_type=detail["content_type"],
+            size_bytes=detail["size_bytes"],
+            template_type=detail["template_type"],
+            topic=detail["topic"],
+            url=detail["url"],
             added_by_name=full_name or username,
-            added_at=link.added_at,
-        )
-        for link, material, full_name, username in rows.all()
-    ]
+            added_at=attachment.added_at,
+        ))
+
+    items.sort(key=lambda i: (_TYPE_ORDER[i.resource_type], i.added_at or datetime.min))
+    return items
 
 
-# Привязать файл из библиотеки к уроку
-@router.post("/{lesson_id}/materials/{material_id}")
-async def attach_lesson_material(
+# Привязать ресурс (файл/квиз/ссылка) из библиотеки к уроку — общий
+# эндпойнт вместо трёх отдельных под каждый тип.
+@router.post("/{lesson_id}/items")
+async def attach_lesson_item(
     lesson_id: int,
-    material_id: int,
+    data: LessonItemAttach,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
     await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
 
-    material = await db.execute(select(Material).where(Material.id == material_id))
-    if not material.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Файл не найден в базе знаний")
+    if data.resource_type not in RESOURCE_MODELS:
+        raise HTTPException(status_code=422, detail="Недопустимый тип ресурса")
+    if not await resource_exists(db, data.resource_type, data.resource_id):
+        raise HTTPException(status_code=404, detail=RESOURCE_NOT_FOUND[data.resource_type])
 
     existing = await db.execute(
-        select(LessonMaterial).where(
-            LessonMaterial.lesson_id == lesson_id,
-            LessonMaterial.material_id == material_id,
+        select(LessonResource).where(
+            LessonResource.lesson_id == lesson_id,
+            LessonResource.resource_type == data.resource_type,
+            LessonResource.resource_id == data.resource_id,
         )
     )
     if existing.scalar_one_or_none():
         return {"ok": True}
 
-    db.add(LessonMaterial(
+    db.add(LessonResource(
         lesson_id=lesson_id,
-        material_id=material_id,
+        resource_type=data.resource_type,
+        resource_id=data.resource_id,
         added_by=current_user.id,
         added_at=datetime.now(dt_timezone.utc),
     ))
@@ -422,88 +448,29 @@ async def attach_lesson_material(
     return {"ok": True}
 
 
-# Отвязать файл от урока (сам файл в библиотеке остаётся)
-@router.delete("/{lesson_id}/materials/{material_id}")
-async def detach_lesson_material(
+# Отвязать ресурс от урока (сам ресурс остаётся в библиотеке)
+@router.delete("/{lesson_id}/items/{resource_type}/{resource_id}")
+async def detach_lesson_item(
     lesson_id: int,
-    material_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
-):
-    await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-
-    link = await db.execute(
-        select(LessonMaterial).where(
-            LessonMaterial.lesson_id == lesson_id,
-            LessonMaterial.material_id == material_id,
-        )
-    )
-    link = link.scalar_one_or_none()
-    if not link:
-        raise HTTPException(status_code=404, detail="Файл не привязан к этому уроку")
-
-    await db.delete(link)
-    await db.commit()
-    return {"ok": True}
-
-
-# Квизы урока (quiz.lesson_id — прямая связь, один квиз — максимум один урок)
-@router.get("/{lesson_id}/quizzes", response_model=list[LessonQuizOut])
-async def get_lesson_quizzes(
-    lesson_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
-):
-    await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-
-    rows = await db.execute(
-        select(Quiz).where(Quiz.lesson_id == lesson_id).order_by(Quiz.created_at)
-    )
-    return rows.scalars().all()
-
-
-# Привязать существующий квиз (из своей библиотеки) к уроку
-@router.post("/{lesson_id}/quizzes/{quiz_id}")
-async def attach_lesson_quiz(
-    lesson_id: int,
-    quiz_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
-):
-    await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-
-    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id))
-    quiz = result.scalar_one_or_none()
-    if not quiz:
-        raise HTTPException(status_code=404, detail="Квиз не найден")
-    if current_user.role != "admin" and quiz.created_by != current_user.id:
-        raise HTTPException(status_code=403, detail="Нет доступа к этому квизу")
-
-    quiz.lesson_id = lesson_id
-    await db.commit()
-    return {"ok": True}
-
-
-# Отвязать квиз от урока (сам квиз остаётся в библиотеке автора)
-@router.delete("/{lesson_id}/quizzes/{quiz_id}")
-async def detach_lesson_quiz(
-    lesson_id: int,
-    quiz_id: int,
+    resource_type: str,
+    resource_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
     await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
 
     result = await db.execute(
-        select(Quiz).where(Quiz.id == quiz_id, Quiz.lesson_id == lesson_id)
+        select(LessonResource).where(
+            LessonResource.lesson_id == lesson_id,
+            LessonResource.resource_type == resource_type,
+            LessonResource.resource_id == resource_id,
+        )
     )
-    quiz = result.scalar_one_or_none()
-    if not quiz:
-        raise HTTPException(status_code=404, detail="Квиз не привязан к этому уроку")
-    if current_user.role != "admin" and quiz.created_by != current_user.id:
-        raise HTTPException(status_code=403, detail="Нет доступа к этому квизу")
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Ресурс не привязан к этому уроку")
 
-    quiz.lesson_id = None
+    await db.delete(attachment)
     await db.commit()
     return {"ok": True}
 

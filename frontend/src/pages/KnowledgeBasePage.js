@@ -1,34 +1,48 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey } from '../utils/libraryItems';
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function itemKey(item) {
+  return resourceKey(item.resource_type, item.id);
 }
 
 function KnowledgeBasePage() {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = hasRole('admin');
 
-  const [materials, setMaterials] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [typeFilter, setTypeFilter] = useState(''); // '' | material | quiz | link
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [sort, setSort] = useState('date'); // date | title
+  const [deletingKey, setDeletingKey] = useState(null);
+
   const [isUploading, setIsUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    loadMaterials();
-  }, []);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [isAddingLink, setIsAddingLink] = useState(false);
 
-  const loadMaterials = async () => {
+  useEffect(() => {
+    loadItems();
+    // eslint-disable-next-line
+  }, [typeFilter, onlyMine, sort]);
+
+  const loadItems = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/materials/');
-      setMaterials(res.data);
+      const params = { sort };
+      if (typeFilter) params.type = typeFilter;
+      if (onlyMine && user) params.uploader = user.id;
+      const res = await api.get('/library/items', { params });
+      setItems(res.data);
     } catch (err) {
       setError(err?.response?.data?.detail || 'Не удалось загрузить базу знаний');
     } finally {
@@ -36,8 +50,14 @@ function KnowledgeBasePage() {
     }
   };
 
-  const handleUpload = async () => {
-    const file = fileInputRef.current?.files?.[0];
+  // Кнопка сама открывает системный проводник (клик по скрытому input) —
+  // выбор файла сразу запускает загрузку, без промежуточного шага.
+  const handlePickFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
@@ -49,7 +69,7 @@ function KnowledgeBasePage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
-      loadMaterials();
+      loadItems();
     } catch (err) {
       setError(err?.response?.data?.detail || 'Не удалось загрузить файл');
     } finally {
@@ -57,37 +77,83 @@ function KnowledgeBasePage() {
     }
   };
 
-  const handleOpen = async (id, contentType) => {
+  const handleAddLink = async () => {
+    if (!linkTitle.trim() || !linkUrl.trim()) return;
+
+    setIsAddingLink(true);
     setError('');
     try {
-      const res = await api.get(`/materials/${id}/download`, { responseType: 'blob' });
-      const type = res.headers?.['content-type'] || contentType || 'application/octet-stream';
-      const url = window.URL.createObjectURL(new Blob([res.data], { type }));
-      window.open(url, '_blank');
-      // Отзываем ссылку с задержкой — новой вкладке нужно время её открыть
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      await api.post('/links/', { title: linkTitle.trim(), url: linkUrl.trim() });
+      setLinkTitle('');
+      setLinkUrl('');
+      setShowLinkForm(false);
+      loadItems();
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось открыть файл');
+      setError(err?.response?.data?.detail || 'Не удалось добавить ссылку');
+    } finally {
+      setIsAddingLink(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm('Удалить файл из базы знаний?');
+  // Окно под файл/квиз открываем сразу, синхронно по клику — если открыть
+  // его уже после await, браузер считает это всплывающим окном не по
+  // действию пользователя и блокирует.
+  const handleOpen = async (item) => {
+    setError('');
+
+    if (item.resource_type === 'link') {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const win = window.open('', '_blank');
+    try {
+      if (item.resource_type === 'material') {
+        const res = await api.get(`/materials/${item.id}/download`, { responseType: 'blob' });
+        const type = res.headers?.['content-type'] || item.content_type || 'application/octet-stream';
+        const url = window.URL.createObjectURL(new Blob([res.data], { type }));
+        if (win) win.location.href = url;
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      } else {
+        const res = await api.get(`/quizzes/${item.id}/html`);
+        if (win) {
+          win.document.write(res.data.html);
+          win.document.close();
+        }
+      }
+    } catch (err) {
+      if (win) win.close();
+      setError(err?.response?.data?.detail || 'Не удалось открыть');
+    }
+  };
+
+  const canDelete = (item) => {
+    if (item.attached_lessons_count > 0) return false;
+    if (item.resource_type === 'quiz') return isAdmin || item.uploaded_by === user?.id;
+    return isAdmin; // файлы и ссылки — только admin
+  };
+
+  const handleDelete = async (item) => {
+    const confirmed = window.confirm(`Удалить «${item.title}» из базы знаний?`);
     if (!confirmed) return;
 
-    setDeletingId(id);
+    const key = itemKey(item);
+    const path = item.resource_type === 'material' ? 'materials'
+      : item.resource_type === 'quiz' ? 'quizzes' : 'links';
+
+    setDeletingKey(key);
     setError('');
     try {
-      await api.delete(`/materials/${id}`);
-      setMaterials(prev => prev.filter(m => m.id !== id));
+      await api.delete(`/${path}/${item.id}`);
+      setItems(prev => prev.filter(i => itemKey(i) !== key));
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось удалить файл');
+      setError(err?.response?.data?.detail || 'Не удалось удалить');
     } finally {
-      setDeletingId(null);
+      setDeletingKey(null);
     }
   };
 
-  const columnCount = isAdmin ? 6 : 5;
+  const columnCount = 7;
 
   return (
     <div className="page">
@@ -95,12 +161,76 @@ function KnowledgeBasePage() {
         <h1 className="page-title">{'База знаний'}</h1>
       </div>
 
+      <div className="toolbar">
+        <div className="toolbar__filters">
+          <button type="button" className={`tab${typeFilter === '' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('')}>
+            {'Все'}
+          </button>
+          <button type="button" className={`tab${typeFilter === 'material' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('material')}>
+            {'Файлы'}
+          </button>
+          <button type="button" className={`tab${typeFilter === 'link' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('link')}>
+            {'Ссылки'}
+          </button>
+          <button type="button" className={`tab${typeFilter === 'quiz' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('quiz')}>
+            {'Квизы'}
+          </button>
+        </div>
+        <div className="toolbar__filters">
+          <button type="button" className={`tab${onlyMine ? ' tab--active' : ''}`} onClick={() => setOnlyMine(v => !v)}>
+            {'Моё'}
+          </button>
+          <select className="input" value={sort} onChange={e => setSort(e.target.value)}>
+            <option value="date">{'По дате'}</option>
+            <option value="title">{'По названию'}</option>
+          </select>
+        </div>
+      </div>
+
       <div className="form-toolbar">
-        <input type="file" ref={fileInputRef} className="input" />
-        <button type="button" className="btn" onClick={handleUpload} disabled={isUploading}>
-          {isUploading ? 'Загрузка...' : 'Загрузить'}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelected}
+          hidden
+        />
+        <button type="button" className="btn" onClick={handlePickFile} disabled={isUploading}>
+          {isUploading ? 'Загрузка...' : 'Загрузить файл'}
+        </button>
+        <button type="button" className="btn btn--outline" onClick={() => setShowLinkForm(v => !v)}>
+          {'+ Добавить ссылку'}
+        </button>
+        <button type="button" className="btn btn--outline" onClick={() => navigate('/dashboard/add-quiz')}>
+          {'+ Создать квиз'}
         </button>
       </div>
+
+      {showLinkForm && (
+        <div className="form-toolbar">
+          <input
+            type="text"
+            className="input"
+            placeholder={'Название ссылки'}
+            value={linkTitle}
+            onChange={e => setLinkTitle(e.target.value)}
+          />
+          <input
+            type="text"
+            className="input"
+            placeholder={'https://...'}
+            value={linkUrl}
+            onChange={e => setLinkUrl(e.target.value)}
+          />
+          <button
+            type="button"
+            className="btn"
+            onClick={handleAddLink}
+            disabled={isAddingLink || !linkTitle.trim() || !linkUrl.trim()}
+          >
+            {isAddingLink ? 'Добавление...' : 'Сохранить'}
+          </button>
+        </div>
+      )}
 
       {error && <div className="error-text error-text--muted">{error}</div>}
 
@@ -108,49 +238,61 @@ function KnowledgeBasePage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{'Имя файла'}</th>
               <th>{'Тип'}</th>
-              <th>{'Размер'}</th>
+              <th>{'Название'}</th>
+              <th>{'Детали'}</th>
               <th>{'Загрузил'}</th>
               <th>{'Дата'}</th>
-              {isAdmin && <th>{'Удалить'}</th>}
+              <th>{'В уроках'}</th>
+              <th>{'Удалить'}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr><td colSpan={columnCount} className="table__empty">{'Загрузка...'}</td></tr>
-            ) : materials.length === 0 ? (
-              <tr><td colSpan={columnCount} className="table__empty">{'В базе знаний пока нет файлов'}</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={columnCount} className="table__empty">{'В базе знаний пока пусто'}</td></tr>
             ) : (
-              materials.map(m => (
-                <tr key={m.id}>
-                  <td>
-                    <button
-                      type="button"
-                      className="link"
-                      onClick={() => handleOpen(m.id, m.content_type)}
-                    >
-                      {m.original_filename}
-                    </button>
-                  </td>
-                  <td>{m.content_type || '—'}</td>
-                  <td className="nowrap">{formatSize(m.size_bytes)}</td>
-                  <td>{m.uploaded_by_name || '—'}</td>
-                  <td className="nowrap">{new Date(m.created_at).toLocaleDateString('ru-RU')}</td>
-                  {isAdmin && (
+              items.map(item => {
+                const meta = TYPE_META[item.resource_type];
+                const key = itemKey(item);
+                const deletable = canDelete(item);
+                return (
+                  <tr key={key} className={`table__row--${item.resource_type}`}>
+                    <td>
+                      <span className={`type-badge type-badge--${item.resource_type}`}>
+                        {meta.icon} {subtypeLabel(item)}
+                      </span>
+                    </td>
+                    <td>
+                      <button type="button" className="link" onClick={() => handleOpen(item)}>
+                        {item.title}
+                      </button>
+                    </td>
+                    <td className="nowrap">
+                      {item.resource_type === 'material' && formatSize(item.size_bytes || 0)}
+                      {item.resource_type === 'quiz' && (item.topic || '—')}
+                      {item.resource_type === 'link' && (
+                        <span className="table__cell--truncate" title={item.url}>{item.url}</span>
+                      )}
+                    </td>
+                    <td>{item.uploaded_by_name || '—'}</td>
+                    <td className="nowrap">{new Date(item.created_at).toLocaleDateString('ru-RU')}</td>
+                    <td className="nowrap">{item.attached_lessons_count > 0 ? item.attached_lessons_count : '—'}</td>
                     <td>
                       <button
                         type="button"
                         className="btn btn--sm"
-                        onClick={() => handleDelete(m.id)}
-                        disabled={deletingId === m.id}
+                        onClick={() => handleDelete(item)}
+                        disabled={!deletable || deletingKey === key}
+                        title={item.attached_lessons_count > 0 ? 'Сначала отвяжите от уроков' : undefined}
                       >
                         🗑️
                       </button>
                     </td>
-                  )}
-                </tr>
-              ))
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

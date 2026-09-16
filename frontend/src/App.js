@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import CardsPage from './pages/CardsPage';
 import AddQuizPage from './pages/AddQuizPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminPage from './pages/AdminPage';
@@ -33,9 +32,6 @@ function App() {
           </PrivateRoute>
         }>
           <Route index element={<HomePage />} />
-          <Route path="cards" element={
-            <RoleRoute roles={['teacher', 'admin']}><CardsPage /></RoleRoute>
-          } />
           <Route path="add-quiz" element={
             <RoleRoute roles={['teacher', 'admin']}><AddQuizPage /></RoleRoute>
           } />

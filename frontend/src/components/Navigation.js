@@ -17,13 +17,6 @@ function Navigation({ user }) {
         </li>
         {user?.role !== 'student' && (
           <li className="nav__item">
-            <NavLink to="/dashboard/cards" className={linkClass}>
-              🃏 {'Квизы'}
-            </NavLink>
-          </li>
-        )}
-        {user?.role !== 'student' && (
-          <li className="nav__item">
             <NavLink to="/dashboard/materials" className={linkClass}>
               📚 {'База знаний'}
             </NavLink>

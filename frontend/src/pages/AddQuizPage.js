@@ -17,8 +17,9 @@ function AddQuizPage() {
   const { lang } = useLang();
 
   // Куда возвращаться после сохранения/отмены: если пришли из урока — назад
-  // в урок (квиз уже будет привязан), иначе — в общий список квизов.
-  const returnPath = lessonId ? `/dashboard/lessons/${lessonId}` : '/dashboard/cards';
+  // в урок (квиз уже будет привязан), иначе — в «Базу знаний» (страница
+  // «Квизы» больше не используется, всё собрано там).
+  const returnPath = lessonId ? `/dashboard/lessons/${lessonId}` : '/dashboard/materials';
 
   console.log('🌐 Текущий язык в AddQuizPage:', lang);
 
@@ -41,7 +42,7 @@ function AddQuizPage() {
           }
         } catch (err) {
           alert('Ошибка загрузки квиза');
-          navigate('/dashboard/cards');
+          navigate('/dashboard/materials');
         }
       };
       fetchQuiz();
@@ -85,14 +86,21 @@ function AddQuizPage() {
         template_type: templateType,
         questions,
         lang,  // <-- передаём текущий язык
-        ...(!id && lessonId ? { lesson_id: Number(lessonId) } : {}),
       };
       console.log('📤 Отправка payload:', payload);
 
       if (id) {
         await api.put(`/quizzes/${id}`, payload);
       } else {
-        await api.post('/quizzes/', payload);
+        const res = await api.post('/quizzes/', payload);
+        // Привязка к уроку — отдельным шагом через lesson_resources
+        // (у квиза больше нет собственного lesson_id, см. resources.py).
+        if (lessonId) {
+          await api.post(`/lessons/${lessonId}/items`, {
+            resource_type: 'quiz',
+            resource_id: res.data.id,
+          });
+        }
       }
       navigate(returnPath);
     } catch (err) {

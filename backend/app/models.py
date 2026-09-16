@@ -61,6 +61,7 @@ class Lesson(Base):
     date = Column(DateTime(timezone=True), nullable=True)  # дата проведения
     is_open = Column(Boolean, nullable=False, default=False)  # педагог открывает доступ
     source = Column(String, nullable=True)  # academy | teacher
+    comment = Column(Text, nullable=True)  # заметки педагога по уроку в целом (не по студенту)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -95,25 +96,23 @@ class Material(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-# Привязка материала к уроку — один файл может быть в нескольких уроках
-# одновременно (много-ко-многим). Отвязка не удаляет сам Material.
-class LessonMaterial(Base):
-    __tablename__ = "lesson_materials"
-    __table_args__ = (
-        UniqueConstraint("lesson_id", "material_id", name="uq_lesson_materials_lesson_material"),
-    )
+# Ссылки («База знаний») — третий тип библиотечного ресурса, наравне с
+# Material и Quiz. Своего хранилища не требует — просто url + заголовок.
+class Link(Base):
+    __tablename__ = "links"
     id = Column(Integer, primary_key=True, index=True)
-    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
-    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False)
-    added_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    added_at = Column(DateTime(timezone=True), server_default=func.now())
+    url = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    added_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-# Квизы — привязаны к уроку
+# Квизы — самостоятельная библиотечная единица (как Material и Link).
+# Привязка к урокам — через LessonResource, много-ко-многим.
 class Quiz(Base):
     __tablename__ = "quizzes"
     id = Column(Integer, primary_key=True, index=True)
-    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=True)  # привязка к уроку
     title = Column(String, nullable=False)
     topic = Column(String, nullable=True)
     type = Column(String, nullable=False)  # flash | live | sprint
@@ -122,3 +121,26 @@ class Quiz(Base):
     html_translations = Column(JSON, default={})
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Привязка ресурса (файл/квиз/ссылка) к уроку — общая полиморфная
+# таблица-связка вместо трёх отдельных. Один ресурс можно привязать к
+# нескольким урокам одновременно; отвязка не удаляет сам ресурс.
+# Целостность resource_id (что он реально существует в нужной таблице
+# при привязке, и что привязки чистятся при удалении ресурса) —
+# на уровне кода (routers/library.py, routers/lessons.py), а не FK,
+# т.к. одна колонка не может ссылаться на три разные таблицы.
+class LessonResource(Base):
+    __tablename__ = "lesson_resources"
+    __table_args__ = (
+        UniqueConstraint(
+            "lesson_id", "resource_type", "resource_id",
+            name="uq_lesson_resources_lesson_type_resource",
+        ),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
+    resource_type = Column(String, nullable=False)  # material | quiz | link
+    resource_id = Column(Integer, nullable=False)
+    added_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    added_at = Column(DateTime(timezone=True), server_default=func.now())

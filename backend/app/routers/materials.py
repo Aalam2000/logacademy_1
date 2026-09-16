@@ -12,6 +12,7 @@ from .. import storage
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
 from ..models import Material, User
+from ..resources import ensure_deletable
 
 router = APIRouter(prefix="/materials", tags=["materials"])
 
@@ -113,6 +114,8 @@ async def delete_material(
     material = result.scalar_one_or_none()
     if not material:
         raise HTTPException(status_code=404, detail="Файл не найден")
+
+    await ensure_deletable(db, "material", material_id)
 
     storage.delete_object(material.object_key)
     await db.delete(material)
