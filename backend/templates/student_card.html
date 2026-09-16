@@ -1,0 +1,49 @@
+<html>
+<head>
+<style>
+@page { size: A4; margin: 2cm; }
+@font-face { font-family: "DejaVu"; src: url("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); }
+@font-face { font-family: "DejaVu"; font-weight: bold; src: url("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"); }
+body { font-family: "DejaVu"; font-size: 11pt; color: #1a2e4a; }
+h1 { font-size: 18pt; color: #3dbdaa; margin-bottom: 4px; }
+h2 { font-size: 13pt; margin-top: 20px; margin-bottom: 6px; border-bottom: 1px solid #c8f0ea; padding-bottom: 4px; }
+.meta { color: #4B5563; font-size: 9pt; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+td, th { padding: 4px 8px; border-bottom: 1px solid #e8f4f0; text-align: left; font-size: 10pt; }
+th { color: #4B5563; font-weight: normal; }
+.contacts th { width: 25%; }
+.stats-grid td { width: 25%; }
+.stats-value { font-size: 16pt; font-weight: bold; color: #3dbdaa; }
+.stats-label { font-size: 8pt; color: #4B5563; }
+</style>
+</head>
+<body>
+  <h1>Карточка учащегося</h1>
+  <div class="meta">Log Academy &nbsp;·&nbsp; сформировано {{ generated_date }}</div>
+
+  <h2>{{ student_name }}</h2>
+  <table class="contacts">
+    <tr class="contact-row" style="{{ phone_display }}"><th>Телефон</th><td>{{ phone_value }}</td></tr>
+    <tr class="contact-row" style="{{ telegram_display }}"><th>Telegram</th><td>{{ telegram_value }}</td></tr>
+    <tr class="contact-row" style="{{ whatsapp_display }}"><th>WhatsApp</th><td>{{ whatsapp_value }}</td></tr>
+    <tr class="contact-row" style="{{ email_display }}"><th>Email</th><td>{{ email_value }}</td></tr>
+  </table>
+
+  <h2>Группы и курсы</h2>
+  <table>
+    <tr><th>Группа</th><th>Курс</th><th>Педагог</th></tr>
+    {{ groups_rows }}
+    <tr style="{{ empty_groups_display }}"><td colspan="3">Нет активных групп</td></tr>
+  </table>
+
+  <h2>Успеваемость и посещаемость</h2>
+  <table class="stats-grid">
+    <tr>
+      <td><div class="stats-value">{{ avg }}</div><div class="stats-label">Средний балл</div></td>
+      <td><div class="stats-value">{{ max_score }}</div><div class="stats-label">Максимальный балл</div></td>
+      <td><div class="stats-value">{{ unexcused }}</div><div class="stats-label">Пропуски (неуваж.)</div></td>
+      <td><div class="stats-value">{{ late }}</div><div class="stats-label">Опоздания</div></td>
+    </tr>
+  </table>
+</body>
+</html>

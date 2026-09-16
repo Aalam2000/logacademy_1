@@ -181,7 +181,14 @@
   min-width: 160px; /* AdminPage — компактные поля форм/таблиц */
 }
 .input--sm-num {
-  width: 90px; /* LessonPage — оценка 0-100 в табличке студентов */
+  width: 100%;
+  box-sizing: border-box; /* иначе паддинги/border вылезают за границу узкой
+    колонки .table__col--score и поле заезжает на «Звёзды» */
+}
+.input--full {
+  width: 100%;
+  box-sizing: border-box; /* иначе паддинги вылезают за границу ячейки таблицы —
+    LessonPage, поле «Комментарий» в табличке студентов заезжало на «Контакты» */
 }
 .star-picker {
   display: inline-flex;
@@ -313,6 +320,38 @@
   width: 100%;
   border-collapse: collapse;
   font-size: var(--font-sm);
+}
+/* table-layout: fixed — колонки не растягиваются по контенту (длинный
+   URL/название урока), а держат заданную/равную ширину и переносят текст
+   вместо того чтобы толкать таблицу за пределы страницы (LessonPage —
+   таблица «Материалы урока», из-за которой была не видна «Открепить»). */
+.table--fixed {
+  table-layout: fixed;
+}
+/* Ширины колонок для .table--fixed — по содержимому конкретных виджетов
+   (в отличие от .table__col--date/--action/--delete из CardsPage, которые
+   меряли под свою фиксированную таблицу и здесь не подходили). */
+.table__col--attendance {
+  width: 150px; /* LessonPage — группа кружков посещаемости */
+}
+.table__col--score {
+  width: 80px; /* LessonPage — число 0..100 */
+}
+.table__col--stars {
+  width: 90px; /* LessonPage — 3 звезды */
+}
+.table__col--icons {
+  width: 90px; /* пара иконок Telegram/WhatsApp */
+}
+/* Обрезка «по размеру поля» — в отличие от .table__cell--truncate
+   (фиксированные 260px под таблицы без table-layout:fixed), тут ширина —
+   100% реальной ячейки, которую держит table-layout:fixed. */
+.table__cell--clip {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .table--card {
   background: var(--color-white);
@@ -579,4 +618,35 @@
   font-size: var(--font-sm);
   background: var(--color-white);
   cursor: pointer;
+}
+
+/* ===== Значки контактов в строке таблицы (GroupsPage) ===== */
+.table__icons {
+  display: flex;
+  gap: var(--space-2);
+}
+.row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--color-white);
+  transition: opacity 0.2s;
+}
+.row-icon--tg {
+  background: #229ed9;
+}
+.row-icon--wa {
+  background: #25d366;
+}
+.row-icon--disabled {
+  background: var(--color-bg-muted);
+  color: var(--color-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+a.row-icon:hover {
+  opacity: 0.85;
 }

@@ -6,6 +6,7 @@ import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
+import { StudentContactIcons } from '../components/ContactIcons';
 
 // Кружки посещаемости вместо select'а. Пришёл/Онлайн/Уважительная —
 // взаимоисключающие («ИЛИ», attendance_status), «Опоздал» — независимый
@@ -112,6 +113,8 @@ function LessonPage() {
       setMarksRows(res.data.students.map(s => ({
         student_id: s.student_id,
         full_name: s.full_name,
+        telegram_username: s.telegram_username,
+        whatsapp: s.whatsapp,
         attendance_status: s.attendance_status || '',
         is_late: !!s.is_late,
         score: s.score === null || s.score === undefined ? '' : s.score,
@@ -347,8 +350,6 @@ function LessonPage() {
     }
   };
 
-  const handleSaveAll = () => saveAllRows();
-
   // «Все пришли» — отмечает всех присутствующими очно (без опозданий) и
   // сразу сохраняет всю таблицу разом.
   const handleMarkAllPresent = () => {
@@ -565,16 +566,16 @@ function LessonPage() {
 
           {!itemsLoading && itemsLoaded && (
             <>
-              <div className="table-scroll">
-                <table className="table">
+              <div>
+                <table className="table table--fixed">
                   <thead>
                     <tr>
                       <th>{'Тип'}</th>
                       <th>{'Название'}</th>
                       <th>{'Детали'}</th>
                       <th>{'Добавил'}</th>
-                      <th>{'Дата'}</th>
-                      <th>{'Открепить'}</th>
+                      <th className="table__col--date">{'Дата'}</th>
+                      <th className="table__col--delete">{'Открепить'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -596,16 +597,20 @@ function LessonPage() {
                                 {item.title}
                               </button>
                             </td>
-                            <td className="nowrap">
-                              {item.resource_type === 'material' && formatSize(item.size_bytes || 0)}
-                              {item.resource_type === 'quiz' && (item.topic || '—')}
+                            <td>
+                              {item.resource_type === 'material' && (
+                                <span className="table__cell--clip">{formatSize(item.size_bytes || 0)}</span>
+                              )}
+                              {item.resource_type === 'quiz' && (
+                                <span className="table__cell--clip" title={item.topic || ''}>{item.topic || '—'}</span>
+                              )}
                               {item.resource_type === 'link' && (
-                                <span className="table__cell--truncate" title={item.url}>{item.url}</span>
+                                <span className="table__cell--clip" title={item.url}>{item.url}</span>
                               )}
                             </td>
                             <td>{item.added_by_name || '—'}</td>
-                            <td className="nowrap">{item.added_at ? new Date(item.added_at).toLocaleDateString('ru-RU') : '—'}</td>
-                            <td>
+                            <td className="table__col--date nowrap">{item.added_at ? new Date(item.added_at).toLocaleDateString('ru-RU') : '—'}</td>
+                            <td className="table__col--delete">
                               <button
                                 type="button"
                                 className="btn btn--sm"
@@ -648,20 +653,21 @@ function LessonPage() {
                 </div>
               )}
 
-              <div className="table-scroll">
-                <table className="table">
+              <div>
+                <table className="table table--fixed">
                   <thead>
                     <tr>
                       <th>{'Имя'}</th>
-                      <th>{'Посещаемость'}</th>
-                      <th>{'Оценка'}</th>
-                      <th>{'Звёзды'}</th>
+                      <th className="table__col--attendance">{'Посещаемость'}</th>
+                      <th className="table__col--score">{'Оценка'}</th>
+                      <th className="table__col--stars">{'Звёзды'}</th>
                       <th>{'Комментарий'}</th>
+                      <th className="table__col--icons">{'Контакты'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {marksRows.length === 0 ? (
-                      <tr><td colSpan="5" className="table__empty">{'В группе нет студентов'}</td></tr>
+                      <tr><td colSpan="6" className="table__empty">{'В группе нет студентов'}</td></tr>
                     ) : (
                       marksRows.map(row => (
                           <tr key={row.student_id}>
@@ -717,7 +723,7 @@ function LessonPage() {
                             <td>
                               <input
                                 type="text"
-                                className="input"
+                                className="input input--full"
                                 value={row.comment}
                                 disabled={marksLocked}
                                 onChange={e => updateRowField(row.student_id, 'comment', e.target.value)}
@@ -727,6 +733,9 @@ function LessonPage() {
                                 <div className="error-text--sm">{rowErrors[row.student_id]}</div>
                               )}
                             </td>
+                            <td>
+                              <StudentContactIcons telegram={row.telegram_username} whatsapp={row.whatsapp} />
+                            </td>
                           </tr>
                       ))
                     )}
@@ -734,19 +743,12 @@ function LessonPage() {
                 </table>
               </div>
 
-              {marksRows.length > 0 && (
-                <div className="button-row">
-                  <button type="button" className="btn" onClick={handleSaveAll} disabled={isSavingAll || marksLocked}>
-                    {isSavingAll ? 'Сохранение...' : 'Сохранить'}
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>
       )}
 
-      <label className="field-label">
+      <label className="field-label field-label--top-gap">
         {'Комментарий к уроку'}
         <textarea
           className="input input--textarea"

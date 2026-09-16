@@ -10,6 +10,8 @@ import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
 import LessonPage from './pages/LessonPage';
 import GroupPage from './pages/GroupPage';
+import StudentsPage from './pages/StudentsPage';
+import TeachersDirectoryPage from './pages/TeachersDirectoryPage';
 import JoinGroupPage from './pages/JoinGroupPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoleRoute from './components/RoleRoute';
@@ -40,6 +42,12 @@ function App() {
           } />
           <Route path="materials" element={
             <RoleRoute roles={['teacher', 'admin']}><KnowledgeBasePage /></RoleRoute>
+          } />
+          <Route path="students" element={
+            <RoleRoute roles={['teacher', 'admin']}><StudentsPage /></RoleRoute>
+          } />
+          <Route path="teachers" element={
+            <RoleRoute roles={['admin']}><TeachersDirectoryPage /></RoleRoute>
           } />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="admin" element={

@@ -212,6 +212,10 @@
   font-size: var(--font-sm);
   color: var(--color-text);
 }
+.field-label--top-gap {
+  margin-top: var(--space-6); /* отступ примерно в высоту строки текста —
+    LessonPage, «Комментарий к уроку» под таблицами (материалы/студенты) */
+}
 .inline-row {
   display: flex;
   align-items: center;

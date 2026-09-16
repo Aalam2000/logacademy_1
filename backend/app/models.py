@@ -18,6 +18,7 @@ class User(Base):
     telegram_username = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)  # путь к фото, MinIO — этап 2
+    theme = Column(String, nullable=True)  # brand | playful | dark — выбор пользователя, NULL = brand по умолчанию
 
 
 # Курс / тема преподавания
@@ -25,6 +26,7 @@ class Course(Base):
     __tablename__ = "courses"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -35,6 +37,7 @@ class Group(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
     name = Column(String, nullable=False)
     telegram_chat_id = Column(String, nullable=True)
+    whatsapp = Column(String, nullable=True)
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False, default="active")  # active | archived
     invite_code = Column(String, unique=True, nullable=False)  # для регистрации студентов по QR

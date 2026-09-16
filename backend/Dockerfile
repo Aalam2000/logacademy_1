@@ -5,7 +5,7 @@ WORKDIR /app
 # Node.js обязателен для autoi18n — сканирование JS/JSX/TSX идёт через
 # настоящий AST-парсер (Babel), не через регулярки (см. README autoi18n).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl fonts-dejavu-core \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*

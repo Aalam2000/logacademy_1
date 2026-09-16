@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
+import { StudentContactIcons } from '../components/ContactIcons';
 
 function GroupsPage() {
   const navigate = useNavigate();
@@ -48,12 +49,13 @@ function GroupsPage() {
             <th>{'Название группы'}</th>
             <th>{'Курс'}</th>
             <th>{'Учеников'}</th>
+            <th>{'Контакты'}</th>
           </tr>
         </thead>
         <tbody>
           {groups.length === 0 && (
             <tr>
-              <td colSpan={3} className="table__empty">
+              <td colSpan={4} className="table__empty">
                 {'Групп пока нет'}
               </td>
             </tr>
@@ -67,6 +69,9 @@ function GroupsPage() {
               <td>{g.name}</td>
               <td>{courseName(g.course_id)}</td>
               <td>{g.student_count ?? 0}</td>
+              <td>
+                <StudentContactIcons telegram={g.telegram_chat_id} whatsapp={g.whatsapp} />
+              </td>
             </tr>
           ))}
         </tbody>

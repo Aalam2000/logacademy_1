@@ -60,6 +60,8 @@ class LessonMarkBulkItem(LessonMarkIn):
 class LessonMarkOut(BaseModel):
     student_id: int
     full_name: Optional[str]
+    telegram_username: Optional[str] = None
+    whatsapp: Optional[str] = None
     attendance_status: Optional[str]
     is_late: bool
     score: Optional[int]
@@ -300,6 +302,8 @@ async def get_lesson_marks(
         students.append(LessonMarkOut(
             student_id=user.id,
             full_name=user.full_name or user.username,
+            telegram_username=user.telegram_username,
+            whatsapp=user.whatsapp,
             attendance_status=mark.attendance_status if mark else None,
             is_late=mark.is_late if mark else False,
             score=mark.score if mark else None,
