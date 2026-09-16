@@ -20,8 +20,7 @@ docker compose -f docker-compose.prod.yml ps
 echo "[deploy] current revision"
 git rev-parse --short HEAD
 
-echo "[deploy] cleanup unused docker images/build cache"
-docker image prune -af
-docker builder prune -af
+echo "[deploy] cleanup: только dangling-образы, build cache не трогаем — иначе каждый деплой качает всё заново"
+docker image prune -f
 
 echo "[deploy] done"
