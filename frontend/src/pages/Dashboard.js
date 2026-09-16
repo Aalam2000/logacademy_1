@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navigation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import ThemeSwitcher from '../components/ThemeSwitcher';
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -24,6 +25,7 @@ function Dashboard() {
             )}
           </h2>
           <div className="dashboard-header-right">
+            <ThemeSwitcher />
             <LanguageSwitcher />
             <button onClick={() => { logout(); navigate('/login'); }} className="btn btn--danger btn--pill">
               {'Выйти'}

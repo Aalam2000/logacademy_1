@@ -17,6 +17,7 @@
   --color-primary-border: #c8f0ea; /* обводка/рамка в тон бренду (инпуты, карточки, кнопки-табы) */
   --color-border-light: #e8f4f0;   /* более лёгкий делитель: границы строк таблиц/модалок (было ошибочно = primary-border в Table.js — исправлено) */
   --color-white: #ffffff;
+  --color-surface: #ffffff;  /* фон карточек/сайдбара/модалок — отдельно от --color-white (тот держит текст НА цветном фоне и в темах не меняется) */
 
   --color-text: #1a2e4a;           /* основной текст (объединил #1a2e4a, #111827 и разовый #333 из AddQuizPage) */
   --color-muted: #4B5563;          /* второстепенный/серый текст (объединил #4B5563, #6B7280 и разовый #6a8aaa из CardsPage) */
@@ -77,4 +78,104 @@
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);  /* было ошибочно 0.08 — исправлено по факту использования (CardsPage) */
   --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.2);  /* было ошибочно 0.12 — исправлено по факту использования (все модалки) */
   --shadow-glow: 0 4px 32px rgba(61, 189, 170, 0.08); /* тень с бирюзовым оттенком (Login/JoinGroup) */
+
+  /* --- Шрифты --- */
+  --font-family-heading: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-family-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/*
+ * Темы интерфейса — переключаются атрибутом data-theme на <html>
+ * (см. ThemeContext.js). Тема "brand" — это отсутствие атрибута, то есть
+ * весь блок :root выше и есть тема "brand" по умолчанию, ничего отдельно
+ * для неё не описываем.
+ *
+ * Каждая тема переопределяет только переменные — ни один компонент не
+ * трогаем, поэтому переключение темы не может сломать функционал.
+ */
+
+/* ===== Тема "playful" — яркая, для детской аудитории ===== */
+:root[data-theme="playful"] {
+  --color-primary: #ff6b4a;
+  --color-primary-border: #ffe1cf;
+  --color-border-light: #fff3e0;
+  --color-surface: #fffaf3;
+
+  --color-text: #3a2e1f;
+  --color-muted: #8a7a68;
+
+  --color-danger: #e0503f;
+  --color-danger-text: #c2412f;
+  --color-danger-bg-light: #ffe1e1;
+
+  --color-info: #4ecbf0;
+  --color-role-student: #4fbf5f;
+
+  --color-bg-muted: #ffe9c9;
+  --color-bg-soft: #fff8ec;
+
+  --color-success-bg: #eafbe9;
+  --color-success-text: #2f8f3e;
+
+  --color-warning-bg: #ffe1a8;
+  --color-warning: #e8a23a;
+
+  --color-row-material: #fff8ec;
+  --color-row-quiz: #e9f6ff;
+  --color-row-link: #f4ecff;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  --font-family-heading: 'Baloo 2', system-ui, sans-serif;
+  --font-family-body: 'Nunito', system-ui, sans-serif;
+}
+
+/* ===== Тема "dark" — тёмная плотная консоль ===== */
+:root[data-theme="dark"] {
+  --color-primary: #e8b64c;
+  --color-primary-border: #3a3f72;
+  --color-border-light: #232a55;
+  --color-surface: #171a3a;
+
+  --color-text: #e8edf2;
+  --color-muted: #8b95a3;
+
+  --color-danger: #ef5b5b;
+  --color-danger-text: #ff8a8a;
+  --color-danger-bg-light: rgba(239, 91, 91, 0.12);
+
+  --color-info: #7c9cff;
+  --color-role-student: #4fd1c5;
+
+  --color-bg-muted: #232a55;
+  --color-bg-soft: #10122a;
+
+  --color-success-bg: rgba(79, 209, 197, 0.14);
+  --color-success-text: #4fd1c5;
+
+  --color-warning-bg: rgba(232, 182, 76, 0.14);
+  --color-warning: #e8b64c;
+
+  --color-row-material: #171e3f;
+  --color-row-quiz: #1a1f4a;
+  --color-row-link: #241f42;
+
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-pill: 8px;
+
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 4px 32px rgba(232, 182, 76, 0.1);
+
+  --font-family-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-family-body: 'Space Grotesk', system-ui, sans-serif;
 }

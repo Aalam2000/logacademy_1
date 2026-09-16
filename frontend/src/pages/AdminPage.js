@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../components/Button';
+import Modal from '../components/Modal';
 import api from '../api/auth';
 
-const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '' };
-const emptyAdmin   = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '' };
-const emptyCourse  = { title: '' };
-const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '' };
+const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
+const emptyAdmin   = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
+const emptyCourse  = { title: '', description: '' };
+const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '', whatsapp: '' };
+const emptyUserEdit = { full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
+const emptyCourseEdit = { title: '', description: '' };
 
 function AdminPage() {
   const [tab, setTab] = useState('teachers');
@@ -19,6 +22,25 @@ function AdminPage() {
   const [newAdmin,   setNewAdmin]   = useState(emptyAdmin);
   const [newCourse,  setNewCourse]  = useState(emptyCourse);
   const [newGroup,   setNewGroup]   = useState(emptyGroup);
+
+  // Модалка «Добавить»: null | 'teacher' | 'admin' | 'course' | 'group'
+  const [openAddModal, setOpenAddModal] = useState(null);
+
+  const [editingTeacherId, setEditingTeacherId] = useState(null);
+  const [editingTeacherDraft, setEditingTeacherDraft] = useState(emptyUserEdit);
+  const [isSavingTeacher, setIsSavingTeacher] = useState(false);
+  const teachersTableRef = useRef(null);
+
+  const [editingAdminId, setEditingAdminId] = useState(null);
+  const [editingAdminDraft, setEditingAdminDraft] = useState(emptyUserEdit);
+  const [isSavingAdmin, setIsSavingAdmin] = useState(false);
+  const adminsTableRef = useRef(null);
+
+  const [editingCourseId, setEditingCourseId] = useState(null);
+  const [editingCourseDraft, setEditingCourseDraft] = useState(emptyCourseEdit);
+  const [isSavingCourse, setIsSavingCourse] = useState(false);
+  const coursesTableRef = useRef(null);
+
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [editingGroupDraft, setEditingGroupDraft] = useState(emptyGroup);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
@@ -30,17 +52,31 @@ function AdminPage() {
     loadAll();
   }, []);
 
+  // Клик по строке таблицы открывает её поля для редактирования, клик
+  // мимо таблицы (в любой вкладке) сохраняет черновик. Один обработчик
+  // на все 4 вкладки — ветвимся по активной.
   useEffect(() => {
     const handleDocumentMouseDown = (event) => {
-      if (tab !== 'groups' || editingGroupId === null || isSavingGroup) return;
-      if (!groupsTableRef.current?.contains(event.target)) {
-        saveEditingGroup();
+      if (tab === 'teachers' && editingTeacherId !== null && !isSavingTeacher) {
+        if (!teachersTableRef.current?.contains(event.target)) saveEditingTeacher();
+      } else if (tab === 'admins' && editingAdminId !== null && !isSavingAdmin) {
+        if (!adminsTableRef.current?.contains(event.target)) saveEditingAdmin();
+      } else if (tab === 'courses' && editingCourseId !== null && !isSavingCourse) {
+        if (!coursesTableRef.current?.contains(event.target)) saveEditingCourse();
+      } else if (tab === 'groups' && editingGroupId !== null && !isSavingGroup) {
+        if (!groupsTableRef.current?.contains(event.target)) saveEditingGroup();
       }
     };
 
     document.addEventListener('mousedown', handleDocumentMouseDown);
     return () => document.removeEventListener('mousedown', handleDocumentMouseDown);
-  }, [tab, editingGroupId, editingGroupDraft, isSavingGroup]);
+  }, [
+    tab,
+    editingTeacherId, editingTeacherDraft, isSavingTeacher,
+    editingAdminId, editingAdminDraft, isSavingAdmin,
+    editingCourseId, editingCourseDraft, isSavingCourse,
+    editingGroupId, editingGroupDraft, isSavingGroup,
+  ]);
 
   const loadAll = () => {
     loadTeachers();
@@ -59,21 +95,29 @@ function AdminPage() {
     setTimeout(() => setError(''), 4000);
   };
 
+  // Telegram и WhatsApp у группы — необязательные поля, в проверку не входят.
   const areAllGroupFieldsFilled = (groupData) => {
     return (
       groupData.name.trim() !== ''
       && String(groupData.course_id).trim() !== ''
       && String(groupData.teacher_id).trim() !== ''
-      && String(groupData.telegram_chat_id).trim() !== ''
     );
   };
 
   const isNewGroupValid = areAllGroupFieldsFilled(newGroup);
 
+  const closeAddModal = () => {
+    setOpenAddModal(null);
+    setNewTeacher(emptyTeacher);
+    setNewAdmin(emptyAdmin);
+    setNewCourse(emptyCourse);
+    setNewGroup(emptyGroup);
+  };
+
   const createTeacher = async () => {
     try {
       await api.post('/admin/teachers', { ...newTeacher, role: 'teacher' });
-      setNewTeacher(emptyTeacher);
+      closeAddModal();
       loadTeachers();
     } catch(e) { handleError(e); }
   };
@@ -85,7 +129,7 @@ function AdminPage() {
   const createAdmin = async () => {
     try {
       await api.post('/admin/admins', { ...newAdmin, role: 'admin' });
-      setNewAdmin(emptyAdmin);
+      closeAddModal();
       loadAdmins();
     } catch(e) { handleError(e); }
   };
@@ -97,7 +141,7 @@ function AdminPage() {
   const createCourse = async () => {
     try {
       await api.post('/admin/courses', newCourse);
-      setNewCourse(emptyCourse);
+      closeAddModal();
       loadCourses();
     } catch(e) { handleError(e); }
   };
@@ -119,7 +163,7 @@ function AdminPage() {
         course_id:  parseInt(newGroup.course_id),
         teacher_id: parseInt(newGroup.teacher_id),
       });
-      setNewGroup(emptyGroup);
+      closeAddModal();
       loadGroups();
     } catch(e) { handleError(e); }
   };
@@ -128,7 +172,87 @@ function AdminPage() {
     catch(e) { handleError(e); }
   };
 
+  // ── inline-редактирование: педагоги ──
+  const startEditTeacher = (u) => {
+    if (editingTeacherId === u.id) return;
+    if (isSavingTeacher) return;
+    setEditingTeacherId(u.id);
+    setEditingTeacherDraft({
+      full_name: u.full_name || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      telegram_username: u.telegram_username || '',
+      whatsapp: u.whatsapp || '',
+    });
+  };
+  const saveEditingTeacher = async () => {
+    if (editingTeacherId === null || isSavingTeacher) return;
+    try {
+      setIsSavingTeacher(true);
+      const res = await api.patch(`/admin/teachers/${editingTeacherId}`, editingTeacherDraft);
+      setTeachers(prev => prev.map(u => u.id === editingTeacherId ? res.data : u));
+      setEditingTeacherId(null);
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setIsSavingTeacher(false);
+    }
+  };
+
+  // ── inline-редактирование: админы ──
+  const startEditAdmin = (u) => {
+    if (editingAdminId === u.id) return;
+    if (isSavingAdmin) return;
+    setEditingAdminId(u.id);
+    setEditingAdminDraft({
+      full_name: u.full_name || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      telegram_username: u.telegram_username || '',
+      whatsapp: u.whatsapp || '',
+    });
+  };
+  const saveEditingAdmin = async () => {
+    if (editingAdminId === null || isSavingAdmin) return;
+    try {
+      setIsSavingAdmin(true);
+      const res = await api.patch(`/admin/admins/${editingAdminId}`, editingAdminDraft);
+      setAdmins(prev => prev.map(u => u.id === editingAdminId ? res.data : u));
+      setEditingAdminId(null);
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setIsSavingAdmin(false);
+    }
+  };
+
+  // ── inline-редактирование: курсы ──
+  const startEditCourse = (c) => {
+    if (editingCourseId === c.id) return;
+    if (isSavingCourse) return;
+    setEditingCourseId(c.id);
+    setEditingCourseDraft({
+      title: c.title || '',
+      description: c.description || '',
+    });
+  };
+  const saveEditingCourse = async () => {
+    if (editingCourseId === null || isSavingCourse) return;
+    try {
+      setIsSavingCourse(true);
+      const res = await api.patch(`/admin/courses/${editingCourseId}`, editingCourseDraft);
+      setCourses(prev => prev.map(c => c.id === editingCourseId ? res.data : c));
+      setEditingCourseId(null);
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setIsSavingCourse(false);
+    }
+  };
+
+  // ── inline-редактирование: группы ──
   const startEditGroup = (group) => {
+    if (editingGroupId === group.id) return;
     if (isSavingGroup) return;
     setEditingGroupId(group.id);
     setEditingGroupDraft({
@@ -136,6 +260,7 @@ function AdminPage() {
       course_id: String(group.course_id || ''),
       teacher_id: String(group.teacher_id || ''),
       telegram_chat_id: group.telegram_chat_id || '',
+      whatsapp: group.whatsapp || '',
     });
   };
 
@@ -155,6 +280,7 @@ function AdminPage() {
         course_id: parseInt(editingGroupDraft.course_id),
         teacher_id: parseInt(editingGroupDraft.teacher_id),
         telegram_chat_id: editingGroupDraft.telegram_chat_id.trim(),
+        whatsapp: editingGroupDraft.whatsapp.trim(),
       };
       const res = await api.patch(`/admin/groups/${editingGroupId}`, payload);
       setGroups(prev => prev.map(g => g.id === editingGroupId ? res.data : g));
@@ -190,6 +316,7 @@ function AdminPage() {
     ['email',             'Email',    'text'],
     ['phone',             'Телефон',  'text'],
     ['telegram_username', 'Telegram', 'text'],
+    ['whatsapp',           'WhatsApp', 'text'],
   ].map(([field, label, type]) => (
     <input key={field} placeholder={label} className="input input--min160"
       type={type} autoComplete={field === 'username' || field === 'password' ? 'new-password' : 'off'}
@@ -198,33 +325,67 @@ function AdminPage() {
     />
   ));
 
-  const userTable = (list, onDelete) => (
-    <table className="table">
-      <thead><tr>
-        <th>{'Имя'}</th>
-        <th>{'Логин'}</th>
-        <th>{'Email'}</th>
-        <th>{'Телефон'}</th>
-        <th>{'Telegram'}</th>
-        <th></th>
-      </tr></thead>
-      <tbody>
-        {list.map(u => (
-          <tr key={u.id}>
-            <td>{u.full_name}</td>
-            <td>{u.username}</td>
-            <td>{u.email}</td>
-            <td>{u.phone}</td>
-            <td>{u.telegram_username}</td>
-            <td>
-              <Button onClick={() => onDelete(u.id)} variant="danger" className="btn--del-compact">
-                {'Удалить'}
-              </Button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  const userTable = (list, onDelete, editingId, editingDraft, setEditingDraft, onRowClick, tableRef) => (
+    <div ref={tableRef}>
+      <table className="table">
+        <thead><tr>
+          <th>{'Имя'}</th>
+          <th>{'Логин'}</th>
+          <th>{'Email'}</th>
+          <th>{'Телефон'}</th>
+          <th>{'Telegram'}</th>
+          <th>{'WhatsApp'}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          {list.map(u => (
+            <tr key={u.id} onClick={() => onRowClick(u)} className="table__row--clickable">
+              <td>
+                {editingId === u.id ? (
+                  <input className="input input--min160" value={editingDraft.full_name}
+                    onChange={e => setEditingDraft({ ...editingDraft, full_name: e.target.value })}
+                  />
+                ) : u.full_name}
+              </td>
+              <td>{u.username}</td>
+              <td>
+                {editingId === u.id ? (
+                  <input className="input input--min160" value={editingDraft.email}
+                    onChange={e => setEditingDraft({ ...editingDraft, email: e.target.value })}
+                  />
+                ) : u.email}
+              </td>
+              <td>
+                {editingId === u.id ? (
+                  <input className="input input--min160" value={editingDraft.phone}
+                    onChange={e => setEditingDraft({ ...editingDraft, phone: e.target.value })}
+                  />
+                ) : u.phone}
+              </td>
+              <td>
+                {editingId === u.id ? (
+                  <input className="input input--min160" value={editingDraft.telegram_username}
+                    onChange={e => setEditingDraft({ ...editingDraft, telegram_username: e.target.value })}
+                  />
+                ) : u.telegram_username}
+              </td>
+              <td>
+                {editingId === u.id ? (
+                  <input className="input input--min160" value={editingDraft.whatsapp}
+                    onChange={e => setEditingDraft({ ...editingDraft, whatsapp: e.target.value })}
+                  />
+                ) : u.whatsapp}
+              </td>
+              <td>
+                <Button onClick={(e) => { e.stopPropagation(); onDelete(u.id); }} variant="danger" className="btn--del-compact">
+                  {'Удалить'}
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 
   return (
@@ -245,70 +406,218 @@ function AdminPage() {
       {/* ПЕДАГОГИ */}
       {tab === 'teachers' && (
         <div>
-          <h3>{'Новый педагог'}</h3>
           <div className="form-toolbar">
-            {userFields(newTeacher, setNewTeacher)}
-            <Button onClick={createTeacher}>{'+ Добавить'}</Button>
+            <Button onClick={() => setOpenAddModal('teacher')}>{'+ Добавить педагога'}</Button>
           </div>
           <h3>{'Список педагогов'}</h3>
-          {userTable(teachers, deleteTeacher)}
+          {userTable(teachers, deleteTeacher, editingTeacherId, editingTeacherDraft, setEditingTeacherDraft, startEditTeacher, teachersTableRef)}
         </div>
       )}
 
       {/* АДМИНЫ */}
       {tab === 'admins' && (
         <div>
-          <h3>{'Новый администратор'}</h3>
           <div className="form-toolbar">
-            {userFields(newAdmin, setNewAdmin)}
-            <Button onClick={createAdmin}>{'+ Добавить'}</Button>
+            <Button onClick={() => setOpenAddModal('admin')}>{'+ Добавить администратора'}</Button>
           </div>
           <h3>{'Список администраторов'}</h3>
-          {userTable(admins, deleteAdmin)}
+          {userTable(admins, deleteAdmin, editingAdminId, editingAdminDraft, setEditingAdminDraft, startEditAdmin, adminsTableRef)}
         </div>
       )}
 
       {/* КУРСЫ */}
       {tab === 'courses' && (
         <div>
-          <h3>{'Новый курс'}</h3>
           <div className="form-toolbar">
-            <input placeholder={'Название курса'} className="input input--min160"
-              autoComplete="off"
-              value={newCourse.title}
-              onChange={e => setNewCourse({ title: e.target.value })}
-            />
-            <Button onClick={createCourse}>{'+ Добавить'}</Button>
+            <Button onClick={() => setOpenAddModal('course')}>{'+ Добавить курс'}</Button>
           </div>
           <h3>{'Список курсов'}</h3>
-          <table className="table">
-            <thead><tr>
-              <th>#</th>
-              <th>{'Название'}</th>
-              <th></th>
-            </tr></thead>
-            <tbody>
-              {courses.map(c => (
-                <tr key={c.id}>
-                  <td>{c.id}</td>
-                  <td>{c.title}</td>
-                  <td>
-                    <Button onClick={() => deleteCourse(c.id)} variant="danger" className="btn--del-compact">
-                      {'Удалить'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div ref={coursesTableRef}>
+            <table className="table">
+              <thead><tr>
+                <th>#</th>
+                <th>{'Название'}</th>
+                <th>{'Описание'}</th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+                {courses.map(c => (
+                  <tr key={c.id} onClick={() => startEditCourse(c)} className="table__row--clickable">
+                    <td>{c.id}</td>
+                    <td>
+                      {editingCourseId === c.id ? (
+                        <input className="input input--min160" value={editingCourseDraft.title}
+                          onChange={e => setEditingCourseDraft({ ...editingCourseDraft, title: e.target.value })}
+                        />
+                      ) : c.title}
+                    </td>
+                    <td>
+                      {editingCourseId === c.id ? (
+                        <textarea className="input input--textarea" value={editingCourseDraft.description}
+                          onChange={e => setEditingCourseDraft({ ...editingCourseDraft, description: e.target.value })}
+                        />
+                      ) : c.description}
+                    </td>
+                    <td>
+                      <Button onClick={(e) => { e.stopPropagation(); deleteCourse(c.id); }} variant="danger" className="btn--del-compact">
+                        {'Удалить'}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* ГРУППЫ */}
       {tab === 'groups' && (
         <div>
-          <h3>{'Новая группа'}</h3>
           <div className="form-toolbar">
+            <Button onClick={() => setOpenAddModal('group')}>{'+ Добавить группу'}</Button>
+          </div>
+          <h3>{'Список групп'}</h3>
+          <div ref={groupsTableRef}>
+            <table className="table">
+              <thead><tr>
+                <th>{'Название'}</th>
+                <th>{'Курс'}</th>
+                <th>{'Педагог'}</th>
+                <th>{'Telegram'}</th>
+                <th>{'WhatsApp'}</th>
+                <th>{'Invite-код'}</th>
+                <th>{'Статус'}</th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+                {groups.map(g => (
+                  <tr key={g.id} onClick={() => startEditGroup(g)} className="table__row--clickable">
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <input
+                          className="input input--min160"
+                          value={editingGroupDraft.name}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, name: e.target.value })}
+                        />
+                      ) : g.name}
+                    </td>
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <select
+                          className="input input--min160"
+                          value={editingGroupDraft.course_id}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, course_id: e.target.value })}
+                        >
+                          <option value="">{'— Курс —'}</option>
+                          {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                        </select>
+                      ) : courseLabelById(g.course_id)}
+                    </td>
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <select
+                          className="input input--min160"
+                          value={editingGroupDraft.teacher_id}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
+                        >
+                          <option value="">{'— Педагог —'}</option>
+                          {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
+                        </select>
+                      ) : teacherLabelById(g.teacher_id)}
+                    </td>
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <input
+                          className="input input--min160"
+                          value={editingGroupDraft.telegram_chat_id}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, telegram_chat_id: e.target.value })}
+                        />
+                      ) : g.telegram_chat_id}
+                    </td>
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <input
+                          className="input input--min160"
+                          value={editingGroupDraft.whatsapp}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, whatsapp: e.target.value })}
+                        />
+                      ) : g.whatsapp}
+                    </td>
+                    <td><code>{g.invite_code}</code></td>
+                    <td>{g.status}</td>
+                    <td>
+                      <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="danger" className="btn--del-compact">
+                        {'Удалить'}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка: новый педагог */}
+      {openAddModal === 'teacher' && (
+        <Modal title={'Новый педагог'} onClose={closeAddModal} footer={(
+          <>
+            <button className="btn btn--secondary" onClick={closeAddModal}>{'Отмена'}</button>
+            <Button onClick={createTeacher}>{'Добавить'}</Button>
+          </>
+        )}>
+          <div className="form-stack">
+            {userFields(newTeacher, setNewTeacher)}
+          </div>
+        </Modal>
+      )}
+
+      {/* Модалка: новый администратор */}
+      {openAddModal === 'admin' && (
+        <Modal title={'Новый администратор'} onClose={closeAddModal} footer={(
+          <>
+            <button className="btn btn--secondary" onClick={closeAddModal}>{'Отмена'}</button>
+            <Button onClick={createAdmin}>{'Добавить'}</Button>
+          </>
+        )}>
+          <div className="form-stack">
+            {userFields(newAdmin, setNewAdmin)}
+          </div>
+        </Modal>
+      )}
+
+      {/* Модалка: новый курс */}
+      {openAddModal === 'course' && (
+        <Modal title={'Новый курс'} onClose={closeAddModal} footer={(
+          <>
+            <button className="btn btn--secondary" onClick={closeAddModal}>{'Отмена'}</button>
+            <Button onClick={createCourse}>{'Добавить'}</Button>
+          </>
+        )}>
+          <div className="form-stack">
+            <input placeholder={'Название курса'} className="input input--min160"
+              autoComplete="off"
+              value={newCourse.title}
+              onChange={e => setNewCourse({ ...newCourse, title: e.target.value })}
+            />
+            <textarea placeholder={'Описание курса'} className="input input--textarea"
+              value={newCourse.description}
+              onChange={e => setNewCourse({ ...newCourse, description: e.target.value })}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {/* Модалка: новая группа */}
+      {openAddModal === 'group' && (
+        <Modal title={'Новая группа'} onClose={closeAddModal} footer={(
+          <>
+            <button className="btn btn--secondary" onClick={closeAddModal}>{'Отмена'}</button>
+            <Button onClick={createGroup} disabled={!isNewGroupValid}>{'Добавить'}</Button>
+          </>
+        )}>
+          <div className="form-stack">
             <input placeholder={'Название группы'} className="input input--min160"
               autoComplete="off"
               value={newGroup.name}
@@ -324,88 +633,18 @@ function AdminPage() {
               <option value="">{'— Педагог —'}</option>
               {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
             </select>
-            <input placeholder={'Telegram chat_id'} className="input input--min160"
+            <input placeholder={'Telegram (юзернейм или ссылка-приглашение)'} className="input input--min160"
               autoComplete="off"
               value={newGroup.telegram_chat_id}
               onChange={e => setNewGroup({ ...newGroup, telegram_chat_id: e.target.value })}
             />
-            <Button
-              onClick={createGroup}
-              disabled={!isNewGroupValid}
-            >
-              {'+ Добавить'}
-            </Button>
+            <input placeholder={'WhatsApp'} className="input input--min160"
+              autoComplete="off"
+              value={newGroup.whatsapp}
+              onChange={e => setNewGroup({ ...newGroup, whatsapp: e.target.value })}
+            />
           </div>
-          <h3>{'Список групп'}</h3>
-          <div ref={groupsTableRef}>
-          <table className="table">
-            <thead><tr>
-              <th>{'Название'}</th>
-              <th>{'Курс'}</th>
-              <th>{'Педагог'}</th>
-              <th>{'Telegram chat_id'}</th>
-              <th>{'Invite-код'}</th>
-              <th>{'Статус'}</th>
-              <th></th>
-            </tr></thead>
-            <tbody>
-              {groups.map(g => (
-                <tr key={g.id} onClick={() => startEditGroup(g)} className="table__row--clickable">
-                  <td>
-                    {editingGroupId === g.id ? (
-                      <input
-                        className="input input--min160"
-                        value={editingGroupDraft.name}
-                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, name: e.target.value })}
-                      />
-                    ) : g.name}
-                  </td>
-                  <td>
-                    {editingGroupId === g.id ? (
-                      <select
-                        className="input input--min160"
-                        value={editingGroupDraft.course_id}
-                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, course_id: e.target.value })}
-                      >
-                        <option value="">{'— Курс —'}</option>
-                        {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                      </select>
-                    ) : courseLabelById(g.course_id)}
-                  </td>
-                  <td>
-                    {editingGroupId === g.id ? (
-                      <select
-                        className="input input--min160"
-                        value={editingGroupDraft.teacher_id}
-                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
-                      >
-                        <option value="">{'— Педагог —'}</option>
-                        {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}
-                      </select>
-                    ) : teacherLabelById(g.teacher_id)}
-                  </td>
-                  <td>
-                    {editingGroupId === g.id ? (
-                      <input
-                        className="input input--min160"
-                        value={editingGroupDraft.telegram_chat_id}
-                        onChange={e => setEditingGroupDraft({ ...editingGroupDraft, telegram_chat_id: e.target.value })}
-                      />
-                    ) : g.telegram_chat_id}
-                  </td>
-                  <td><code>{g.invite_code}</code></td>
-                  <td>{g.status}</td>
-                  <td>
-                    <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="danger" className="btn--del-compact">
-                      {'Удалить'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

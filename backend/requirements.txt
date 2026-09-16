@@ -8,3 +8,4 @@ werkzeug==3.0.1
 auto-i18n-lib==2.1.1
 alembic==1.19.2
 minio==7.2.15
+xhtml2pdf==0.2.16

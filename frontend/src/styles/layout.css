@@ -67,7 +67,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: var(--space-8);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-glow);
@@ -100,7 +100,7 @@
 }
 .dashboard-header {
   padding: var(--space-4) var(--space-6);
-  background: var(--color-white);
+  background: var(--color-surface);
   border-bottom: 2px solid var(--color-primary-border);
   display: flex;
   justify-content: space-between;
@@ -221,7 +221,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  background: var(--color-white);
+  background: var(--color-surface);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   padding: var(--space-4);

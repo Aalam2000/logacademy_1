@@ -33,6 +33,7 @@ class UserOut(BaseModel):
     telegram_username: Optional[str]
     whatsapp: Optional[str]
     photo_url: Optional[str]
+    theme: Optional[str] = None
     role: str
     created_at: datetime
 
@@ -41,10 +42,12 @@ class UserOut(BaseModel):
 
 class CourseCreate(BaseModel):
     title: str
+    description: Optional[str] = None
 
 class CourseOut(BaseModel):
     id: int
     title: str
+    description: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -55,6 +58,7 @@ class GroupCreate(BaseModel):
     course_id: int
     teacher_id: int  # какому педагогу принадлежит
     telegram_chat_id: Optional[str] = None
+    whatsapp: Optional[str] = None
 
 class GroupOut(BaseModel):
     id: int
@@ -62,6 +66,7 @@ class GroupOut(BaseModel):
     course_id: int
     teacher_id: int
     telegram_chat_id: Optional[str]
+    whatsapp: Optional[str] = None
     status: str
     invite_code: str
     created_at: datetime
@@ -82,6 +87,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     telegram_username: Optional[str] = None
     whatsapp: Optional[str] = None
+    theme: Optional[str] = None  # brand | playful | dark
     old_password: Optional[str] = None
     new_password: Optional[str] = None
 

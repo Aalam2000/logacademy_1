@@ -9,6 +9,8 @@ from ..dependencies import get_current_user
 
 router = APIRouter()
 
+ALLOWED_THEMES = {"brand", "playful", "dark"}
+
 # Регистрация педагога админом
 @router.post("/register", response_model=UserOut)
 async def register(
@@ -102,6 +104,10 @@ async def update_me(
     if data.phone is not None:            current_user.phone = data.phone
     if data.telegram_username is not None: current_user.telegram_username = data.telegram_username
     if data.whatsapp is not None:         current_user.whatsapp = data.whatsapp
+    if data.theme is not None:
+        if data.theme not in ALLOWED_THEMES:
+            raise HTTPException(status_code=400, detail="Неизвестная тема")
+        current_user.theme = data.theme
     if data.new_password:
         if not verify_password(data.old_password or '', current_user.hashed_password):
             raise HTTPException(status_code=400, detail="Неверный текущий пароль")

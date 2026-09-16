@@ -22,6 +22,20 @@ function Navigation({ user }) {
             </NavLink>
           </li>
         )}
+        {user?.role !== 'student' && (
+          <li className="nav__item">
+            <NavLink to="/dashboard/students" className={linkClass}>
+              🎓 {'Студенты'}
+            </NavLink>
+          </li>
+        )}
+        {user?.role === 'admin' && (
+          <li className="nav__item">
+            <NavLink to="/dashboard/teachers" className={linkClass}>
+              🧑‍🏫 {'Преподы'}
+            </NavLink>
+          </li>
+        )}
         <li className="nav__item">
           <NavLink to="/dashboard/profile" className={linkClass}>
             👤 {'Профиль'}

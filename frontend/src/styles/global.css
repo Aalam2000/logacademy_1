@@ -4,3 +4,15 @@
 @import './components.css';
 @import './layout.css';
 @import './media.css';
+
+/* Базовый шрифт страницы — переменные из tokens.css, меняются темой
+ * (data-theme на <html>, см. ThemeContext.js). Раньше здесь ничего не
+ * было задано — браузер использовал свой sans-serif по умолчанию,
+ * поэтому значение по умолчанию (тема "brand") специально подобрано
+ * похожим, чтобы для тех, кто тему не переключал, ничего не изменилось. */
+body {
+  font-family: var(--font-family-body);
+}
+h1, h2, h3, .page-title, .toolbar__title {
+  font-family: var(--font-family-heading);
+}
