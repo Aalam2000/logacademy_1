@@ -12,5 +12,9 @@ RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
+# COPY ставит владельцем root и сохраняет исходные права сборочной стадии —
+# nginx работает от непривилегированного пользователя nginx и без этого
+# не может даже прочитать файлы (проявилось как пропавший логотип, 403).
+RUN chmod -R a+rX /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3000
