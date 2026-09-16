@@ -3,6 +3,7 @@ import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../hooks/useLang';
 import { StudentContactIcons } from '../components/ContactIcons';
+import Dropdown from '../components/Dropdown';
 
 function StudentsPage() {
   const { user, hasRole } = useAuth();
@@ -104,37 +105,33 @@ function StudentsPage() {
 
   return (
     <div className="page">
-      <div className="toolbar toolbar--start">
-        <h1 className="page-title">{'Студенты'}</h1>
-      </div>
-
-      <div className="toolbar">
+      <div className="toolbar toolbar--underline-row">
         <div className="toolbar__filters">
           {isAdmin && (
-            <select
-              className="input"
+            <Dropdown
               value={mine ? '' : teacherId}
               disabled={mine}
-              onChange={e => setTeacherId(e.target.value)}
-            >
-              <option value="">{'Препод — все'}</option>
-              {teacherOptions.map(([id, name]) => (
-                <option key={id} value={id}>{name}</option>
-              ))}
-            </select>
+              onChange={v => setTeacherId(v)}
+              placeholder={'Препод — все'}
+              options={teacherOptions.map(([id, name]) => ({ value: id, label: name }))}
+            />
           )}
-          <select className="input" value={courseId} onChange={e => { setCourseId(e.target.value); setGroupId(''); }}>
-            <option value="">{'Тема — все'}</option>
-            {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-          </select>
-          <select className="input" value={groupId} onChange={e => setGroupId(e.target.value)}>
-            <option value="">{'Группа — все'}</option>
-            {groupOptions.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
+          <Dropdown
+            value={courseId}
+            onChange={v => { setCourseId(v); setGroupId(''); }}
+            placeholder={'Тема — все'}
+            options={courses.map(c => ({ value: c.id, label: c.title }))}
+          />
+          <Dropdown
+            value={groupId}
+            onChange={v => setGroupId(v)}
+            placeholder={'Группа — все'}
+            options={groupOptions.map(g => ({ value: g.id, label: g.name }))}
+          />
         </div>
         <div className="toolbar__filters">
           {isAdmin && (
-            <button type="button" className={`tab${mine ? ' tab--active' : ''}`} onClick={handleMineToggle}>
+            <button type="button" className={`tab tab--underline${mine ? ' tab--active' : ''}`} onClick={handleMineToggle}>
               {'Моё'}
             </button>
           )}

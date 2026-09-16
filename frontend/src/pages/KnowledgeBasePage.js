@@ -157,27 +157,23 @@ function KnowledgeBasePage() {
 
   return (
     <div className="page">
-      <div className="toolbar toolbar--start">
-        <h1 className="page-title">{'База знаний'}</h1>
-      </div>
-
-      <div className="toolbar">
+      <div className="toolbar toolbar--underline-row">
         <div className="toolbar__filters">
-          <button type="button" className={`tab${typeFilter === '' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('')}>
+          <button type="button" className={`tab tab--underline${typeFilter === '' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('')}>
             {'Все'}
           </button>
-          <button type="button" className={`tab${typeFilter === 'material' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('material')}>
+          <button type="button" className={`tab tab--underline${typeFilter === 'material' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('material')}>
             {'Файлы'}
           </button>
-          <button type="button" className={`tab${typeFilter === 'link' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('link')}>
+          <button type="button" className={`tab tab--underline${typeFilter === 'link' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('link')}>
             {'Ссылки'}
           </button>
-          <button type="button" className={`tab${typeFilter === 'quiz' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('quiz')}>
+          <button type="button" className={`tab tab--underline${typeFilter === 'quiz' ? ' tab--active' : ''}`} onClick={() => setTypeFilter('quiz')}>
             {'Квизы'}
           </button>
         </div>
         <div className="toolbar__filters">
-          <button type="button" className={`tab${onlyMine ? ' tab--active' : ''}`} onClick={() => setOnlyMine(v => !v)}>
+          <button type="button" className={`tab tab--underline${onlyMine ? ' tab--active' : ''}`} onClick={() => setOnlyMine(v => !v)}>
             {'Моё'}
           </button>
           <select className="input" value={sort} onChange={e => setSort(e.target.value)}>

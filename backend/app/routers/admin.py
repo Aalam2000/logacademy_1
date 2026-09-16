@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional
 from ..database import get_db
@@ -285,7 +285,36 @@ async def delete_course(course_id: int, db: AsyncSession = Depends(get_db), admi
 @router.get("/groups", response_model=list[GroupOut])
 async def get_groups(db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
     result = await db.execute(select(Group))
-    return result.scalars().all()
+    groups = result.scalars().all()
+    if not groups:
+        return []
+
+    group_ids = [g.id for g in groups]
+
+    # Количество активных учеников по группам
+    counts_result = await db.execute(
+        select(GroupMember.group_id, func.count(GroupMember.id))
+        .where(GroupMember.group_id.in_(group_ids), GroupMember.status == "active")
+        .group_by(GroupMember.group_id)
+    )
+    counts = {gid: cnt for gid, cnt in counts_result.all()}
+
+    # Имена преподавателей — раньше не подставлялись вообще (в отличие от
+    # /groups/my), из-за чего в StudentsPage фильтр «Препод» показывал
+    # «#<id>» вместо имени.
+    teacher_ids = list({g.teacher_id for g in groups})
+    teachers_result = await db.execute(
+        select(User.id, User.full_name, User.username).where(User.id.in_(teacher_ids))
+    )
+    teachers = {uid: (full_name or username) for uid, full_name, username in teachers_result.all()}
+
+    out = []
+    for g in groups:
+        item = GroupOut.model_validate(g)
+        item.student_count = counts.get(g.id, 0)
+        item.teacher_name = teachers.get(g.teacher_id)
+        out.append(item)
+    return out
 
 @router.post("/groups", response_model=GroupOut)
 async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):

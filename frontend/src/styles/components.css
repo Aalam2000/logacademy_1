@@ -104,6 +104,103 @@
   border-color: var(--color-primary);
 }
 
+/* ===== Tabs-в-виде-подчёркнутого-текста (AdminPage, .tabs-row) =====
+ * Тот же .tab/.tab--active, что и везде (LessonPage и т.п.), но внутри
+ * .tabs-row перекрываем вид на текстовые вкладки с подчёркиванием вместо
+ * кнопок-пилюль. Цвета те же самые токены (--color-primary/--color-muted),
+ * меняется только форма. */
+.tabs-row .tab {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--font-lg);
+}
+.tabs-row .tab--active {
+  background: transparent;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* ===== .tab--underline — та же подчёркнутая форма, но как модификатор
+ * прямо на кнопке (не завязан на .tabs-row), чтобы точечно применять
+ * на страницах вроде KnowledgeBasePage, где .toolbar__filters общий
+ * класс с другими страницами (LessonPage и т.п.) и трогать его целиком
+ * нельзя. */
+.tab.tab--underline {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--font-lg);
+}
+.tab.tab--underline.tab--active {
+  background: transparent;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* ===== .dropdown — кастомный дропдаун (StudentsPage: Препод/Тема/Группа).
+ * Триггер в том же подчёркнутом стиле, что .tab--underline, панель —
+ * не больше ~7 строк, дальше скролл. */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+/* Триггер дропдауна — тот же .tab.tab--underline, что и обычные табы
+ * (просто добавляем flex под стрелочку рядом с текстом). */
+.dropdown .tab.tab--underline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.dropdown__trigger--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.dropdown__caret {
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+}
+.dropdown__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 180px;
+  max-height: 238px; /* ~7 строк по var(--font-sm) + паддинги, дальше скролл */
+  overflow-y: auto;
+  background: var(--color-white);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  margin-top: var(--space-1);
+}
+.dropdown__option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+.dropdown__option:hover {
+  background: var(--color-bg-soft);
+}
+.dropdown__option--active {
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
 /* ===== Inputs & form field =====
  * Как и у кнопок — два реальных варианта: компактный (админка/дашборд,
  * radius-sm) и крупный (формы логина/регистрации, radius-md).

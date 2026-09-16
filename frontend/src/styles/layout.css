@@ -175,6 +175,14 @@
   display: flex;
   gap: var(--space-2);
   margin-bottom: var(--space-6); /* AdminPage */
+  border-bottom: 2px solid var(--color-border-light); /* линия под всей строкой вкладок */
+}
+.toolbar--underline-row {
+  border-bottom: 2px solid var(--color-border-light); /* та же сплошная линия под всем
+    рядом фильтров (KnowledgeBasePage, StudentsPage) — без неё табы/дропдауны
+    визуально «рвутся»: у активного пункта своя цветная линия, у остальных
+    её нет вообще */
+  padding-bottom: var(--space-1);
 }
 
 /* ===== Формы ===== */

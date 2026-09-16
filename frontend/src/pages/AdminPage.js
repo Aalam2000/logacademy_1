@@ -390,8 +390,6 @@ function AdminPage() {
 
   return (
     <div className="page">
-      <h2>{'Администрирование'}</h2>
-
       {error && <div className="banner banner--error">{error}</div>}
 
       <div className="tabs-row">
@@ -406,10 +404,10 @@ function AdminPage() {
       {/* ПЕДАГОГИ */}
       {tab === 'teachers' && (
         <div>
-          <div className="form-toolbar">
+          <div className="toolbar">
+            <h3 className="toolbar__title">{'Список педагогов'}</h3>
             <Button onClick={() => setOpenAddModal('teacher')}>{'+ Добавить педагога'}</Button>
           </div>
-          <h3>{'Список педагогов'}</h3>
           {userTable(teachers, deleteTeacher, editingTeacherId, editingTeacherDraft, setEditingTeacherDraft, startEditTeacher, teachersTableRef)}
         </div>
       )}
@@ -417,10 +415,10 @@ function AdminPage() {
       {/* АДМИНЫ */}
       {tab === 'admins' && (
         <div>
-          <div className="form-toolbar">
+          <div className="toolbar">
+            <h3 className="toolbar__title">{'Список администраторов'}</h3>
             <Button onClick={() => setOpenAddModal('admin')}>{'+ Добавить администратора'}</Button>
           </div>
-          <h3>{'Список администраторов'}</h3>
           {userTable(admins, deleteAdmin, editingAdminId, editingAdminDraft, setEditingAdminDraft, startEditAdmin, adminsTableRef)}
         </div>
       )}
@@ -428,14 +426,13 @@ function AdminPage() {
       {/* КУРСЫ */}
       {tab === 'courses' && (
         <div>
-          <div className="form-toolbar">
+          <div className="toolbar">
+            <h3 className="toolbar__title">{'Список курсов'}</h3>
             <Button onClick={() => setOpenAddModal('course')}>{'+ Добавить курс'}</Button>
           </div>
-          <h3>{'Список курсов'}</h3>
           <div ref={coursesTableRef}>
             <table className="table">
               <thead><tr>
-                <th>#</th>
                 <th>{'Название'}</th>
                 <th>{'Описание'}</th>
                 <th></th>
@@ -443,7 +440,6 @@ function AdminPage() {
               <tbody>
                 {courses.map(c => (
                   <tr key={c.id} onClick={() => startEditCourse(c)} className="table__row--clickable">
-                    <td>{c.id}</td>
                     <td>
                       {editingCourseId === c.id ? (
                         <input className="input input--min160" value={editingCourseDraft.title}
@@ -474,10 +470,10 @@ function AdminPage() {
       {/* ГРУППЫ */}
       {tab === 'groups' && (
         <div>
-          <div className="form-toolbar">
+          <div className="toolbar">
+            <h3 className="toolbar__title">{'Список групп'}</h3>
             <Button onClick={() => setOpenAddModal('group')}>{'+ Добавить группу'}</Button>
           </div>
-          <h3>{'Список групп'}</h3>
           <div ref={groupsTableRef}>
             <table className="table">
               <thead><tr>
