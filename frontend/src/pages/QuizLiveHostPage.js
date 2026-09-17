@@ -52,7 +52,16 @@ function QuizLiveHostPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // молча — поле со ссылкой всё равно есть для ручного копирования
+      // navigator.clipboard недоступен без HTTPS (прод сейчас на http://) —
+      // тот же fallback, что и в QRModal.js: скрытый textarea + execCommand.
+      const el = document.createElement('textarea');
+      el.value = joinUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
