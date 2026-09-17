@@ -113,17 +113,26 @@ function QuizLiveHostPage() {
       {state.status === 'waiting' && (
         <div className="quiz-live-layout">
           <div className="quiz-live-main">
-            <div className="qr-frame">
-              <QRCodeSVG value={joinUrl} size={220} />
+            <div className="quiz-live-qr-frame">
+              <QRCodeSVG value={joinUrl} size={200} />
             </div>
             <div className="input-row">
               <input className="input input--soft" value={joinUrl} readOnly onFocus={e => e.target.select()} />
               <button className="btn" onClick={handleCopy}>{copied ? 'Скопировано' : 'Копировать'}</button>
             </div>
-            <label className="checkbox-row">
-              <input type="checkbox" checked={state.is_exam} onChange={e => handleToggleExam(e.target.checked)} />
-              {' '}{'Экзамен — по итогам поставит оценку в урок'}
-            </label>
+            <div className="quiz-live-exam-block">
+              <button
+                type="button"
+                className={`quiz-live-exam-toggle${state.is_exam ? ' quiz-live-exam-toggle--on' : ''}`}
+                onClick={() => handleToggleExam(!state.is_exam)}
+              >
+                <span className="quiz-live-exam-toggle__check">{'\u2713'}</span>
+                {'Экзамен'}
+              </button>
+              <p className="quiz-live-exam-hint">
+                {state.is_exam ? 'Оценка пойдёт в журнал урока' : 'Оценка не ставится'}
+              </p>
+            </div>
             <button className="btn btn--pill btn--lg" onClick={handleStart} disabled={busy}>{'Провести'}</button>
           </div>
           <div className="quiz-live-participants">
@@ -139,13 +148,20 @@ function QuizLiveHostPage() {
       {state.status === 'active' && (
         <div className="quiz-live-layout">
           <div className="quiz-live-main">
-            <p className="text-muted">{`Вопрос ${state.current_question + 1} из ${state.total_questions} · ${state.time_left} сек`}</p>
+            <div className="quiz-live-question-header">
+              <span className="quiz-live-question-progress">{`Вопрос ${state.current_question + 1} из ${state.total_questions}`}</span>
+              <div className="quiz-live-timer-ring">
+                <span className="quiz-live-timer-ring__num">{state.time_left}</span>
+                <span className="quiz-live-timer-ring__unit">{'сек'}</span>
+              </div>
+            </div>
             <h2 className="quiz-live-question">{state.question}</h2>
+            <p className="quiz-live-options-label">{'Варианты ответов:'}</p>
             <div className="quiz-live-options-grid">
               {state.options.map((opt, i) => (
                 <div key={i} className="quiz-live-option" style={{ background: QUIZ_LIVE_OPTION_STYLES[i].color }}>
                   <span className="quiz-live-option__num">{QUIZ_LIVE_OPTION_STYLES[i].number}</span>
-                  {opt}
+                  <span><b>{`Вариант ${QUIZ_LIVE_OPTION_STYLES[i].number}.`}</b> {opt}</span>
                 </div>
               ))}
             </div>
