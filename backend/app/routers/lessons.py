@@ -49,6 +49,7 @@ class LessonMarkIn(BaseModel):
     attendance_status: Optional[str] = None  # in_person | online | excused | absent | None
     is_late: bool = False
     score: Optional[int] = Field(default=None, ge=0, le=100)
+    exam_score: Optional[int] = Field(default=None, ge=0, le=100)  # ставит препод вручную или живой квиз-"Экзамен"
     stars: Optional[int] = Field(default=None, ge=0, le=3)
     comment: Optional[str] = None
 
@@ -65,6 +66,7 @@ class LessonMarkOut(BaseModel):
     attendance_status: Optional[str]
     is_late: bool
     score: Optional[int]
+    exam_score: Optional[int]
     stars: Optional[int]
     comment: Optional[str]
     marked_at: Optional[datetime]
@@ -269,6 +271,7 @@ async def _upsert_mark(
     mark.attendance_status = data.attendance_status
     mark.is_late = data.is_late
     mark.score = data.score
+    mark.exam_score = data.exam_score
     mark.stars = data.stars
     mark.comment = data.comment
     mark.marked_by = current_user.id
@@ -307,6 +310,7 @@ async def get_lesson_marks(
             attendance_status=mark.attendance_status if mark else None,
             is_late=mark.is_late if mark else False,
             score=mark.score if mark else None,
+            exam_score=mark.exam_score if mark else None,
             stars=mark.stars if mark else None,
             comment=mark.comment if mark else None,
             marked_at=mark.marked_at if mark else None,

@@ -7,6 +7,7 @@ import TrashIcon from '../components/TrashIcon';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
 import { StudentContactIcons } from '../components/ContactIcons';
+import { subscribeLessonMarksUpdated } from '../utils/lessonMarksChannel';
 
 // Кружки посещаемости вместо select'а. Пришёл/Онлайн/Уважительная —
 // взаимоисключающие («ИЛИ», attendance_status), «Опоздал» — независимый
@@ -104,6 +105,18 @@ function LessonPage() {
     // eslint-disable-next-line
   }, [view, lessonId]);
 
+  // Сигнал от вкладки живого квиза-«Экзамен» (та же группа браузера) — как
+  // только там записалась оценка, подтягиваем табличку здесь заново, не
+  // дожидаясь ручной перезагрузки страницы.
+  useEffect(() => {
+    return subscribeLessonMarksUpdated((updatedLessonId) => {
+      if (String(updatedLessonId) === String(lessonId)) {
+        loadMarks();
+      }
+    });
+    // eslint-disable-next-line
+  }, [lessonId]);
+
   const loadMarks = async () => {
     setMarksLoading(true);
     setMarksError('');
@@ -118,6 +131,7 @@ function LessonPage() {
         attendance_status: s.attendance_status || '',
         is_late: !!s.is_late,
         score: s.score === null || s.score === undefined ? '' : s.score,
+        exam_score: s.exam_score === null || s.exam_score === undefined ? '' : s.exam_score,
         stars: s.stars || 0,
         comment: s.comment || '',
       })));
@@ -162,6 +176,11 @@ function LessonPage() {
         const url = window.URL.createObjectURL(new Blob([res.data], { type }));
         if (win) win.location.href = url;
         setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      } else if (item.resource_type === 'quiz' && item.template_type === 'live') {
+        // Живой квиз — не статичный HTML, а страница хоста: открываем игру
+        // на бэкенде и переводим уже открытую вкладку на неё.
+        const res = await api.post(`/quiz-live/${item.resource_id}/open`, { lesson_id: Number(lessonId) });
+        if (win) win.location.href = `/quiz-live/${res.data.code}/host`;
       } else {
         const res = await api.get(`/quizzes/${item.resource_id}/html`);
         if (win) {
@@ -249,6 +268,7 @@ function LessonPage() {
     attendance_status: row.attendance_status || null,
     is_late: !!row.is_late,
     score: row.score === '' ? null : Number(row.score),
+    exam_score: row.exam_score === '' ? null : Number(row.exam_score),
     stars: row.stars || 0,
     comment: row.comment || null,
   });
@@ -318,12 +338,12 @@ function LessonPage() {
   // Оценка 0..100 — то же ограничение стоит на бэке (Field(ge=0, le=100)).
   // HTML min/max на <input type="number"> не мешает ввести 200 руками, а
   // бэк на такое ответит 422 — подрезаем на blur, до отправки.
-  const handleScoreBlur = (studentId) => {
+  const handleScoreLikeBlur = (studentId, field) => {
     const current = marksRowsRef.current.find(r => r.student_id === studentId);
-    if (current && current.score !== '') {
-      const clamped = Math.max(0, Math.min(100, Number(current.score)));
-      if (clamped !== Number(current.score)) {
-        const updated = { ...current, score: clamped };
+    if (current && current[field] !== '') {
+      const clamped = Math.max(0, Math.min(100, Number(current[field])));
+      if (clamped !== Number(current[field])) {
+        const updated = { ...current, [field]: clamped };
         setMarksRows(prev => prev.map(r => (r.student_id === studentId ? updated : r)));
         saveRow(studentId, updated);
         return;
@@ -331,6 +351,9 @@ function LessonPage() {
     }
     saveRow(studentId);
   };
+
+  const handleScoreBlur = (studentId) => handleScoreLikeBlur(studentId, 'score');
+  const handleExamScoreBlur = (studentId) => handleScoreLikeBlur(studentId, 'exam_score');
 
   const saveAllRows = async (rowsOverride) => {
     const rows = rowsOverride || marksRowsRef.current;
@@ -660,6 +683,7 @@ function LessonPage() {
                       <th>{'Имя'}</th>
                       <th className="table__col--attendance">{'Посещаемость'}</th>
                       <th className="table__col--score">{'Оценка'}</th>
+                      <th className="table__col--score">{'Экзамен'}</th>
                       <th className="table__col--stars">{'Звёзды'}</th>
                       <th>{'Комментарий'}</th>
                       <th className="table__col--icons">{'Контакты'}</th>
@@ -667,7 +691,7 @@ function LessonPage() {
                   </thead>
                   <tbody>
                     {marksRows.length === 0 ? (
-                      <tr><td colSpan="6" className="table__empty">{'В группе нет студентов'}</td></tr>
+                      <tr><td colSpan="7" className="table__empty">{'В группе нет студентов'}</td></tr>
                     ) : (
                       marksRows.map(row => (
                           <tr key={row.student_id}>
@@ -703,6 +727,18 @@ function LessonPage() {
                                 disabled={marksLocked}
                                 onChange={e => updateRowField(row.student_id, 'score', e.target.value)}
                                 onBlur={() => handleScoreBlur(row.student_id)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                className="input input--sm-num"
+                                value={row.exam_score}
+                                disabled={marksLocked}
+                                onChange={e => updateRowField(row.student_id, 'exam_score', e.target.value)}
+                                onBlur={() => handleExamScoreBlur(row.student_id)}
                               />
                             </td>
                             <td>

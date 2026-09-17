@@ -4,11 +4,18 @@ import { useLang } from '../hooks/useLang';
 import Button from '../components/Button';
 import api from '../api/auth';
 
+const blankFlashQuestion = () => ({ question: '', time: 60, answer: '' });
+const blankLiveQuestion = () => ({ question: '', time: 60, options: ['', '', '', ''], correct_index: 0 });
+
+function blankQuestionFor(templateType) {
+  return templateType === 'live' ? blankLiveQuestion() : blankFlashQuestion();
+}
+
 function AddQuizPage() {
   const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
   const [templateType, setTemplateType] = useState('flash');
-  const [questions, setQuestions] = useState([{ question: '', time: 60, answer: '' }]);
+  const [questions, setQuestions] = useState([blankFlashQuestion()]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams();
@@ -30,7 +37,8 @@ function AddQuizPage() {
           const res = await api.get(`/quizzes/${id}/edit`);
           setTitle(res.data.title);
           setTopic(res.data.topic || '');
-          setTemplateType(res.data.template_type || 'flash');
+          const loadedType = res.data.template_type || 'flash';
+          setTemplateType(loadedType);
           if (res.data.questions && res.data.questions.length > 0) {
             const loadedQuestions = res.data.questions.map(q => ({
               ...q,
@@ -38,7 +46,7 @@ function AddQuizPage() {
             }));
             setQuestions(loadedQuestions);
           } else {
-            setQuestions([{ question: '', time: 60, answer: '' }]);
+            setQuestions([blankQuestionFor(loadedType)]);
           }
         } catch (err) {
           alert('Ошибка загрузки квиза');
@@ -49,8 +57,13 @@ function AddQuizPage() {
     }
   }, [id, navigate]);
 
+  const handleTemplateTypeChange = (value) => {
+    setTemplateType(value);
+    setQuestions([blankQuestionFor(value)]);
+  };
+
   const addQuestion = () => {
-    setQuestions([...questions, { question: '', time: 60, answer: '' }]);
+    setQuestions([...questions, blankQuestionFor(templateType)]);
   };
 
   const removeQuestion = (index) => {
@@ -63,10 +76,28 @@ function AddQuizPage() {
       const updated = [...prev];
       if (field === 'time') {
         const num = parseInt(value, 10);
-        updated[index][field] = isNaN(num) ? 60 : num;
+        updated[index] = { ...updated[index], time: isNaN(num) ? 60 : num };
       } else {
-        updated[index][field] = value;
+        updated[index] = { ...updated[index], [field]: value };
       }
+      return updated;
+    });
+  };
+
+  const handleOptionChange = (qIndex, optIndex, value) => {
+    setQuestions(prev => {
+      const updated = [...prev];
+      const options = [...updated[qIndex].options];
+      options[optIndex] = value;
+      updated[qIndex] = { ...updated[qIndex], options };
+      return updated;
+    });
+  };
+
+  const handleCorrectIndexChange = (qIndex, optIndex) => {
+    setQuestions(prev => {
+      const updated = [...prev];
+      updated[qIndex] = { ...updated[qIndex], correct_index: optIndex };
       return updated;
     });
   };
@@ -74,7 +105,12 @@ function AddQuizPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) { alert('Введите название'); return; }
-    if (questions.some(q => !q.question.trim() || !q.answer.trim())) {
+    if (templateType === 'live') {
+      if (questions.some(q => !q.question.trim() || (q.options || []).some(o => !o.trim()))) {
+        alert('Все вопросы и все 4 варианта ответа должны быть заполнены');
+        return;
+      }
+    } else if (questions.some(q => !q.question.trim() || !(q.answer || '').trim())) {
       alert('Все вопросы и ответы должны быть заполнены');
       return;
     }
@@ -124,7 +160,7 @@ function AddQuizPage() {
         <input type="text" value={topic} onChange={e => setTopic(e.target.value)} className="input input--lg" />
 
         <label className="form-label">Тип квиза</label>
-        <select value={templateType} onChange={e => setTemplateType(e.target.value)} className="input input--lg">
+        <select value={templateType} onChange={e => handleTemplateTypeChange(e.target.value)} className="input input--lg">
           <option value="flash">Flash (вопрос-ответ)</option>
           <option value="live">Live (голосование)</option>
           <option value="sprint">Sprint (скоростной)</option>
@@ -135,38 +171,85 @@ function AddQuizPage() {
           <Button type="button" onClick={addQuestion} className="btn--pill">+ {'Добавить вопрос'}</Button>
         </div>
 
-        {questions.map((q, index) => (
-          <div key={index} className="question-card">
-            <div className="question-row">
-              <input
-                type="text"
-                placeholder={'Вопрос'}
-                value={q.question}
-                onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
-                className="input input--lg input--grow"
-                required
-              />
-              <input
-                type="number"
-                placeholder={'Время (сек)'}
-                value={q.time}
-                onChange={(e) => handleQuestionChange(index, 'time', e.target.value)}
-                className="input input--lg input--time"
-                min="5"
-                required
-              />
-              <input
-                type="text"
-                placeholder={'Ответ'}
-                value={q.answer}
-                onChange={(e) => handleQuestionChange(index, 'answer', e.target.value)}
-                className="input input--lg input--grow"
-                required
-              />
-              <Button type="button" onClick={() => removeQuestion(index)} variant="danger" className="btn--icon-circle">✕</Button>
+        {templateType === 'live' ? (
+          questions.map((q, index) => (
+            <div key={index} className="question-card">
+              <div className="question-row">
+                <input
+                  type="text"
+                  placeholder={'Вопрос'}
+                  value={q.question}
+                  onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
+                  className="input input--lg input--grow"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder={'Время (сек)'}
+                  value={q.time}
+                  onChange={(e) => handleQuestionChange(index, 'time', e.target.value)}
+                  className="input input--lg input--time"
+                  min="5"
+                  required
+                />
+                <Button type="button" onClick={() => removeQuestion(index)} variant="danger" className="btn--icon-circle">✕</Button>
+              </div>
+              <div className="question-options-grid">
+                {(q.options || ['', '', '', '']).map((opt, optIndex) => (
+                  <label key={optIndex} className="question-option-row">
+                    <input
+                      type="radio"
+                      name={`correct-${index}`}
+                      checked={q.correct_index === optIndex}
+                      onChange={() => handleCorrectIndexChange(index, optIndex)}
+                    />
+                    <input
+                      type="text"
+                      placeholder={`Вариант ${optIndex + 1}`}
+                      value={opt}
+                      onChange={(e) => handleOptionChange(index, optIndex, e.target.value)}
+                      className="input input--lg input--grow"
+                      required
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          questions.map((q, index) => (
+            <div key={index} className="question-card">
+              <div className="question-row">
+                <input
+                  type="text"
+                  placeholder={'Вопрос'}
+                  value={q.question}
+                  onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
+                  className="input input--lg input--grow"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder={'Время (сек)'}
+                  value={q.time}
+                  onChange={(e) => handleQuestionChange(index, 'time', e.target.value)}
+                  className="input input--lg input--time"
+                  min="5"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder={'Ответ'}
+                  value={q.answer}
+                  onChange={(e) => handleQuestionChange(index, 'answer', e.target.value)}
+                  className="input input--lg input--grow"
+                  required
+                />
+                <Button type="button" onClick={() => removeQuestion(index)} variant="danger" className="btn--icon-circle">✕</Button>
+              </div>
+            </div>
+          ))
+        )}
 
         <div className="form-actions">
           <Button type="submit" className="btn--pill" disabled={loading}>

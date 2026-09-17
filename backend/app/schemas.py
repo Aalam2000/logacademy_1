@@ -95,8 +95,10 @@ class Token(BaseModel):
 
 class QuestionSchema(BaseModel):
     question: str
-    time: int
-    answer: str
+    time: int = 60
+    answer: Optional[str] = None            # flash — текст ответа
+    options: Optional[List[str]] = None      # live — 4 варианта
+    correct_index: Optional[int] = None      # live — индекс правильного (0..3)
 
 class QuizCreate(BaseModel):
     title: str

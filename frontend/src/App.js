@@ -13,6 +13,8 @@ import GroupPage from './pages/GroupPage';
 import StudentsPage from './pages/StudentsPage';
 import TeachersDirectoryPage from './pages/TeachersDirectoryPage';
 import JoinGroupPage from './pages/JoinGroupPage';
+import QuizLiveHostPage from './pages/QuizLiveHostPage';
+import QuizLiveJoinPage from './pages/QuizLiveJoinPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoleRoute from './components/RoleRoute';
 
@@ -28,6 +30,12 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/join/:inviteCode" element={<JoinGroupPage />} />
+        <Route path="/quiz-live/:code" element={<QuizLiveJoinPage />} />
+        <Route path="/quiz-live/:code/host" element={
+          <PrivateRoute>
+            <RoleRoute roles={['teacher', 'admin']}><QuizLiveHostPage /></RoleRoute>
+          </PrivateRoute>
+        } />
         <Route path="/dashboard" element={
           <PrivateRoute>
             <Dashboard />

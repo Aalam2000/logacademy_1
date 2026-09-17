@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students
+from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students, quiz_live
 import logging
 from .i18n_auto import start_translation_worker
 
@@ -27,6 +27,7 @@ app.include_router(materials.router)
 app.include_router(links.router)
 app.include_router(library.router)
 app.include_router(students.router)
+app.include_router(quiz_live.router)
 
 
 @app.on_event("startup")

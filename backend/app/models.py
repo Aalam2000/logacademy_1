@@ -77,6 +77,7 @@ class LessonMark(Base):
     attendance_status = Column(String, nullable=True)  # in_person | online | excused | absent | NULL
     is_late = Column(Boolean, nullable=False, default=False)  # независим от attendance_status
     score = Column(Integer, nullable=True)  # 0..100
+    exam_score = Column(Integer, nullable=True)  # 0..100 — из live-квиза с флажком "Экзамен", отдельно от ручной score
     stars = Column(Integer, nullable=True)  # 0..3
     comment = Column(Text, nullable=True)
     marked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -122,6 +123,7 @@ class Quiz(Base):
     template_type = Column(String, nullable=False, default="flash")
     html_content = Column(Text, nullable=False)
     html_translations = Column(JSON, default={})
+    questions_data = Column(JSON, nullable=True)  # live/sprint — структурированные вопросы, не переводится
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

@@ -60,6 +60,11 @@ async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db),
     html = render_translated_template(template_type, quiz_data.lang, data)
     print(f"📄 Generated HTML (first 200 chars): {html[:200]}...")
 
+    # live/sprint — содержимое вопросов не переводится, храним структурой
+    # отдельно от html_content (который остаётся только переведённой
+    # обёрткой-страницей, как у flash).
+    questions_data = questions_dict if template_type != "flash" else None
+
     new_quiz = Quiz(
         title=quiz_data.title,
         topic=quiz_data.topic,
@@ -67,6 +72,7 @@ async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db),
         template_type=template_type,
         html_content=html,
         html_translations={},
+        questions_data=questions_data,
         created_by=current_user.id,
     )
     db.add(new_quiz)
@@ -99,6 +105,7 @@ async def update_quiz(quiz_id: int, quiz_data: QuizCreate, db: AsyncSession = De
     quiz.type = template_type
     quiz.html_content = html
     quiz.html_translations = {}
+    quiz.questions_data = questions_dict if template_type != "flash" else None
 
     await db.commit()
     await db.refresh(quiz)
@@ -137,13 +144,17 @@ async def get_quiz_edit_data(quiz_id: int, db: AsyncSession = Depends(get_db), c
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    match = re.search(r'const QUESTIONS\s*=\s*(\[.*?\])\s*;', quiz.html_content, re.DOTALL)
-    questions = []
-    if match:
-        try:
-            questions = json.loads(match.group(1))
-        except Exception:
-            pass
+    if quiz.questions_data is not None:
+        # live/sprint — структура хранится напрямую, разбирать html не нужно
+        questions = quiz.questions_data
+    else:
+        match = re.search(r'const QUESTIONS\s*=\s*(\[.*?\])\s*;', quiz.html_content, re.DOTALL)
+        questions = []
+        if match:
+            try:
+                questions = json.loads(match.group(1))
+            except Exception:
+                pass
 
     return {
         "id": quiz.id,
