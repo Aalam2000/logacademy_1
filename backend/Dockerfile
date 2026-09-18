@@ -25,4 +25,18 @@ RUN AUTOI18N_DIR=$(python -c "import autoi18n, os; print(os.path.join(os.path.di
 
 COPY . .
 
+# Непривилегированный пользователь для рантайма — раньше контейнер работал
+# от root, что увеличивает ущерб при потенциальной уязвимости в LibreOffice
+# (конвертация загруженных docx/xlsx/pptx в PDF, см. routers/materials.py).
+# UID/GID фиксированы (1000) — если после деплоя backend упадёт с
+# Permission denied на translations/ или .env, на сервере:
+#   sudo chown -R 1000:1000 translations .env.prod
+# -m создаёт домашнюю директорию — она нужна LibreOffice под свой профиль,
+# без неё soffice может не запуститься от непривилегированного юзера.
+RUN groupadd -g 1000 appuser \
+    && useradd -m -u 1000 -g appuser appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+ENV HOME=/home/appuser
+
 CMD ["sh", "-c", "python -m app.migrate_bootstrap && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
