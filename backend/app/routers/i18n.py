@@ -1,6 +1,11 @@
 import logging
-from fastapi import APIRouter, Request, Response
+import os
+
+from fastapi import APIRouter, Depends, Request, Response
 from autoi18n import Translator
+
+from ..dependencies import require_admin
+from ..models import User
 
 logger = logging.getLogger("i18n-trace")
 
@@ -9,6 +14,26 @@ router = APIRouter(prefix="/i18n", tags=["i18n"])
 # Единый экземпляр Translator для всего backend (используется также в
 # routers/quizzes.py для перевода HTML-шаблонов квизов).
 translator = Translator(env_path=".env")
+
+# POST /i18n/languages дёргает библиотеку autoi18n, а она переводит СРАЗУ
+# весь реестр исходного языка через OpenAI (платно, синхронно). Библиотека
+# общая для разных проектов, поэтому свой порог "сколько можно отправить за
+# один раз" держим тут, в проекте, а не в библиотеке. Меряем размер файла
+# реестра в КБ — это быстрее и проще, чем парсить JSON и считать фразы.
+# Ориентир: сейчас ~285 фраз ~= 21 КБ (~76 байт/фразу); 5000 фраз ~= 372 КБ.
+# Порог берём с запасом.
+MAX_REGISTRY_KB = 400
+
+
+def _registry_size_kb() -> float:
+    """Размер файла реестра исходного языка (translations/{source_lang}.json)
+    в КБ — то, что уйдёт в библиотеку (и дальше в OpenAI) при добавлении
+    нового языка."""
+    path = os.path.join(translator.cache_dir, f"{translator.source_lang}.json")
+    try:
+        return os.path.getsize(path) / 1024
+    except OSError:
+        return 0.0
 
 
 @router.get("/languages")
@@ -57,7 +82,21 @@ async def get_runtime_js(request: Request, lang: str = "ru"):
 
 
 @router.post("/languages")
-async def add_language(lang: str):
+async def add_language(lang: str, current_user: User = Depends(require_admin)):
     """Добавить целевой язык 'на лету' (для будущей админки): дописывает
-    .env и сразу переводит на него весь известный реестр фраз."""
+    .env и сразу переводит на него весь известный реестр фраз.
+
+    Защита: только админ (наружу этот путь и так не выпущен — см. nginx),
+    и порог по объёму реестра (MAX_REGISTRY_KB) перед передачей в библиотеку.
+    Если реестр больше порога — в библиотеку не передаём вообще (не будет
+    синхронного платного вызова OpenAI), пишем тревогу в лог, дальше решает
+    администратор."""
+    size_kb = _registry_size_kb()
+    if size_kb > MAX_REGISTRY_KB:
+        logger.error(
+            f"🚨[i18n-guard] POST /i18n/languages?lang={lang} ЗАБЛОКИРОВАН: "
+            f"реестр исходного языка {size_kb:.1f} КБ превышает лимит {MAX_REGISTRY_KB} КБ. "
+            f"В библиотеку не передано, OpenAI не вызывался. Инициатор: {current_user.username}."
+        )
+        return {"added": 0, "translated": 0, "blocked": True, "registry_kb": round(size_kb, 1)}
     return translator.add_target_lang(lang)

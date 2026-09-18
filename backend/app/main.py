@@ -9,10 +9,27 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Явный список origin вместо "*" — раньше CORS был открыт полностью, а в
+# связке с allow_credentials=True это означало доверие ЛЮБОМУ сайту в
+# интернете (Starlette при wildcard+credentials отражает Origin запроса
+# вместо "*"). credentials выключены — auth тут не на куках, токен только
+# в заголовке Authorization из localStorage, credentials-режим CORS не нужен.
+#
+# localhost:3000 — dev-фронтенд (свой порт, кросс-origin к backend:8000).
+# 192.168.0.9 — прод: фронтенд и backend теперь за одним nginx на 80,
+# для самого сайта это same-origin, список тут скорее подстраховка от
+# чужих сайтов. Когда появится публичный домен — добавить его сюда
+# отдельной строкой (например "https://logacademy.az") и передеплоить.
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://192.168.0.9",
+    # "https://logacademy.az",  # TODO: добавить, когда появится домен + SSL
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
