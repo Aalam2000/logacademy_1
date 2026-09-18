@@ -1,7 +1,18 @@
+# По умолчанию у docker json-file драйвера НЕТ лимита — лог контейнера
+# может расти неограниченно. Общий anchor на все три сервиса: максимум
+# 10 МБ на файл, 3 файла на контейнер (ротация) — то есть не больше
+# ~30 МБ логов на сервис одновременно.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   backend:
     build: ./backend
     restart: unless-stopped
+    logging: *default-logging
     # Порт больше не публикуется на хост вообще — nginx-контейнер ходит
     # к backend по внутреннему имени сервиса (backend:8000) в докер-сети
     # compose-проекта. Наружу торчит только сам nginx (80).
@@ -20,6 +31,7 @@ services:
       args:
         REACT_APP_API_URL: http://192.168.0.9/api
     restart: unless-stopped
+    logging: *default-logging
     # Порт тоже не публикуется — см. комментарий у backend. Для frontend
     # это ещё и единственный рабочий вариант: 127.0.0.1 к нему в принципе
     # не достучаться при публикации на хост (проверено, не работает), а
@@ -30,10 +42,15 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
     volumes:
       - ./deploy/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      # Отдельная директория (не /var/log/nginx — там дефолтные симлинки на
+      # stdout/stderr, монтировать поверх них не хотим, сломает `docker logs`)
+      # под лог именно /auth/login — его читает fail2ban на хосте.
+      - ./logs/nginx-fail2ban:/var/log/nginx-fail2ban
     depends_on:
       - backend
       - frontend

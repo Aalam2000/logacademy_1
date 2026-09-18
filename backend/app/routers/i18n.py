@@ -51,9 +51,7 @@ async def get_languages():
 async def get_translations(lang: str = "ru"):
     """Плоский словарь {оригинальный_текст: перевод} — именно его ждёт
     клиентский рантайм (window.autoI18n.setLanguage) при смене языка."""
-    result = translator.get_translations_dict(lang)
-    logger.info(f"🔍[i18n-trace] 3f-BACKEND. GET /i18n/translations?lang={lang} -> {len(result)} переводов")
-    return result
+    return translator.get_translations_dict(lang)
 
 
 @router.get("/runtime.js")
@@ -72,7 +70,6 @@ async def get_runtime_js(request: Request, lang: str = "ru"):
     """
     base = str(request.base_url).rstrip("/")
     translations_url_template = f"{base}/i18n/translations?lang={{lang}}"
-    logger.info(f"🔍[i18n-trace] 0-BACKEND. GET /i18n/runtime.js?lang={lang} | translations_url_template={translations_url_template}")
     script = translator.build_runtime(
         lang,
         dynamic_dom_enabled=True,

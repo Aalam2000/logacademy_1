@@ -48,7 +48,6 @@ async def get_quizzes(db: AsyncSession = Depends(get_db), current_user: User = D
 
 @router.post("/", response_model=QuizOut)
 async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    print(f"📥 Received lang: {quiz_data.lang}")
     template_type = quiz_data.template_type or "flash"
     questions_dict = [q.model_dump() for q in quiz_data.questions]
     data = {
@@ -58,7 +57,6 @@ async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db),
         "questions_json": json.dumps(questions_dict, ensure_ascii=False),
     }
     html = render_translated_template(template_type, quiz_data.lang, data)
-    print(f"📄 Generated HTML (first 200 chars): {html[:200]}...")
 
     # live/sprint — содержимое вопросов не переводится, храним структурой
     # отдельно от html_content (который остаётся только переведённой
@@ -87,7 +85,6 @@ async def update_quiz(quiz_id: int, quiz_data: QuizCreate, db: AsyncSession = De
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    print(f"📥 Update lang: {quiz_data.lang}")
     template_type = quiz_data.template_type or "flash"
     questions_dict = [q.model_dump() for q in quiz_data.questions]
     data = {
@@ -97,7 +94,6 @@ async def update_quiz(quiz_id: int, quiz_data: QuizCreate, db: AsyncSession = De
         "questions_json": json.dumps(questions_dict, ensure_ascii=False),
     }
     html = render_translated_template(template_type, quiz_data.lang, data)
-    print(f"📄 Updated HTML (first 200 chars): {html[:200]}...")
 
     quiz.title = quiz_data.title
     quiz.topic = quiz_data.topic
