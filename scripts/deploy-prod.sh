@@ -20,7 +20,9 @@ docker compose -f docker-compose.prod.yml ps
 echo "[deploy] current revision"
 git rev-parse --short HEAD
 
-echo "[deploy] cleanup: только dangling-образы, build cache не трогаем — иначе каждый деплой качает всё заново"
+echo "[deploy] cleanup: dangling-образы, осиротевшие volume, build cache старше недели"
 docker image prune -f
+docker volume prune -f
+docker builder prune -f --filter "until=168h"
 
 echo "[deploy] done"
