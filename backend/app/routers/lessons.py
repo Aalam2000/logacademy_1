@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
 from typing import Optional
@@ -316,7 +316,10 @@ async def get_lesson_marks(
             marked_at=mark.marked_at if mark else None,
         ))
 
-    return {"locked": is_lesson_locked(lesson), "students": students}
+    return {
+        "locked": is_lesson_locked(lesson) and current_user.role != "admin",
+        "students": students,
+    }
 
 
 # Сохранить отметку одного студента (автосохранение по полю на фронте)
@@ -329,7 +332,7 @@ async def save_lesson_mark(
     current_user: User = Depends(require_teacher)
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-    if is_lesson_locked(lesson):
+    if is_lesson_locked(lesson) and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Урок заблокирован для редактирования (прошла полночь по Баку)")
 
     active_ids = await _get_active_group_student_ids(lesson, db)
@@ -351,7 +354,7 @@ async def save_lesson_marks_bulk(
     current_user: User = Depends(require_teacher)
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-    if is_lesson_locked(lesson):
+    if is_lesson_locked(lesson) and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Урок заблокирован для редактирования (прошла полночь по Баку)")
 
     active_ids = await _get_active_group_student_ids(lesson, db)
@@ -518,6 +521,15 @@ async def delete_lesson(
     current_user: User = Depends(require_teacher)
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+
+    # lesson_marks/lesson_resources ссылаются на lessons.id без ON DELETE
+    # CASCADE (и без ORM-relationship с каскадом) — без этого удаление
+    # урока с уже проставленными оценками или привязанными материалами
+    # падало на ограничении внешнего ключа. Сами материалы/квизы/ссылки
+    # в «Базе знаний» не трогаем — удаляем только привязки этого урока.
+    await db.execute(delete(LessonMark).where(LessonMark.lesson_id == lesson_id))
+    await db.execute(delete(LessonResource).where(LessonResource.lesson_id == lesson_id))
+
     await db.delete(lesson)
     await db.commit()
     return {"ok": True}

@@ -6,12 +6,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
 
 from ..database import get_db
-from ..dependencies import require_teacher
+from ..dependencies import require_admin, require_teacher
 from ..models import Course, Group, GroupMember, Lesson, LessonMark, User
 from .i18n import translator
 
@@ -290,3 +290,25 @@ async def get_student_card(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
+
+# Удалить ученика — только admin. group_members/lesson_marks ссылаются на
+# users.id без ON DELETE CASCADE (тот же случай, что и с lessons — см.
+# delete_lesson в lessons.py), поэтому чистим их явно: это личная история
+# самого ученика (его группы и его оценки), ни на что общее она не
+# ссылается, блокировать удаление из-за неё смысла нет.
+@router.delete("/{student_id}")
+async def delete_student(
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    result = await db.execute(select(User).where(User.id == student_id, User.role == "student"))
+    student = result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    await db.execute(delete(GroupMember).where(GroupMember.student_id == student_id))
+    await db.execute(delete(LessonMark).where(LessonMark.student_id == student_id))
+    await db.delete(student)
+    await db.commit()
+    return {"ok": True}

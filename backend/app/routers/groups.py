@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -20,15 +22,27 @@ async def get_courses_for_teacher(
     return result.scalars().all()
 
 
-# Мои группы — с количеством учеников и именем преподавателя
+# Мои группы — с количеством учеников и именем преподавателя.
+# У admin, в отличие от teacher, есть выбор области видимости (тот же
+# смысл, что и в /students — см. _scope_group_ids в students.py):
+# teacher_id=<id> — группы конкретного препода, mine=true — только свои,
+# ни то ни другое — вообще все группы.
 @router.get("/my", response_model=list[GroupOut])
 async def get_my_groups(
+    teacher_id: Optional[int] = None,
+    mine: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    result = await db.execute(
-        select(Group).where(Group.teacher_id == current_user.id)
-    )
+    query = select(Group)
+    if current_user.role != "admin":
+        query = query.where(Group.teacher_id == current_user.id)
+    elif mine:
+        query = query.where(Group.teacher_id == current_user.id)
+    elif teacher_id is not None:
+        query = query.where(Group.teacher_id == teacher_id)
+
+    result = await db.execute(query)
     groups = result.scalars().all()
     if not groups:
         return []

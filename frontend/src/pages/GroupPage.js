@@ -22,6 +22,7 @@ function GroupPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isStudentsModalOpen, setIsStudentsModalOpen] = useState(false);
+  const [rangeFilter, setRangeFilter] = useState('upcoming'); // upcoming | week | month | all
 
   useEffect(() => {
     const load = async () => {
@@ -29,7 +30,7 @@ function GroupPage() {
       setError('');
       try {
         const [lessonsRes, groupsRes, coursesRes] = await Promise.all([
-          api.get('/lessons/my'),
+          api.get(`/lessons/group/${gid}`),
           api.get('/groups/my'),
           api.get('/groups/courses'),
         ]);
@@ -43,19 +44,42 @@ function GroupPage() {
       }
     };
     load();
-  }, []);
+    // eslint-disable-next-line
+  }, [gid]);
 
   const group = groups.find(g => g.id === gid);
   const courseName = courses.find(c => c.id === group?.course_id)?.title || '—';
 
-  // Уроки только этой группы, по умолчанию — с сегодня
+  // Уроки только этой группы. По умолчанию — с сегодня и далее; кнопками
+  // «Неделя»/«Месяц»/«Все» нижняя граница отодвигается назад (в прошлое),
+  // будущие уроки при этом видны всегда — верхней границы нет никогда.
+  const startOfWeek = (d) => {
+    // Неделя с понедельника (getDay(): 0 — воскресенье)
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+  const startOfMonth = (d) => {
+    const date = new Date(d.getFullYear(), d.getMonth(), 1);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+
   const visible = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    let lowerBound = today;
+    if (rangeFilter === 'week') lowerBound = startOfWeek(today);
+    else if (rangeFilter === 'month') lowerBound = startOfMonth(today);
+    else if (rangeFilter === 'all') lowerBound = null;
+
     return lessons
       .filter(l => l.group_id === gid)
-      .filter(l => !l.date || new Date(l.date) >= today)
+      .filter(l => !l.date || lowerBound === null || new Date(l.date) >= lowerBound)
       .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-  }, [lessons, gid]);
+  }, [lessons, gid, rangeFilter]);
 
   const isToday = (dateStr) => {
     if (!dateStr) return false;
@@ -145,6 +169,24 @@ function GroupPage() {
         <button className="btn" onClick={openCreateModal}>
           {'+ Урок'}
         </button>
+      </div>
+
+      <div className="toolbar__filters">
+        {[
+          { key: 'upcoming', label: 'Ближайшие' },
+          { key: 'week', label: 'Неделя' },
+          { key: 'month', label: 'Месяц' },
+          { key: 'all', label: 'Все' },
+        ].map(opt => (
+          <button
+            key={opt.key}
+            type="button"
+            className={`tab tab--underline${rangeFilter === opt.key ? ' tab--active' : ''}`}
+            onClick={() => setRangeFilter(opt.key)}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {error && <div className="error-text error-text--top">{error}</div>}

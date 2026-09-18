@@ -15,11 +15,23 @@ function StudentsPage() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
 
   const [courseId, setCourseId] = useState('');
   const [groupId, setGroupId] = useState('');
-  const [teacherId, setTeacherId] = useState('');
-  const [mine, setMine] = useState(false);
+  // Выбор «Препод/Мои» запоминаем в localStorage — чтобы не сбрасывался
+  // при возврате на страницу (тот же приём, что и в GroupsPage).
+  const [teacherId, setTeacherId] = useState(() => localStorage.getItem('la_students_teacherId') || '');
+  const [mine, setMine] = useState(() => localStorage.getItem('la_students_mine') === 'true');
+
+  useEffect(() => {
+    localStorage.setItem('la_students_teacherId', teacherId);
+  }, [teacherId]);
+
+  useEffect(() => {
+    localStorage.setItem('la_students_mine', String(mine));
+  }, [mine]);
+
   const [sort, setSort] = useState('name'); // name | score
 
   // Курсы и группы — для фильтров. Группы у admin — все (чтобы построить
@@ -75,6 +87,24 @@ function StudentsPage() {
     }
   };
 
+  // Удаление ученика — только admin. Каскадно чистит его группы/оценки на
+  // бэкенде (delete_student в students.py), тут просто убираем из списка.
+  const handleDelete = async (student) => {
+    const confirmed = window.confirm(`Удалить ученика «${student.full_name}»? Это действие необратимо.`);
+    if (!confirmed) return;
+
+    setDeletingId(student.id);
+    setError('');
+    try {
+      await api.delete(`/students/${student.id}`);
+      setStudents(prev => prev.filter(s => s.id !== student.id));
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Не удалось удалить ученика');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // Список преподавателей — из уже загруженных групп (только те, у кого
   // реально есть группы), а не отдельным запросом.
   const teacherOptions = isAdmin
@@ -101,7 +131,7 @@ function StudentsPage() {
   // «Препод» показываем только пока admin смотрит сводно (не выбран ни
   // конкретный препод, ни «Моё») — иначе колонка избыточна, все и так его.
   const showTeacherColumn = isAdmin && !mine && !teacherId;
-  const columnCount = 7 + (showTeacherColumn ? 1 : 0);
+  const columnCount = 7 + (showTeacherColumn ? 1 : 0) + (isAdmin ? 1 : 0);
 
   return (
     <div className="page">
@@ -156,6 +186,7 @@ function StudentsPage() {
               <th>{'Пропуски'}</th>
               <th>{'Опоздания'}</th>
               <th>{'Контакты'}</th>
+              {isAdmin && <th></th>}
             </tr>
           </thead>
           <tbody>
@@ -182,6 +213,18 @@ function StudentsPage() {
                   <td>
                     <StudentContactIcons telegram={s.telegram_username} whatsapp={s.whatsapp} />
                   </td>
+                  {isAdmin && (
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn--sm"
+                        onClick={() => handleDelete(s)}
+                        disabled={deletingId === s.id}
+                      >
+                        {'🗑️'}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
