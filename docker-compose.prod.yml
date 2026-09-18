@@ -23,6 +23,9 @@ services:
         REACT_APP_API_URL: http://192.168.0.9/api
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # nginx на хосте после правки будет стучаться через localhost:3000 —
+      # снаружи 3000 не нужен, биндим только на loopback (тот же приём,
+      # что и для backend/8000).
+      - "127.0.0.1:3000:3000"
     depends_on:
       - backend
