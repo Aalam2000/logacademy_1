@@ -4,7 +4,7 @@ import api from '../api/auth';
 import DateTimePicker from '../components/DateTimePicker';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
-import { TYPE_META, formatSize, subtypeLabel, resourceKey } from '../utils/libraryItems';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
 import { StudentContactIcons } from '../components/ContactIcons';
 import { subscribeLessonMarksUpdated } from '../utils/lessonMarksChannel';
@@ -53,6 +53,7 @@ function LessonPage() {
   const [lessonItems, setLessonItems] = useState([]);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [detachingKey, setDetachingKey] = useState(null);
+  const [openingKey, setOpeningKey] = useState(null);
 
   const [isUploadingMaterial, setIsUploadingMaterial] = useState(false);
   const materialInputRef = useRef(null);
@@ -168,13 +169,23 @@ function LessonPage() {
       return;
     }
 
+    const key = resourceKey(item.resource_type, item.resource_id);
+    setOpeningKey(key);
     const win = window.open('', '_blank');
+    const isConverting = item.resource_type === 'material' && needsPdfPreview(item.content_type);
+    if (win && isConverting) {
+      win.document.write('<p style="font-family:sans-serif;color:#4B5563;padding:24px">Конвертируем файл в PDF...</p>');
+      win.document.close();
+    }
     try {
       if (item.resource_type === 'material') {
-        const res = await api.get(`/materials/${item.resource_id}/download`, { responseType: 'blob' });
-        const type = res.headers?.['content-type'] || item.content_type || 'application/octet-stream';
+        const endpoint = needsPdfPreview(item.content_type) ? 'preview' : 'download';
+        const res = await api.get(`/materials/${item.resource_id}/${endpoint}`, { responseType: 'blob' });
+        const fallbackType = endpoint === 'preview' ? 'application/pdf' : (item.content_type || 'application/octet-stream');
+        const type = res.headers?.['content-type'] || fallbackType;
         const url = window.URL.createObjectURL(new Blob([res.data], { type }));
-        if (win) win.location.href = url;
+        const openUrl = type === 'application/pdf' ? `${url}#navpanes=0` : url;
+        if (win) win.location.href = openUrl;
         setTimeout(() => window.URL.revokeObjectURL(url), 60000);
       } else if (item.resource_type === 'quiz' && item.template_type === 'live') {
         // Живой квиз — не статичный HTML, а страница хоста: открываем игру
@@ -191,6 +202,8 @@ function LessonPage() {
     } catch (err) {
       if (win) win.close();
       setItemsError(extractErrorMessage(err, 'Не удалось открыть'));
+    } finally {
+      setOpeningKey(null);
     }
   };
 
@@ -616,8 +629,8 @@ function LessonPage() {
                               </span>
                             </td>
                             <td>
-                              <button type="button" className="link" onClick={() => handleOpenItem(item)}>
-                                {item.title}
+                              <button type="button" className="link" onClick={() => handleOpenItem(item)} disabled={openingKey === key}>
+                                {openingKey === key ? `${item.title} — открываем...` : item.title}
                               </button>
                             </td>
                             <td>

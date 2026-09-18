@@ -26,6 +26,7 @@ export function materialTypeLabel(contentType) {
   if (contentType.startsWith('video/')) return 'Видео';
   if (contentType.startsWith('audio/')) return 'Аудио';
   if (contentType.includes('zip') || contentType.includes('rar') || contentType.includes('7z')) return 'Архив';
+  if (contentType.includes('html')) return 'HTML';
   if (contentType.startsWith('text/')) return 'Текст';
   return contentType.split('/')[1]?.toUpperCase() || contentType;
 }
@@ -34,6 +35,13 @@ export function subtypeLabel(item) {
   if (item.resource_type === 'material') return materialTypeLabel(item.content_type);
   if (item.resource_type === 'quiz') return item.template_type || '—';
   return 'Ссылка';
+}
+
+// docx/xlsx/pptx браузер нативно не открывает — для них бэкенд конвертирует
+// в PDF на лету (/materials/{id}/preview), дальше открывается тем же
+// способом, что уже работает для PDF/картинок (/download).
+export function needsPdfPreview(contentType) {
+  return ['DOCX', 'XLSX', 'PPTX'].includes(materialTypeLabel(contentType));
 }
 
 export function resourceKey(resourceType, resourceId) {

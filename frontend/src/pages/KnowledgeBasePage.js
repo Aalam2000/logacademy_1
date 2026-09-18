@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-import { TYPE_META, formatSize, subtypeLabel, resourceKey } from '../utils/libraryItems';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
 
 function itemKey(item) {
   return resourceKey(item.resource_type, item.id);
@@ -20,6 +20,7 @@ function KnowledgeBasePage() {
   const [onlyMine, setOnlyMine] = useState(false);
   const [sort, setSort] = useState('date'); // date | title
   const [deletingKey, setDeletingKey] = useState(null);
+  const [openingKey, setOpeningKey] = useState(null);
 
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -106,13 +107,23 @@ function KnowledgeBasePage() {
       return;
     }
 
+    const key = itemKey(item);
+    setOpeningKey(key);
     const win = window.open('', '_blank');
+    const isConverting = item.resource_type === 'material' && needsPdfPreview(item.content_type);
+    if (win && isConverting) {
+      win.document.write('<p style="font-family:sans-serif;color:#4B5563;padding:24px">Конвертируем файл в PDF...</p>');
+      win.document.close();
+    }
     try {
       if (item.resource_type === 'material') {
-        const res = await api.get(`/materials/${item.id}/download`, { responseType: 'blob' });
-        const type = res.headers?.['content-type'] || item.content_type || 'application/octet-stream';
+        const endpoint = needsPdfPreview(item.content_type) ? 'preview' : 'download';
+        const res = await api.get(`/materials/${item.id}/${endpoint}`, { responseType: 'blob' });
+        const fallbackType = endpoint === 'preview' ? 'application/pdf' : (item.content_type || 'application/octet-stream');
+        const type = res.headers?.['content-type'] || fallbackType;
         const url = window.URL.createObjectURL(new Blob([res.data], { type }));
-        if (win) win.location.href = url;
+        const openUrl = type === 'application/pdf' ? `${url}#navpanes=0` : url;
+        if (win) win.location.href = openUrl;
         setTimeout(() => window.URL.revokeObjectURL(url), 60000);
       } else {
         const res = await api.get(`/quizzes/${item.id}/html`);
@@ -124,6 +135,8 @@ function KnowledgeBasePage() {
     } catch (err) {
       if (win) win.close();
       setError(err?.response?.data?.detail || 'Не удалось открыть');
+    } finally {
+      setOpeningKey(null);
     }
   };
 
@@ -261,8 +274,8 @@ function KnowledgeBasePage() {
                       </span>
                     </td>
                     <td>
-                      <button type="button" className="link" onClick={() => handleOpen(item)}>
-                        {item.title}
+                      <button type="button" className="link" onClick={() => handleOpen(item)} disabled={openingKey === key}>
+                        {openingKey === key ? `${item.title} — открываем...` : item.title}
                       </button>
                     </td>
                     <td className="nowrap">

@@ -1,9 +1,13 @@
+import asyncio
+import subprocess
+import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +21,27 @@ from ..resources import ensure_deletable
 router = APIRouter(prefix="/materials", tags=["materials"])
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 МБ — рабочий дефолт, см. claude/minio-plan.md
+
+# Форматы, для которых делаем предпросмотр через конвертацию в PDF
+# (см. /materials/{id}/preview ниже). Конвертация всегда заново, без
+# кэша — решение Андрея, 2026-09-18; следующий шаг (редактирование
+# этих файлов) — отдельная, ещё не спроектированная задача.
+PREVIEW_CONVERTIBLE_EXTENSIONS = {".docx", ".xlsx", ".pptx"}
+
+
+def _fetch_and_convert_to_pdf(object_key: str, ext: str) -> bytes:
+    """Синхронная (блокирующая) часть — скачивание из MinIO и вызов
+    soffice — намеренно вынесена в отдельную функцию и гоняется через
+    asyncio.to_thread в самом эндпоинте, чтобы не блокировать event loop."""
+    data = b"".join(storage.stream_object(object_key))
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / f"src{ext}"
+        src.write_bytes(data)
+        subprocess.run(
+            ["soffice", "--headless", "--convert-to", "pdf", "--outdir", tmp, str(src)],
+            check=True, timeout=60, capture_output=True,
+        )
+        return src.with_suffix(".pdf").read_bytes()
 
 
 class MaterialOut(BaseModel):
@@ -101,6 +126,35 @@ async def download_material(
         media_type=material.content_type or "application/octet-stream",
         headers={"Content-Disposition": f'attachment; filename="{material.original_filename}"'},
     )
+
+
+# Предпросмотр — docx/xlsx/pptx конвертируются в PDF на лету и открываются
+# в браузере тем же путём, что уже работает для PDF/картинок (см.
+# handleOpen/handleOpenItem на фронте). Без кэша: конвертируем заново на
+# каждый запрос.
+@router.get("/{material_id}/preview")
+async def preview_material(
+    material_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher)
+):
+    result = await db.execute(select(Material).where(Material.id == material_id))
+    material = result.scalar_one_or_none()
+    if not material:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
+    ext = Path(material.original_filename).suffix.lower()
+    if ext not in PREVIEW_CONVERTIBLE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Предпросмотр для этого формата не поддерживается")
+
+    try:
+        pdf_bytes = await asyncio.to_thread(_fetch_and_convert_to_pdf, material.object_key, ext)
+    except subprocess.CalledProcessError:
+        raise HTTPException(status_code=500, detail="Не удалось сконвертировать файл в PDF")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Конвертация заняла слишком много времени")
+
+    return Response(content=pdf_bytes, media_type="application/pdf")
 
 
 # Удаление — только admin
