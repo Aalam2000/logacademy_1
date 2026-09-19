@@ -3,11 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
-
+import { IconBadgeFile, IconBadgeQuiz, IconBadgeLink } from '../components/TypeBadgeIcons';
 function itemKey(item) {
   return resourceKey(item.resource_type, item.id);
 }
-
+// Иконка по типу ресурса — SVG в стиле бейджа (белая, 12×12).
+function BadgeIcon({ type }) {
+  if (type === 'material') return <IconBadgeFile className="type-badge__icon" />;
+  if (type === 'quiz') return <IconBadgeQuiz className="type-badge__icon" />;
+  if (type === 'link') return <IconBadgeLink className="type-badge__icon" />;
+  return null;
+}
 function KnowledgeBasePage() {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
@@ -270,7 +276,8 @@ function KnowledgeBasePage() {
                   <tr key={key} className={`table__row--${item.resource_type}`}>
                     <td>
                       <span className={`type-badge type-badge--${item.resource_type}`}>
-                        {meta.icon} {subtypeLabel(item)}
+                        <BadgeIcon type={item.resource_type} />
+                        {subtypeLabel(item)}
                       </span>
                     </td>
                     <td>

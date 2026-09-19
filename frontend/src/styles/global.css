@@ -4,3 +4,13 @@
 @import './components.css';
 @import './layout.css';
 @import './media.css';
+
+/* Базовый шрифт для всего приложения. Noto Sans подобран под AZ/RU/EN:
+ * поддерживает кириллицу, латиницу и азербайджанские буквы (ə, ı, ğ, ş,
+ * ç, ö, ü). Если шрифт не загрузится — браузер упадёт на system-ui, ничего
+ * не сломается. */
+body {
+  font-family: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

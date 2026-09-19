@@ -142,7 +142,7 @@ function StudentsPage() {
               value={mine ? '' : teacherId}
               disabled={mine}
               onChange={v => setTeacherId(v)}
-              placeholder={'Препод — все'}
+              placeholder={'Учитель — все'}
               options={teacherOptions.map(([id, name]) => ({ value: id, label: name }))}
             />
           )}
@@ -180,7 +180,7 @@ function StudentsPage() {
             <tr>
               <th>{'Имя'}</th>
               <th>{'Группа'}</th>
-              {showTeacherColumn && <th>{'Препод'}</th>}
+              {showTeacherColumn && <th>{'Учитель'}</th>}
               <th>{'Средний балл'}</th>
               <th>{'Макс. балл'}</th>
               <th>{'Пропуски'}</th>

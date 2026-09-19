@@ -95,7 +95,7 @@ function GroupsPage() {
             value={mine ? '' : teacherId}
             disabled={mine}
             onChange={v => setTeacherId(v)}
-            placeholder={'Препод — все'}
+            placeholder={'Учитель — все'}
             options={teacherOptions.map(([id, name]) => ({ value: id, label: name }))}
           />
           <button type="button" className={`tab tab--underline${mine ? ' tab--active' : ''}`} onClick={handleMineToggle}>
@@ -111,7 +111,7 @@ function GroupsPage() {
           <tr>
             <th>{'Название группы'}</th>
             <th>{'Курс'}</th>
-            {isAdmin && !mine && !teacherId && <th>{'Препод'}</th>}
+            {isAdmin && !mine && !teacherId && <th>{'Учитель'}</th>}
             <th>{'Учеников'}</th>
             <th>{'Контакты'}</th>
           </tr>

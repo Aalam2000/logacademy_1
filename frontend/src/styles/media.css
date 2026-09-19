@@ -1,18 +1,135 @@
 /*
- * media.css — стили для иконок, картинок и анимированных картинок.
+ * media.css — адаптив для мобильных устройств.
  *
- * Честно по факту аудита: сейчас в проекте этому слою почти нечего
- * стилизовать. "Иконки" (📊 🃏 👤 ⚙️ ➕ 📂 ✏️ 🗑️ ✕) — это обычные emoji-символы
- * прямо в тексте кнопок/ссылок, без отдельных CSS-классов. Картинка —
- * только логотип (`<img src="/assets/logo.svg">`), и размер у него задан
- * HTML-атрибутами width/height (не CSS), в трёх разных местах с разными
- * размерами (Navigation 120×40, Login 200×66, JoinGroupPage 180×60) —
- * это осознанный разный размер под разный контекст, а не стиль, который
- * можно один раз стандартизировать здесь.
+ * До 768px:
+ *  - сайдбар уезжает за левый край и выезжает по кнопке-гамбургеру;
+ *  - шапка становится компактнее, гамбургер виден;
+ *  - таблицы скроллятся горизонтально.
  *
- * Анимированных картинок (gif и т.п.) в проекте пока нет вообще.
- *
- * Файл — заготовка на будущее (когда появятся значки как отдельные SVG-
- * компоненты, аватарки, лоадер-спиннер и т.д.). Ничего не придумываю
- * заранее без реального кода под это.
+ * На десктопе (>768px) ничего из этого не применяется — всё как было.
  */
+
+/* ===== Мобильный режим (≤768px) ===== */
+@media (max-width: 768px) {
+
+  /* --- Сайдбар уезжает за левый край --- */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 260px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+  }
+  .nav--open {
+    transform: translateX(0);
+  }
+
+  /* --- Оверлей (затемнение фона при открытом сайдбаре) --- */
+  .dashboard-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  /* --- Гамбургер --- */
+  .dashboard-burger {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin-right: 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .dashboard-burger span {
+    display: block;
+    height: 2px;
+    background: var(--color-text);
+    width: 22px;
+  }
+
+  /* --- Шапка дашборда — компактнее --- */
+  .dashboard-header {
+    height: auto;
+    min-height: 56px;
+    padding: 8px var(--space-4);
+    gap: var(--space-2);
+    flex-wrap: nowrap;
+  }
+  .dashboard-header h2 {
+    font-size: 16px;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dashboard-header-right {
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  /* --- Контент страницы — отступы поменьше --- */
+  .page {
+    padding: var(--space-4);
+  }
+  .page--md,
+  .page--wide,
+  .page--group {
+    max-width: 100%;
+  }
+
+  /* --- Таблицы скроллятся горизонтально --- */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* --- Модалки занимают почти весь экран --- */
+  .modal-window,
+  .modal-window--wide,
+  .modal-window--xwide {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+
+  /* --- Тулбар переносится --- */
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .toolbar__filters {
+    flex-wrap: wrap;
+  }
+
+  /* --- Форма логина на всю ширину --- */
+  .login-form {
+    width: 100%;
+    max-width: 320px;
+  }
+  .card {
+    padding: var(--space-6);
+  }
+}
+
+/* ===== Гамбургер на десктопе НЕ показывается ===== */
+@media (min-width: 769px) {
+  .dashboard-burger {
+    display: none;
+  }
+  .dashboard-overlay {
+    display: none;
+  }
+}

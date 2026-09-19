@@ -18,7 +18,7 @@ function TeachersDirectoryPage() {
   return (
     <div className="page">
       <div className="toolbar toolbar--start">
-        <h1 className="page-title">{'Справочник преподов'}</h1>
+        <h1 className="page-title">{'Преподаватели'}</h1>
       </div>
 
       {error && <div className="error-text error-text--muted">{error}</div>}

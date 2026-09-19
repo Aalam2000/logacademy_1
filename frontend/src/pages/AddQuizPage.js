@@ -28,7 +28,7 @@ function AddQuizPage() {
   // «Квизы» больше не используется, всё собрано там).
   const returnPath = lessonId ? `/dashboard/lessons/${lessonId}` : '/dashboard/materials';
 
-  console.log('🌐 Текущий язык в AddQuizPage:', lang);
+  // console.log('🌐 Текущий язык в AddQuizPage:', lang);
 
   useEffect(() => {
     if (id) {
@@ -123,7 +123,7 @@ function AddQuizPage() {
         questions,
         lang,  // <-- передаём текущий язык
       };
-      console.log('📤 Отправка payload:', payload);
+      // console.log('📤 Отправка payload:', payload);
 
       if (id) {
         await api.put(`/quizzes/${id}`, payload);

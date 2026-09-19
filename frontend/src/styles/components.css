@@ -4,21 +4,13 @@
  * Сюда идёт всё, что раньше жило как `const styles = {...}` внутри
  * Button.js/Input.js/FormField.js/Modal.js/Table.js/Navigation.js и
  * копипастой в QRModal.js/StudentsModal.js/AdminPage.js и т.д.
- * Значения (отступы/радиусы/цвета) — из tokens.css, взяты по факту
- * реального использования в проекте, дизайн не меняется.
+ * Значения (отступы/радиусы/цвета) — из tokens.css.
  *
  * Разделы: Buttons · Tabs · Inputs & Form field · Modal · Table · Badge ·
  * Navigation · Language switcher.
  */
 
-/* ===== Buttons =====
- * В реальном коде было две устойчивые формы кнопки (не случайный разнобой):
- *  - компактная (radius-sm, ~13 мест: GroupPage/TeacherHome/LessonPage/
- *    AdminPage/StudentsModal/QRModal/Modal.js/ProfilePage) — база .btn;
- *  - крупная "пилюля" (radius-lg, ~7 мест: Login/JoinGroup/AddQuiz/
- *    CardsPage/Dashboard) — модификатор .btn--pill.
- * Обе формы сохранены как есть, просто вынесены в классы.
- */
+/* ===== Buttons ===== */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -27,7 +19,7 @@
   padding: var(--space-2) var(--space-5);
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
+  background: var(--color-text);   /* чёрный, как в Log Academy — красный только для CTA */
   color: var(--color-white);
   font-size: var(--font-base);
   font-family: inherit;
@@ -38,6 +30,10 @@
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+.btn--accent {
+  background: var(--color-primary);  /* красный — только для главной CTA */
+  color: var(--color-white);
 }
 .btn--secondary {
   background: var(--color-bg-muted);
@@ -57,7 +53,7 @@
 }
 .btn--pill {
   padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
 }
 .btn--sm {
   padding: var(--space-1) var(--space-2);
@@ -68,6 +64,8 @@
 .btn--lg {
   font-size: var(--font-lg);
   font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .btn--bold {
   font-weight: var(--weight-bold);
@@ -79,13 +77,13 @@
   border-radius: 50%;
 }
 .btn--outline {
-  padding: 6px 14px; /* разовое значение (кнопка «Назад», LessonPage) */
+  padding: 6px 14px;
   background: var(--color-white);
   color: var(--color-text);
   border: 1px solid var(--color-primary-border);
 }
 .btn--compact {
-  padding: var(--space-2) var(--space-4); /* QR/«Ученики» в шапке группы (GroupPage) */
+  padding: var(--space-2) var(--space-4);
 }
 
 /* ===== Tabs (AdminPage) ===== */
@@ -104,11 +102,7 @@
   border-color: var(--color-primary);
 }
 
-/* ===== Tabs-в-виде-подчёркнутого-текста (AdminPage, .tabs-row) =====
- * Тот же .tab/.tab--active, что и везде (LessonPage и т.п.), но внутри
- * .tabs-row перекрываем вид на текстовые вкладки с подчёркиванием вместо
- * кнопок-пилюль. Цвета те же самые токены (--color-primary/--color-muted),
- * меняется только форма. */
+/* ===== Tabs-в-виде-подчёркнутого-текста (AdminPage, .tabs-row) ===== */
 .tabs-row .tab {
   padding: var(--space-2) var(--space-4);
   border: none;
@@ -125,11 +119,7 @@
   font-weight: var(--weight-medium);
 }
 
-/* ===== .tab--underline — та же подчёркнутая форма, но как модификатор
- * прямо на кнопке (не завязан на .tabs-row), чтобы точечно применять
- * на страницах вроде KnowledgeBasePage, где .toolbar__filters общий
- * класс с другими страницами (LessonPage и т.п.) и трогать его целиком
- * нельзя. */
+/* ===== .tab--underline ===== */
 .tab.tab--underline {
   padding: var(--space-2) var(--space-4);
   border: none;
@@ -146,15 +136,11 @@
   font-weight: var(--weight-medium);
 }
 
-/* ===== .dropdown — кастомный дропдаун (StudentsPage: Препод/Тема/Группа).
- * Триггер в том же подчёркнутом стиле, что .tab--underline, панель —
- * не больше ~7 строк, дальше скролл. */
+/* ===== .dropdown ===== */
 .dropdown {
   position: relative;
   display: inline-block;
 }
-/* Триггер дропдауна — тот же .tab.tab--underline, что и обычные табы
- * (просто добавляем flex под стрелочку рядом с текстом). */
 .dropdown .tab.tab--underline {
   display: inline-flex;
   align-items: center;
@@ -174,7 +160,7 @@
   left: 0;
   z-index: 20;
   min-width: 180px;
-  max-height: 238px; /* ~7 строк по var(--font-sm) + паддинги, дальше скролл */
+  max-height: 238px;
   overflow-y: auto;
   background: var(--color-white);
   border: 1px solid var(--color-primary-border);
@@ -201,10 +187,7 @@
   font-weight: var(--weight-medium);
 }
 
-/* ===== Inputs & form field =====
- * Как и у кнопок — два реальных варианта: компактный (админка/дашборд,
- * radius-sm) и крупный (формы логина/регистрации, radius-md).
- */
+/* ===== Inputs & form field ===== */
 .input {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-primary-border);
@@ -215,11 +198,11 @@
 .input--lg {
   padding: var(--space-3);
   border: 2px solid var(--color-primary-border);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   font-size: var(--font-base);
 }
 .input--filter {
-  padding: var(--space-2) var(--space-3); /* тоньше, чем input--lg (CardsPage) */
+  padding: var(--space-2) var(--space-3);
   border: 2px solid var(--color-primary-border);
   border-radius: var(--radius-md);
   font-size: var(--font-base);
@@ -229,13 +212,13 @@
   border-color: var(--color-danger);
 }
 .input--soft {
-  background: var(--color-bg-soft); /* readonly-поле со ссылкой-приглашением (QRModal) */
+  background: var(--color-bg-soft);
 }
 .input--textarea {
   width: 100%;
   min-height: 90px;
   resize: vertical;
-  box-sizing: border-box; /* комментарий к уроку (LessonPage) */
+  box-sizing: border-box;
 }
 
 .form-field {
@@ -253,7 +236,7 @@
   color: var(--color-danger-text);
 }
 .form-label {
-  font-weight: var(--weight-bold); /* AddQuizPage — обычная подпись поля, без уменьшения шрифта */
+  font-weight: var(--weight-bold);
   color: var(--color-text);
 }
 .question-card {
@@ -293,17 +276,15 @@
   width: 120px;
 }
 .input--min160 {
-  min-width: 160px; /* AdminPage — компактные поля форм/таблиц */
+  min-width: 160px;
 }
 .input--sm-num {
   width: 100%;
-  box-sizing: border-box; /* иначе паддинги/border вылезают за границу узкой
-    колонки .table__col--score и поле заезжает на «Звёзды» */
+  box-sizing: border-box;
 }
 .input--full {
   width: 100%;
-  box-sizing: border-box; /* иначе паддинги вылезают за границу ячейки таблицы —
-    LessonPage, поле «Комментарий» в табличке студентов заезжало на «Контакты» */
+  box-sizing: border-box;
 }
 .star-picker {
   display: inline-flex;
@@ -313,7 +294,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: var(--font-xl); /* увеличено (было --font-lg) — плохо видно в таблице (LessonPage) */
+  font-size: var(--font-xl);
   line-height: 1;
   padding: 0;
   color: var(--color-bg-muted);
@@ -325,10 +306,7 @@
   color: var(--color-warning);
 }
 
-/* ===== Кружки посещаемости (табличка «Студенты», LessonPage) =====
- * Взаимоисключающие кнопки вместо select'а: цвет = статус, подпись — во
- * всплывающей подсказке (title). Не заполнено ни одно — значит пропуск.
- */
+/* ===== Кружки посещаемости ===== */
 .attendance-group {
   display: flex;
   gap: var(--space-2);
@@ -371,14 +349,11 @@
   background: var(--color-danger);
 }
 .btn--del-compact {
-  padding: 4px var(--space-3); /* AdminPage — текстовая кнопка «Удалить» в таблицах */
+  padding: 4px var(--space-3);
   border-radius: var(--radius-sm);
 }
 
-/* ===== Modal =====
- * Modal.js уже собирал этот паттерн, но QRModal/StudentsModal/TeacherHome/
- * GroupPage дублировали его инлайном отдельно — теперь один источник.
- */
+/* ===== Modal ===== */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -397,13 +372,13 @@
   box-shadow: var(--shadow-md);
 }
 .modal-window--wide {
-  max-width: 560px; /* StudentsModal */
+  max-width: 560px;
 }
 .modal-window--xwide {
-  max-width: 780px; /* LibraryPickerModal — таблица базы знаний с фильтрами (LessonPage) */
+  max-width: 780px;
 }
 .modal-window--center {
-  text-align: center; /* информационные модалки без формы (QRModal) */
+  text-align: center;
 }
 .modal-title {
   margin: 0 0 var(--space-4) 0;
@@ -426,41 +401,27 @@
   border: 1px solid var(--color-border-light);
 }
 
-/* ===== Table =====
- * th/td граница исправлена на --color-border-light (#e8f4f0) — в старом
- * Table.js по ошибке стоял --color-primary-border (#c8f0ea), которого
- * реально нигде для границ строк таблицы не использовали.
- */
+/* ===== Table ===== */
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--font-sm);
 }
-/* table-layout: fixed — колонки не растягиваются по контенту (длинный
-   URL/название урока), а держат заданную/равную ширину и переносят текст
-   вместо того чтобы толкать таблицу за пределы страницы (LessonPage —
-   таблица «Материалы урока», из-за которой была не видна «Открепить»). */
 .table--fixed {
   table-layout: fixed;
 }
-/* Ширины колонок для .table--fixed — по содержимому конкретных виджетов
-   (в отличие от .table__col--date/--action/--delete из CardsPage, которые
-   меряли под свою фиксированную таблицу и здесь не подходили). */
 .table__col--attendance {
-  width: 150px; /* LessonPage — группа кружков посещаемости */
+  width: 150px;
 }
 .table__col--score {
-  width: 80px; /* LessonPage — число 0..100 */
+  width: 80px;
 }
 .table__col--stars {
-  width: 90px; /* LessonPage — 3 звезды */
+  width: 90px;
 }
 .table__col--icons {
-  width: 90px; /* пара иконок Telegram/WhatsApp */
+  width: 90px;
 }
-/* Обрезка «по размеру поля» — в отличие от .table__cell--truncate
-   (фиксированные 260px под таблицы без table-layout:fixed), тут ширина —
-   100% реальной ячейки, которую держит table-layout:fixed. */
 .table__cell--clip {
   display: block;
   width: 100%;
@@ -470,10 +431,10 @@
 }
 .table--card {
   background: var(--color-white);
-  border-radius: 16px; /* только здесь: разовое значение из CardsPage, не входит в общую шкалу радиусов */
+  border-radius: 0;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  min-width: 600px; /* CardsPage — широкая таблица, скроллится в .table-scroll на узких экранах */
+  min-width: 600px;
 }
 .table th {
   text-align: left;
@@ -512,14 +473,19 @@
   font-weight: var(--weight-medium);
   white-space: nowrap;
 }
+.type-badge__icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
 .type-badge--material {
-  background: var(--color-primary);
+  background: var(--color-badge-material);
 }
 .type-badge--quiz {
-  background: var(--color-info);
+  background: var(--color-badge-quiz);
 }
 .type-badge--link {
-  background: var(--color-warning);
+  background: var(--color-badge-link);
 }
 .table__empty {
   text-align: center;
@@ -527,13 +493,13 @@
   color: var(--color-muted);
 }
 .table__col--date {
-  width: 150px; /* CardsPage */
+  width: 150px;
 }
 .table__col--action {
-  width: 100px; /* CardsPage */
+  width: 100px;
 }
 .table__col--delete {
-  width: 80px; /* CardsPage */
+  width: 80px;
 }
 .table__cell--truncate {
   display: inline-block;
@@ -544,11 +510,7 @@
   vertical-align: bottom;
 }
 
-/* ===== Badge (роль пользователя / статус урока) =====
- * Один и тот же зелёный цвет в коде означает и роль "ученик", и статус
- * "урок открыт" — совпадение значений, а не единый смысл, поэтому два
- * набора модификаторов ниже указывают на один токен --color-role-student.
- */
+/* ===== Badge ===== */
 .badge {
   display: inline-block;
   padding: 2px var(--space-3);
@@ -562,7 +524,7 @@
   letter-spacing: 0.05em;
 }
 .badge--inline {
-  margin-left: var(--space-3); /* бейдж рядом с текстом заголовка (Dashboard) */
+  margin-left: var(--space-3);
   vertical-align: middle;
 }
 .badge--admin {
@@ -590,15 +552,19 @@
   height: 100vh;
   background: var(--color-white);
   border-right: 2px solid var(--color-primary-border);
-  padding: var(--space-5) 0;
+  padding: 0 0 var(--space-5) 0;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 .nav__logo {
-  padding: 0 var(--space-5) var(--space-7) var(--space-5);
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 var(--space-5);
   border-bottom: 1px solid var(--color-primary-border);
   margin-bottom: var(--space-5);
+  box-sizing: border-box;
 }
 .nav__list {
   list-style: none;
@@ -609,20 +575,28 @@
   margin: 0;
 }
 .nav__link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-5);
   color: var(--color-text);
   text-decoration: none;
   font-size: var(--font-base);
-  transition: background 0.2s;
+  transition: color 0.2s;
+}
+.nav__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 .nav__link--active {
-  background: var(--color-primary-border);
+  background: transparent;                       /* было: заливка чёрным (нечитаемо) */
+  color: var(--color-primary);                   /* красный текст */
   font-weight: var(--weight-bold);
-  border-right: 4px solid var(--color-primary);
+  border-left: 4px solid var(--color-primary);   /* красная полоса слева */
 }
 
-/* ===== Datetime picker (LessonPage — дата/время урока) ===== */
+/* ===== Datetime picker ===== */
 .datetime-picker {
   position: relative;
   display: inline-block;
@@ -766,9 +740,7 @@ a.row-icon:hover {
   opacity: 0.85;
 }
 
-/* ===== Живой квиз (QuizLiveHostPage / QuizLiveJoinPage) — новые, ни с
- * чем не пересекаются, поэтому в общих классах (.card, .tab и т.д.) не
- * нуждаются. */
+/* ===== Живой квиз ===== */
 .quiz-live-layout {
   display: flex;
   gap: var(--space-6);
@@ -898,16 +870,7 @@ a.row-icon:hover {
   background: var(--color-danger-bg-light);
 }
 
-/* ===== Живой квиз — визуальный стиль под референс-картинки (экраны
- * препода: титулка ожидания и активный вопрос). Существующие правила
- * выше не трогаем: тут либо новые классы, либо повторные блоки с тем же
- * селектором, которые только ДОБАВЛЯЮТ свойства (background у
- * .quiz-live-participants намеренно не трогаем — его меняет модификатор
- * --all, и порядок правил для этого важен), либо селекторы вида
- * .quiz-live-host .xxx — не выходят за пределы этой страницы и не
- * задевают .quiz-live-answer-grid/.quiz-live-answer-cell на странице
- * ученика (у неё нет класса .quiz-live-host). */
-
+/* ===== Живой квиз — визуальный стиль под референс-картинки ===== */
 .quiz-live-host {
   min-height: calc(100vh - var(--space-7) * 2);
   margin: calc(-1 * var(--space-7));
@@ -1089,4 +1052,3 @@ a.row-icon:hover {
   background: rgba(255,255,255,0.85);
   color: var(--color-text);
 }
-
