@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile
 from fastapi.responses import Response, StreamingResponse
@@ -109,6 +110,16 @@ async def upload_material(
     return item
 
 
+def _content_disposition(filename: str, disposition: str = "attachment") -> str:
+    """Имя файла может быть не-ASCII (кириллица/azeri) — HTTP-заголовки
+    кодируются в latin-1, поэтому кладём его только в filename* (RFC 5987,
+    UTF-8 + percent-encoding), а filename оставляем ASCII-заглушкой для
+    старых клиентов."""
+    ascii_fallback = filename.encode("ascii", "ignore").decode("ascii") or "file"
+    quoted = quote(filename)
+    return f"{disposition}; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quoted}"
+
+
 # Скачивание — стримим через бэкенд (см. claude/minio-plan.md, п.3)
 @router.get("/{material_id}/download")
 async def download_material(
@@ -124,7 +135,7 @@ async def download_material(
     return StreamingResponse(
         storage.stream_object(material.object_key),
         media_type=material.content_type or "application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{material.original_filename}"'},
+        headers={"Content-Disposition": _content_disposition(material.original_filename)},
     )
 
 
