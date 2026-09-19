@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -9,9 +9,17 @@ from .core.security import decode_token
 security = HTTPBearer()
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
+    # Кэш на время одного HTTP-запроса: get_current_user вызывается
+    # несколько раз (напрямую в роутере и через require_teacher/require_admin),
+    # но SELECT users должен выполниться один раз.
+    cached = getattr(request.state, "current_user", None)
+    if cached is not None:
+        return cached
+
     token = credentials.credentials
     username = decode_token(token)
     if username is None:
@@ -28,6 +36,8 @@ async def get_current_user(
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    request.state.current_user = user
     return user
 
 # Dependency для роутов только для admin
