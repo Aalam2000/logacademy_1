@@ -23,7 +23,7 @@ app = FastAPI()
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://192.168.0.9",
-    "https://quiz.logacademy.online/",
+    "https://quiz.logacademy.online",
 ]
 
 app.add_middleware(
