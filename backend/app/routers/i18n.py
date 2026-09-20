@@ -48,9 +48,15 @@ async def get_languages():
 
 
 @router.get("/translations")
-async def get_translations(lang: str = "ru"):
+async def get_translations(lang: str = "ru", response: Response = None):
     """Плоский словарь {оригинальный_текст: перевод} — именно его ждёт
-    клиентский рантайм (window.autoI18n.setLanguage) при смене языка."""
+    клиентский рантайм (window.autoI18n.setLanguage) при смене языка.
+
+    Cache-Control: no-store — без него Cloudflare (сидит перед nginx с
+    недавнего подключения домена) может закэшировать ответ на своём эдже
+    и продолжать отдавать пользователям старые переводы после деплоя,
+    пока кэш сам не протухнет или его не почистить руками в дашборде."""
+    response.headers["Cache-Control"] = "no-store"
     return translator.get_translations_dict(lang)
 
 
@@ -85,7 +91,14 @@ async def get_runtime_js(request: Request, lang: str = "ru"):
         dynamic_dom_enabled=True,
         translations_url_template=translations_url_template,
     )
-    return Response(content=script, media_type="application/javascript")
+    # Cache-Control: no-store — та же причина, что у /translations выше:
+    # .js-расширение Cloudflare кэширует на эдже по умолчанию, а этот
+    # скрипт генерируется заново на каждый запрос.
+    return Response(
+        content=script,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post("/languages")
