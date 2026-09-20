@@ -10,6 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
 import LessonPage from './pages/LessonPage';
 import StudentLessonPage from './pages/StudentLessonPage';
+import StudentPerformancePage from './pages/StudentPerformancePage';
 import GroupPage from './pages/GroupPage';
 import StudentsPage from './pages/StudentsPage';
 import TeachersDirectoryPage from './pages/TeachersDirectoryPage';
@@ -67,6 +68,9 @@ function App() {
           } />
           <Route path="student-lessons/:lessonId" element={
             <RoleRoute roles={['student']}><StudentLessonPage /></RoleRoute>
+          } />
+          <Route path="performance" element={
+            <RoleRoute roles={['student']}><StudentPerformancePage /></RoleRoute>
           } />
           <Route path="groups/:groupId" element={
             <RoleRoute roles={['teacher', 'admin']}><GroupPage /></RoleRoute>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   IconDashboard,
@@ -7,9 +7,13 @@ import {
   IconTeachers,
   IconProfile,
   IconAdmin,
+  IconPerformance,
+  IconHelp,
 } from './CyberIcons';
+import HelpPanel from './HelpPanel';
 
 function Navigation({ user, isOpen, onClose }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const linkClass = ({ isActive }) => `nav__link${isActive ? ' nav__link--active' : ''}`;
 
   const handleLinkClick = () => {
@@ -31,6 +35,14 @@ function Navigation({ user, isOpen, onClose }) {
             <span>{'Главная'}</span>
           </NavLink>
         </li>
+        {user?.role === 'student' && (
+          <li className="nav__item">
+            <NavLink to="/dashboard/performance" className={linkClass} onClick={handleLinkClick}>
+              <IconPerformance className="nav__icon" />
+              <span>{'Успеваемость'}</span>
+            </NavLink>
+          </li>
+        )}
         {user?.role !== 'student' && (
           <li className="nav__item">
             <NavLink to="/dashboard/materials" className={linkClass} onClick={handleLinkClick}>
@@ -70,6 +82,11 @@ function Navigation({ user, isOpen, onClose }) {
           </li>
         )}
       </ul>
+      <button type="button" className="nav__help" onClick={() => setHelpOpen(true)}>
+        <IconHelp className="nav__icon" />
+        <span>{'Помощь'}</span>
+      </button>
+      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
     </nav>
   );
 }

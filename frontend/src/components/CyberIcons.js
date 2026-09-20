@@ -55,6 +55,29 @@ export function IconStudents(props) {
   );
 }
 
+// Помощь — круг со знаком вопроса
+export function IconHelp(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9.5 C9.5 7.5 10.5 7 12 7 C13.5 7 14.5 8 14.5 9.3 C14.5 10.8 13 11.2 12.3 12 C12 12.4 12 12.8 12 13.3" />
+      <line x1="12" y1="16.2" x2="12" y2="16.3" />
+    </svg>
+  );
+}
+
+// 4a. Успеваемость (студент) — столбики по возрастанию
+export function IconPerformance(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <line x1="3" y1="21" x2="21" y2="21" />
+      <rect x="5" y="14" width="4" height="7" />
+      <rect x="11" y="9" width="4" height="12" />
+      <rect x="17" y="4" width="4" height="17" />
+    </svg>
+  );
+}
+
 // 4. Преподы — указка + силуэт в рамке
 export function IconTeachers(props) {
   return (

@@ -131,7 +131,7 @@ function StudentsPage() {
   // «Препод» показываем только пока admin смотрит сводно (не выбран ни
   // конкретный препод, ни «Моё») — иначе колонка избыточна, все и так его.
   const showTeacherColumn = isAdmin && !mine && !teacherId;
-  const columnCount = 7 + (showTeacherColumn ? 1 : 0) + (isAdmin ? 1 : 0);
+  const columnCount = 8 + (showTeacherColumn ? 1 : 0) + (isAdmin ? 1 : 0);
 
   return (
     <div className="page">
@@ -183,6 +183,7 @@ function StudentsPage() {
               {showTeacherColumn && <th>{'Учитель'}</th>}
               <th>{'Средний балл'}</th>
               <th>{'Макс. балл'}</th>
+              <th>{'Экзамены'}</th>
               <th>{'Пропуски'}</th>
               <th>{'Опоздания'}</th>
               <th>{'Контакты'}</th>
@@ -208,6 +209,7 @@ function StudentsPage() {
                   )}
                   <td>{s.avg_score ?? '—'}</td>
                   <td>{s.max_score ?? '—'}</td>
+                  <td>{s.avg_exam_score ?? '—'}</td>
                   <td>{s.unexcused_absences}</td>
                   <td>{s.late_count}</td>
                   <td>

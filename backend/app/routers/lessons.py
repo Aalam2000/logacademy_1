@@ -83,6 +83,17 @@ class MyLessonMarkOut(BaseModel):
     marked_at: Optional[datetime]
 
 
+class MyPerformanceRowOut(BaseModel):
+    lesson_id: int
+    lesson_title: str
+    date: Optional[datetime]
+    attendance_status: Optional[str]
+    is_late: bool
+    score: Optional[int]
+    exam_score: Optional[int]
+    comment: Optional[str]
+
+
 class LessonItemOut(BaseModel):
     resource_type: str  # material | quiz | link
     resource_id: int
@@ -280,6 +291,53 @@ async def get_student_lessons(
         .order_by(Lesson.date.desc())
     )
     return result.scalars().all()
+
+
+# Успеваемость студента: оценки/экзамены/комменты и посещаемость по всем
+# открытым урокам его групп, одним запросом (вместо /marks/me на каждый
+# урок) — для раздела «Успеваемость» в личном кабинете. ДОЛЖЕН идти раньше
+# /{lesson_id}/marks ниже — та же причина, что и у /student выше.
+@router.get("/student/marks", response_model=list[MyPerformanceRowOut])
+async def get_student_marks(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+
+    members_result = await db.execute(
+        select(GroupMember).where(
+            GroupMember.student_id == current_user.id,
+            GroupMember.status == "active",
+        )
+    )
+    group_ids = [m.group_id for m in members_result.scalars().all()]
+    if not group_ids:
+        return []
+
+    rows = await db.execute(
+        select(Lesson, LessonMark)
+        .outerjoin(
+            LessonMark,
+            (LessonMark.lesson_id == Lesson.id) & (LessonMark.student_id == current_user.id),
+        )
+        .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True)
+        .order_by(Lesson.date.desc())
+    )
+
+    return [
+        MyPerformanceRowOut(
+            lesson_id=lesson.id,
+            lesson_title=lesson.title,
+            date=lesson.date,
+            attendance_status=mark.attendance_status if mark else None,
+            is_late=mark.is_late if mark else False,
+            score=mark.score if mark else None,
+            exam_score=mark.exam_score if mark else None,
+            comment=mark.comment if mark else None,
+        )
+        for lesson, mark in rows.all()
+    ]
 
 
 # Открыть / закрыть доступ к уроку

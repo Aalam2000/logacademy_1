@@ -36,6 +36,7 @@ class StudentStatsOut(BaseModel):
     whatsapp: Optional[str] = None
     avg_score: Optional[float] = None
     max_score: Optional[int] = None
+    avg_exam_score: Optional[float] = None
     unexcused_absences: int = 0
     late_count: int = 0
     groups: list[StudentGroupOut] = []
@@ -95,19 +96,24 @@ async def _scope_group_ids(
 async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: list[int]) -> dict[int, dict]:
     """Средний/макс балл + пропуски/опоздания по фактическим отметкам
     (LessonMark) в пределах заданных групп."""
-    stats = {sid: {"scores": [], "unexcused": 0, "late": 0} for sid in student_ids}
+    stats = {sid: {"scores": [], "exam_scores": [], "unexcused": 0, "late": 0} for sid in student_ids}
     if not student_ids or not group_ids:
         return stats
 
     marks_result = await db.execute(
-        select(LessonMark.student_id, LessonMark.score, LessonMark.attendance_status, LessonMark.is_late)
+        select(
+            LessonMark.student_id, LessonMark.score, LessonMark.exam_score,
+            LessonMark.attendance_status, LessonMark.is_late,
+        )
         .join(Lesson, Lesson.id == LessonMark.lesson_id)
         .where(Lesson.group_id.in_(group_ids), LessonMark.student_id.in_(student_ids))
     )
-    for student_id, score, attendance_status, is_late in marks_result.all():
+    for student_id, score, exam_score, attendance_status, is_late in marks_result.all():
         row = stats[student_id]
         if score is not None:
             row["scores"].append(score)
+        if exam_score is not None:
+            row["exam_scores"].append(exam_score)
         if attendance_status not in EXCUSED_OR_PRESENT:
             row["unexcused"] += 1
         if is_late:
@@ -117,9 +123,13 @@ async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: li
 
 def _stats_summary(stats_row: dict) -> dict:
     scores = stats_row["scores"]
+    exam_scores = stats_row["exam_scores"]
     return {
         "avg_score": round(sum(scores) / len(scores), 1) if scores else None,
         "max_score": max(scores) if scores else None,
+        "avg_exam_score": round(sum(exam_scores) / len(exam_scores), 1) if exam_scores else None,
+        "max_exam_score": max(exam_scores) if exam_scores else None,
+        "exams_count": len(exam_scores),
         "unexcused_absences": stats_row["unexcused"],
         "late_count": stats_row["late"],
     }
@@ -237,6 +247,9 @@ def render_student_card_html(lang: str, student: User, groups: list[dict], summa
         "max_score": summary["max_score"] if summary["max_score"] is not None else "—",
         "unexcused": summary["unexcused_absences"],
         "late": summary["late_count"],
+        "avg_exam": summary["avg_exam_score"] if summary["avg_exam_score"] is not None else "—",
+        "max_exam": summary["max_exam_score"] if summary["max_exam_score"] is not None else "—",
+        "exams_count": summary["exams_count"],
     }
     for key, value in data.items():
         template = template.replace(f"{{{{ {key} }}}}", str(value))

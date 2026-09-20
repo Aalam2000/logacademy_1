@@ -595,6 +595,56 @@
   font-weight: var(--weight-bold);
   border-left: 4px solid var(--color-primary);   /* красная полоса слева */
 }
+.nav__help {
+  margin-top: auto;                              /* прижимает кнопку к низу — .nav это flex-column */
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  color: var(--color-text);
+  font-size: var(--font-base);
+  font-family: inherit;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-primary-border);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.nav__help:hover {
+  color: var(--color-primary);
+}
+
+/* ===== Помощь — панель справа ===== */
+.help-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-backdrop);
+  z-index: 1000;
+}
+.help-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-white);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
+  overflow-y: auto;
+  box-sizing: border-box;
+  z-index: 1001;
+}
+.help-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.help-panel__header .modal-title {
+  margin: 0;
+}
 
 /* ===== Datetime picker ===== */
 .datetime-picker {
