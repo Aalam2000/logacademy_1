@@ -19,7 +19,14 @@ root.render(
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
   const lang = localStorage.getItem('autoI18nLang') || 'ru';
   const script = document.createElement('script');
-  script.src = `${apiUrl}/i18n/runtime.js?lang=${encodeURIComponent(lang)}`;
+  // Кэш-бастинг параметром: /i18n/runtime.js отдаётся с Cache-Control:
+  // no-store (см. backend/app/routers/i18n.py), но это касается только
+  // НОВЫХ ответов — то, что Cloudflare уже успела закэшировать на каком-то
+  // из edge-узлов ДО этого фикса, само не пропадёт (у неё нет доступа к
+  // дашборду, чтобы почистить руками). Метка _=Date.now() делает урл
+  // каждый раз новым, ранее не виденным — кэшу просто неоткуда взять
+  // старую копию, независимо от того, какой edge-узел обслуживает запрос.
+  script.src = `${apiUrl}/i18n/runtime.js?lang=${encodeURIComponent(lang)}&_=${Date.now()}`;
   script.async = true;
   document.head.appendChild(script);
 })();
