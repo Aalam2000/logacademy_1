@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import storage
 from ..database import get_db
-from ..dependencies import require_admin, require_teacher
-from ..models import Material, User
+from ..dependencies import require_admin, require_teacher, get_current_user
+from ..models import Material, User, Lesson, LessonResource, GroupMember
 from ..resources import ensure_deletable
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -43,6 +43,29 @@ def _fetch_and_convert_to_pdf(object_key: str, ext: str) -> bytes:
             check=True, timeout=60, capture_output=True,
         )
         return src.with_suffix(".pdf").read_bytes()
+
+
+async def _verify_student_material_access(
+    db: AsyncSession, material_id: int, current_user: User
+) -> None:
+    """Студент может скачать/просмотреть файл, только если он реально
+    привязан к открытому уроку в группе, где студент активный участник —
+    иначе через прямой URL можно было бы утащить любой файл из общей
+    базы знаний."""
+    result = await db.execute(
+        select(LessonResource)
+        .join(Lesson, Lesson.id == LessonResource.lesson_id)
+        .join(GroupMember, GroupMember.group_id == Lesson.group_id)
+        .where(
+            LessonResource.resource_type == "material",
+            LessonResource.resource_id == material_id,
+            Lesson.is_open == True,
+            GroupMember.student_id == current_user.id,
+            GroupMember.status == "active",
+        )
+    )
+    if result.first() is None:
+        raise HTTPException(status_code=403, detail="Нет доступа к файлу")
 
 
 class MaterialOut(BaseModel):
@@ -125,12 +148,17 @@ def _content_disposition(filename: str, disposition: str = "attachment") -> str:
 async def download_material(
     material_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(select(Material).where(Material.id == material_id))
     material = result.scalar_one_or_none()
     if not material:
         raise HTTPException(status_code=404, detail="Файл не найден")
+
+    if current_user.role == "student":
+        await _verify_student_material_access(db, material_id, current_user)
+    elif current_user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
 
     return StreamingResponse(
         storage.stream_object(material.object_key),
@@ -147,12 +175,17 @@ async def download_material(
 async def preview_material(
     material_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(select(Material).where(Material.id == material_id))
     material = result.scalar_one_or_none()
     if not material:
         raise HTTPException(status_code=404, detail="Файл не найден")
+
+    if current_user.role == "student":
+        await _verify_student_material_access(db, material_id, current_user)
+    elif current_user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
 
     ext = Path(material.original_filename).suffix.lower()
     if ext not in PREVIEW_CONVERTIBLE_EXTENSIONS:

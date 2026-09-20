@@ -6,7 +6,7 @@ function LanguageSwitcher() {
 
   const handleChange = (e) => {
     const newLang = e.target.value;
-    console.log('🔍[i18n-trace] 1. LanguageSwitcher.handleChange: клик, newLang =', newLang, 'текущий lang в этом хуке =', lang);
+    // console.log('🔍[i18n-trace] 1. LanguageSwitcher.handleChange: клик, newLang =', newLang, 'текущий lang в этом хуке =', lang);
     changeLanguage(newLang);
   };
 

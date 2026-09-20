@@ -72,6 +72,17 @@ class LessonMarkOut(BaseModel):
     marked_at: Optional[datetime]
 
 
+class MyLessonMarkOut(BaseModel):
+    attendance_status: Optional[str]
+    is_late: bool
+    status_label: str  # человекочитаемый статус для студента, см. _build_status_label
+    score: Optional[int]
+    exam_score: Optional[int]
+    stars: Optional[int]
+    comment: Optional[str]
+    marked_at: Optional[datetime]
+
+
 class LessonItemOut(BaseModel):
     resource_type: str  # material | quiz | link
     resource_id: int
@@ -105,6 +116,27 @@ def validate_attendance_status(value: Optional[str]) -> None:
         raise HTTPException(status_code=422, detail=f"Недопустимый статус посещаемости: {value}")
 
 
+# Текстовый статус для студента — та же логика, что у полей учителя
+# (attendance_status + независимый is_late), просто словами и без
+# контролов. is_late осмыслен только при in_person/online — как и в форме
+# учителя, где чекбокс "опоздал" задизейблен для остальных статусов.
+_STATUS_LABELS = {
+    "in_person": "Был",
+    "online": "Онлайн",
+    "excused": "Ув.прич",
+    "absent": "Пропуск",
+}
+
+
+def _build_status_label(attendance_status: Optional[str], is_late: bool) -> str:
+    base = _STATUS_LABELS.get(attendance_status)
+    if base is None:
+        return "—"
+    if is_late and attendance_status in ("in_person", "online"):
+        return f"{base}, опоздал"
+    return base
+
+
 async def get_lesson_for_teacher_or_admin(
     lesson_id: int,
     db: AsyncSession,
@@ -121,6 +153,32 @@ async def get_lesson_for_teacher_or_admin(
 
     group = await db.execute(group_query)
     if not group.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="Нет доступа")
+
+    return lesson
+
+
+async def get_lesson_for_student(
+    lesson_id: int,
+    db: AsyncSession,
+    current_user: User
+) -> Lesson:
+    result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
+    lesson = result.scalar_one_or_none()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Урок не найден")
+
+    if not lesson.is_open:
+        raise HTTPException(status_code=403, detail="Урок ещё не открыт")
+
+    member = await db.execute(
+        select(GroupMember).where(
+            GroupMember.group_id == lesson.group_id,
+            GroupMember.student_id == current_user.id,
+            GroupMember.status == "active",
+        )
+    )
+    if not member.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="Нет доступа")
 
     return lesson
@@ -219,7 +277,7 @@ async def get_student_lessons(
     result = await db.execute(
         select(Lesson)
         .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True)
-        .order_by(Lesson.date)
+        .order_by(Lesson.date.desc())
     )
     return result.scalars().all()
 
@@ -322,6 +380,41 @@ async def get_lesson_marks(
     }
 
 
+# Своя отметка студента — read-only, без доступа к оценкам одногруппников
+@router.get("/{lesson_id}/marks/me", response_model=MyLessonMarkOut)
+async def get_my_lesson_mark(
+    lesson_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+
+    await get_lesson_for_student(lesson_id, db, current_user)
+
+    result = await db.execute(
+        select(LessonMark).where(
+            LessonMark.lesson_id == lesson_id,
+            LessonMark.student_id == current_user.id,
+        )
+    )
+    mark = result.scalar_one_or_none()
+
+    attendance_status = mark.attendance_status if mark else None
+    is_late = mark.is_late if mark else False
+
+    return MyLessonMarkOut(
+        attendance_status=attendance_status,
+        is_late=is_late,
+        status_label=_build_status_label(attendance_status, is_late),
+        score=mark.score if mark else None,
+        exam_score=mark.exam_score if mark else None,
+        stars=mark.stars if mark else None,
+        comment=mark.comment if mark else None,
+        marked_at=mark.marked_at if mark else None,
+    )
+
+
 # Сохранить отметку одного студента (автосохранение по полю на фронте)
 @router.put("/{lesson_id}/marks/{student_id}")
 async def save_lesson_mark(
@@ -379,9 +472,12 @@ _TYPE_ORDER = {"material": 0, "link": 1, "quiz": 2}
 async def get_lesson_items(
     lesson_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
+    current_user: User = Depends(get_current_user)
 ):
-    await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    if current_user.role == "student":
+        await get_lesson_for_student(lesson_id, db, current_user)
+    else:
+        await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
 
     rows = await db.execute(
         select(LessonResource, User.full_name, User.username)
@@ -419,6 +515,8 @@ async def get_lesson_items(
         ))
 
     items.sort(key=lambda i: (_TYPE_ORDER[i.resource_type], i.added_at or datetime.min))
+    if current_user.role == "student":
+        items = [item for item in items if item.resource_type != "quiz"]
     return items
 
 
@@ -490,9 +588,12 @@ async def detach_lesson_item(
 async def get_lesson(
     lesson_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher)
+    current_user: User = Depends(get_current_user)
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    if current_user.role == "student":
+        lesson = await get_lesson_for_student(lesson_id, db, current_user)
+    else:
+        lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
     return lesson
 
 
