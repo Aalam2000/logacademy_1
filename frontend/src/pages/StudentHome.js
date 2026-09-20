@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 
 function StudentHome() {
+  const navigate = useNavigate();
   const [lessons, setLessons] = useState([]);
 
   useEffect(() => {
@@ -25,7 +27,11 @@ function StudentHome() {
             </td></tr>
           )}
           {lessons.map(l => (
-            <tr key={l.id}>
+            <tr
+              key={l.id}
+              className="table__row--clickable"
+              onClick={() => navigate(`/dashboard/student-lessons/${l.id}`)}
+            >
               <td>{l.date ? new Date(l.date).toLocaleDateString('ru-RU') : '—'}</td>
               <td>{l.title}</td>
             </tr>

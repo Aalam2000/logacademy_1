@@ -60,16 +60,26 @@ async def get_runtime_js(request: Request, lang: str = "ru"):
     Клиентский JS-рантайм для React-фронтенда — подключается один раз
     в точке входа (frontend/src/index.js), без правок кода компонентов.
 
-    URL для смены языка внутри рантайма делаем абсолютным (а не
-    относительным) — сам скрипт выполняется в контексте страницы на
-    origin фронтенда (localhost:3000 в dev), а не на origin backend'а,
-    откуда он был загружен. Относительный fetch('/i18n/translations...')
-    ушёл бы на фронтенд-сервер и получил бы обратно его index.html вместо
-    JSON. Берём origin прямо из входящего запроса — так работает и в dev,
-    и при любой конфигурации reverse-proxy в проде.
+    URL для смены языка внутри рантайма делаем host-абсолютным (но БЕЗ
+    схемы, protocol-relative — "//host/...") — сам скрипт выполняется в
+    контексте страницы на origin фронтенда (localhost:3000 в dev), а не
+    на origin backend'а, откуда он был загружен. Относительный
+    fetch('/i18n/translations...') ушёл бы на фронтенд-сервер и получил
+    бы обратно его index.html вместо JSON. Хост берём прямо из входящего
+    запроса (Host-заголовок, его nginx прокидывает как есть) — так
+    работает и в dev, и при любой конфигурации reverse-proxy в проде.
+    Схему НЕ фиксируем: request.base_url.scheme отражает протокол, по
+    которому backend увидел запрос от nginx (внутри docker-сети — почти
+    всегда plain http, даже когда снаружи HTTPS через Cloudflare/nginx),
+    так что "чинить" через X-Forwarded-Proto пришлось бы согласовывать
+    сразу в трёх местах (Cloudflare → nginx → uvicorn --proxy-headers +
+    --forwarded-allow-ips). Protocol-relative URL решает это без единой
+    правки нигде, кроме этой строки — браузер сам подставит тот протокол,
+    на котором открыта страница (нашли на проде: https-страница дёргала
+    http:// из-за этого — mixed content, браузер блокировал fetch).
     """
-    base = str(request.base_url).rstrip("/")
-    translations_url_template = f"{base}/i18n/translations?lang={{lang}}"
+    host = request.base_url.netloc
+    translations_url_template = f"//{host}/i18n/translations?lang={{lang}}"
     script = translator.build_runtime(
         lang,
         dynamic_dom_enabled=True,
