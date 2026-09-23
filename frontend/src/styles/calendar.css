@@ -102,6 +102,17 @@
   font-size: var(--font-sm);
   color: var(--color-muted);
 }
+.la-calendar__legend-item--clickable {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.la-calendar__legend-item--clickable:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
 .la-calendar__legend-dot {
   width: 10px;
   height: 10px;

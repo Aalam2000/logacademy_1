@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
-import Calendar from '../components/Calendar';
+import Calendar, { GROUP_COLORS } from '../components/Calendar';
 import { getMyLessons } from '../api/lessons';
 
 function GroupsPage() {
@@ -89,6 +89,18 @@ function GroupsPage() {
     return { ...l, group_name: showTeacher && g?.teacher_name ? `${groupName} (${g.teacher_name})` : groupName };
   });
 
+  // Цвет группы — от полного списка видимых групп (groups), а не только
+  // тех, у кого уже есть уроки: иначе только что созданная пустая группа
+  // пропадала бы из вида в режиме календаря — её нельзя было бы ни увидеть,
+  // ни открыть. Порядок стабильный — id, тот же цвет и в календаре, и в
+  // списке групп рядом с ним.
+  const groupColorMap = useMemo(() => {
+    const map = {};
+    groups.forEach((g, i) => { map[g.id] = GROUP_COLORS[i % GROUP_COLORS.length]; });
+    return map;
+  }, [groups]);
+  const getEventColor = (lesson) => groupColorMap[lesson.group_id] || GROUP_COLORS[0];
+
   // Список преподавателей — из полного списка групп (только те, у кого
   // реально есть группы), тот же приём, что и в StudentsPage.
   const teacherOptions = isAdmin
@@ -148,11 +160,29 @@ function GroupsPage() {
       {error && <div className="error-text error-text--top">{error}</div>}
 
       {viewMode === 'calendar' ? (
-        <Calendar
-          lessons={calendarLessons}
-          colorByGroup
-          onSelectLesson={(l) => navigate(`/dashboard/lessons/${l.id}`)}
-        />
+        <>
+          <Calendar
+            lessons={calendarLessons}
+            getEventColor={getEventColor}
+            onSelectLesson={(l) => navigate(`/dashboard/lessons/${l.id}`)}
+          />
+          {/* Список групп остаётся виден и кликабелен и в календаре — тут
+              же можно открыть саму группу, а не только её урок. Со всеми
+              видимыми группами, даже без единого урока пока. */}
+          <div className="la-calendar__legend">
+            {groups.map(g => (
+              <button
+                key={g.id}
+                type="button"
+                className="la-calendar__legend-item la-calendar__legend-item--clickable"
+                onClick={() => navigate(`/dashboard/groups/${g.id}`)}
+              >
+                <span className="la-calendar__legend-dot" style={{ '--la-event-color': groupColorMap[g.id] }} />
+                {g.name}
+              </button>
+            ))}
+          </div>
+        </>
       ) : (
         <table className="table">
           <thead>
