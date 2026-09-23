@@ -1,0 +1,111 @@
+/*
+ * Переопределение внешнего вида react-big-calendar под токены Log
+ * Academy (см. tokens.css) — сам плагин даёт только механику
+ * (месяц/неделя/день, переключение, попапы), вид — наш.
+ */
+.la-calendar .rbc-calendar {
+  height: 650px;
+  font-family: inherit;
+  color: var(--color-text);
+}
+
+/* ===== Тулбар (Назад/Вперёд/Сегодня + Месяц/Неделя/День) ===== */
+.la-calendar .rbc-toolbar {
+  margin-bottom: var(--space-4);
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.la-calendar .rbc-toolbar-label {
+  font-weight: var(--weight-medium);
+  font-size: var(--font-lg);
+  text-transform: capitalize;
+}
+.la-calendar .rbc-toolbar button {
+  background: var(--color-white);
+  border: 2px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  box-shadow: none;
+}
+.la-calendar .rbc-toolbar button:hover {
+  background: var(--color-bg-soft);
+  color: var(--color-text);
+}
+.la-calendar .rbc-toolbar button.rbc-active,
+.la-calendar .rbc-toolbar button.rbc-active:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary-border);
+  color: var(--color-white);
+}
+
+/* ===== Сетка ===== */
+.la-calendar .rbc-month-view,
+.la-calendar .rbc-time-view,
+.la-calendar .rbc-header,
+.la-calendar .rbc-month-row,
+.la-calendar .rbc-day-bg,
+.la-calendar .rbc-time-content,
+.la-calendar .rbc-time-header-content,
+.la-calendar .rbc-timeslot-group,
+.la-calendar .rbc-agenda-view table.rbc-agenda-table {
+  border-color: var(--color-border-light);
+}
+.la-calendar .rbc-header {
+  padding: var(--space-2);
+  font-weight: var(--weight-medium);
+  color: var(--color-muted);
+}
+.la-calendar .rbc-off-range-bg {
+  background: var(--color-bg-soft);
+}
+.la-calendar .rbc-today {
+  background: var(--color-warning-bg);
+}
+.la-calendar .rbc-current-time-indicator {
+  background: var(--color-primary);
+}
+
+/* ===== События ===== */
+.la-calendar .rbc-event,
+.la-calendar .rbc-day-slot .rbc-background-event {
+  background: var(--la-event-color, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+}
+.la-calendar .rbc-event:focus {
+  outline: 2px solid var(--color-primary-border);
+}
+.la-calendar .rbc-event-label {
+  display: none; /* время урока и так видно в заголовке события через title */
+}
+.la-calendar .rbc-show-more {
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* ===== Легенда групп (только агрегированный календарь на /groups) ===== */
+.la-calendar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.la-calendar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--color-muted);
+}
+.la-calendar__legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--la-event-color, var(--color-primary));
+  flex-shrink: 0;
+}

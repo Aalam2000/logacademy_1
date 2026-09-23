@@ -1,12 +1,14 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, date as date_type, timedelta, timezone as dt_timezone
 from zoneinfo import ZoneInfo
 from typing import Optional
 from pydantic import BaseModel, Field
 from ..database import get_db
-from ..models import Lesson, Group, GroupMember, User, LessonMark, LessonResource
+from ..models import Lesson, Group, GroupMember, User, LessonMark, LessonResource, Material, Link, Quiz
 from ..dependencies import require_teacher, get_current_user
 from ..resources import RESOURCE_MODELS, RESOURCE_NOT_FOUND, fetch_resource_details, resource_exists
 
@@ -112,6 +114,30 @@ class LessonItemAttach(BaseModel):
     resource_id: int
 
 
+# Генератор расписания группы (claude/group-schedule-plan.md, задача 1).
+# MVP: одно время на все выбранные дни недели, длина серии — количеством
+# уроков (не датой окончания — так проще сочетается с шаблоном курса).
+class ScheduleGenerate(BaseModel):
+    group_id: int
+    start_date: date_type
+    start_time: str  # "HH:MM", одно и то же время для всех уроков серии
+    weekdays: list[int] = Field(min_length=1)  # 0=Пн .. 6=Вс (date.weekday())
+    lesson_count: int = Field(ge=1, le=200)
+    fill_source: Optional[str] = None  # "template" | "group"
+    fill_group_id: Optional[int] = None  # обязателен при fill_source == "group"
+
+
+# Дозаполнение/обновление материалов уже существующих уроков по шаблону
+# курса или по другой (уже обкатанной) группе — сопоставление по
+# порядковой позиции урока в серии, не по дате (claude/course-templates-plan.md).
+class FillScheduleRequest(BaseModel):
+    source: str  # "template" | "group"
+    fill_group_id: Optional[int] = None  # обязателен при source == "group"
+    range_from: int = Field(ge=1)
+    range_to: int = Field(ge=1)
+    mode: str = "add"  # "add" (Дополнить) | "replace" (Заменить)
+
+
 def is_lesson_locked(lesson: Lesson) -> bool:
     # Блокировка — в полночь дня урока по Баку. Если дата урока не задана —
     # блокировать нечего.
@@ -167,6 +193,102 @@ async def get_lesson_for_teacher_or_admin(
         raise HTTPException(status_code=403, detail="Нет доступа")
 
     return lesson
+
+
+async def get_accessible_group(group_id: int, db: AsyncSession, current_user: User) -> Group:
+    """Доступ к группе для операций над расписанием: admin — к любой,
+    teacher — только к своей. Используется генератором/дозаполнением/
+    массовым удалением уроков — тот же контроль доступа, что и везде в
+    этом файле, просто вынесен в одно место, чтобы не повторять запрос."""
+    group_query = select(Group).where(Group.id == group_id)
+    if current_user.role != "admin":
+        group_query = group_query.where(Group.teacher_id == current_user.id)
+    result = await db.execute(group_query)
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=403, detail="Нет доступа к этой группе")
+    return group
+
+
+# Номер урока в шаблоне ("5.2", "5", "Урок 5") -> (модуль, день) для
+# сортировки — та же схема, что parseLessonNo на фронте (KnowledgeBasePage.js).
+# Нераспознанное отправляем в конец, чтобы не портило сортировку остальных.
+def _parse_lesson_no(value: Optional[str]) -> tuple:
+    if not value:
+        return (10**6, 0)
+    match = re.search(r"(\d+)(?:\D+(\d+))?", value)
+    if not match:
+        return (10**6, 0)
+    major = int(match.group(1))
+    minor = int(match.group(2)) if match.group(2) else 0
+    return (major, minor)
+
+
+# Шаблонные материалы курса+сектора (только approved), сгруппированные по
+# ПОРЯДКОВОЙ позиции в серии — не по литеральному template_lesson_no
+# (см. claude/course-templates-plan.md, "как считать номер урока"):
+# берём все различные template_lesson_no, сортируем, нумеруем 1..K —
+# эта позиция и сопоставляется с Lesson.order при заполнении.
+async def _collect_template_positions(
+    db: AsyncSession, course_id: int, sector: str
+) -> dict[int, list[tuple[str, int]]]:
+    tagged: list[tuple[str, int, str]] = []  # (resource_type, resource_id, template_lesson_no)
+    for model, resource_type in ((Material, "material"), (Link, "link"), (Quiz, "quiz")):
+        rows = await db.execute(
+            select(model.id, model.template_lesson_no).where(
+                model.course_id == course_id,
+                model.sector == sector,
+                model.template_status == "approved",
+                model.template_lesson_no.isnot(None),
+            )
+        )
+        for resource_id, lesson_no in rows.all():
+            tagged.append((resource_type, resource_id, lesson_no))
+
+    distinct_numbers = sorted({lesson_no for _, _, lesson_no in tagged}, key=_parse_lesson_no)
+    position_by_no = {lesson_no: i + 1 for i, lesson_no in enumerate(distinct_numbers)}
+
+    positions: dict[int, list[tuple[str, int]]] = {}
+    for resource_type, resource_id, lesson_no in tagged:
+        positions.setdefault(position_by_no[lesson_no], []).append((resource_type, resource_id))
+    return positions
+
+
+# Раскладывает подобранные по позиции ресурсы по конкретным урокам.
+# mode="replace" — сперва отвязывает всё текущее у этих уроков (Заменить),
+# mode="add" — просто добавляет недостающее, существующее не трогает
+# (Дополнить). lesson.id должен быть уже присвоен (после db.flush()).
+async def _apply_positions_to_lessons(
+    db: AsyncSession,
+    lessons_by_order: dict[int, Lesson],
+    positions: dict[int, list[tuple[str, int]]],
+    mode: str,
+    current_user: User,
+) -> int:
+    attached = 0
+    for order, lesson in lessons_by_order.items():
+        items = positions.get(order, [])
+        if mode == "replace":
+            await db.execute(delete(LessonResource).where(LessonResource.lesson_id == lesson.id))
+        for resource_type, resource_id in items:
+            existing = await db.execute(
+                select(LessonResource).where(
+                    LessonResource.lesson_id == lesson.id,
+                    LessonResource.resource_type == resource_type,
+                    LessonResource.resource_id == resource_id,
+                )
+            )
+            if existing.scalar_one_or_none():
+                continue
+            db.add(LessonResource(
+                lesson_id=lesson.id,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                added_by=current_user.id,
+                added_at=datetime.now(dt_timezone.utc),
+            ))
+            attached += 1
+    return attached
 
 
 async def get_lesson_for_student(
@@ -246,15 +368,199 @@ async def create_lesson(
     return lesson
 
 
-# Все уроки педагога (для главной страницы)
+# Генератор расписания (claude/group-schedule-plan.md, задача 1). Требует
+# пустую группу (без уроков) — если уроки уже есть, фронт сперва спрашивает
+# педагога "удалить и пересоздать или дозаполнить материалами" и в первом
+# случае явно вызывает DELETE /lessons/group/{id}, во втором — не вызывает
+# generate вовсе, а сразу POST /lessons/group/{id}/fill-schedule.
+#
+# Праздники генератор НЕ вычисляет и не пропускает — никакого справочника
+# праздников в системе нет (решение Андрея: такой справочник никто не
+# ведёт). Если известный заранее праздник попадает в диапазон — педагог
+# просто подбирает дату/дни недели так, чтобы обойти его, либо создаёт
+# серию как есть и затем правит конкретный урок кнопкой на странице
+# группы (POST /{lesson_id}/mark-holiday ниже) — она двигает вперёд его и
+# все последующие уроки этой же группы.
+@router.post("/generate", response_model=list[LessonOut])
+async def generate_schedule(
+    data: ScheduleGenerate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    group = await get_accessible_group(data.group_id, db, current_user)
+
+    existing = await db.execute(select(Lesson.id).where(Lesson.group_id == data.group_id))
+    if existing.first():
+        raise HTTPException(
+            status_code=409,
+            detail="В группе уже есть уроки — удалите их (DELETE /lessons/group/{id}) либо дозаполните материалами вместо генерации",
+        )
+
+    try:
+        hh, mm = (int(part) for part in data.start_time.split(":"))
+        if not (0 <= hh <= 23 and 0 <= mm <= 59):
+            raise ValueError
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Неверный формат времени, ожидается ЧЧ:ММ")
+
+    weekday_set = set(data.weekdays)
+    if not weekday_set.issubset(set(range(7))):
+        raise HTTPException(status_code=422, detail="День недели должен быть числом от 0 (Пн) до 6 (Вс)")
+
+    dates: list[datetime] = []
+    cursor = data.start_date
+    # Предохранитель от зацикливания при некорректных входных данных —
+    # не более (запрошено уроков × 30 + год) дней вперёд.
+    safety_limit = data.lesson_count * 30 + 365
+    steps = 0
+    while len(dates) < data.lesson_count and steps < safety_limit:
+        if cursor.weekday() in weekday_set:
+            dates.append(datetime(cursor.year, cursor.month, cursor.day, hh, mm, tzinfo=BAKU_TZ))
+        cursor += timedelta(days=1)
+        steps += 1
+
+    if len(dates) < data.lesson_count:
+        raise HTTPException(status_code=422, detail="Не удалось подобрать достаточно дат — проверьте дни недели и период")
+
+    lessons_by_order: dict[int, Lesson] = {}
+    for i, lesson_date in enumerate(dates, start=1):
+        lesson = Lesson(
+            group_id=data.group_id,
+            title=f"Урок {i}",
+            order=i,
+            date=lesson_date,
+            source="academy",
+            is_open=False,
+        )
+        db.add(lesson)
+        lessons_by_order[i] = lesson
+
+    if data.fill_source:
+        await db.flush()  # нужны id уроков для привязки ресурсов ниже
+        if data.fill_source == "template":
+            if not group.course_id or not group.sector:
+                raise HTTPException(status_code=400, detail="У группы не указан курс или сектор — заполнение из шаблона невозможно")
+            positions = await _collect_template_positions(db, group.course_id, group.sector)
+        elif data.fill_source == "group":
+            if not data.fill_group_id:
+                raise HTTPException(status_code=422, detail="Укажите группу-источник материалов")
+            source_lessons = await db.execute(select(Lesson).where(Lesson.group_id == data.fill_group_id))
+            positions = {}
+            for source_lesson in source_lessons.scalars().all():
+                res_rows = await db.execute(
+                    select(LessonResource.resource_type, LessonResource.resource_id)
+                    .where(LessonResource.lesson_id == source_lesson.id)
+                )
+                items = res_rows.all()
+                if items:
+                    positions[source_lesson.order] = [(rt, rid) for rt, rid in items]
+        else:
+            raise HTTPException(status_code=422, detail="Недопустимый источник материалов")
+
+        await _apply_positions_to_lessons(db, lessons_by_order, positions, mode="add", current_user=current_user)
+
+    await db.commit()
+    lessons = list(lessons_by_order.values())
+    for lesson in lessons:
+        await db.refresh(lesson)
+    return lessons
+
+
+# Дозаполнение/обновление материалов существующих уроков — отдельно от
+# генерации: и как её необязательный последний шаг (см. выше), и как
+# самостоятельная кнопка «Обновить материалы» (материалы готовятся
+# пачками уже после того, как расписание создано).
+@router.post("/group/{group_id}/fill-schedule")
+async def fill_group_schedule(
+    group_id: int,
+    data: FillScheduleRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    group = await get_accessible_group(group_id, db, current_user)
+
+    if data.range_from > data.range_to:
+        raise HTTPException(status_code=422, detail="Некорректный диапазон уроков")
+    if data.mode not in ("add", "replace"):
+        raise HTTPException(status_code=422, detail="Недопустимый режим заполнения")
+
+    target_result = await db.execute(
+        select(Lesson).where(
+            Lesson.group_id == group_id,
+            Lesson.order >= data.range_from,
+            Lesson.order <= data.range_to,
+        )
+    )
+    lessons_by_order = {lesson.order: lesson for lesson in target_result.scalars().all()}
+    if not lessons_by_order:
+        raise HTTPException(status_code=404, detail="В указанном диапазоне нет уроков")
+
+    if data.source == "template":
+        if not group.course_id or not group.sector:
+            raise HTTPException(status_code=400, detail="У группы не указан курс или сектор — заполнение из шаблона невозможно")
+        positions = await _collect_template_positions(db, group.course_id, group.sector)
+    elif data.source == "group":
+        if not data.fill_group_id:
+            raise HTTPException(status_code=422, detail="Укажите группу-источник материалов")
+        source_lessons = await db.execute(select(Lesson).where(Lesson.group_id == data.fill_group_id))
+        positions = {}
+        for source_lesson in source_lessons.scalars().all():
+            res_rows = await db.execute(
+                select(LessonResource.resource_type, LessonResource.resource_id)
+                .where(LessonResource.lesson_id == source_lesson.id)
+            )
+            items = res_rows.all()
+            if items:
+                positions[source_lesson.order] = [(rt, rid) for rt, rid in items]
+    else:
+        raise HTTPException(status_code=422, detail="Недопустимый источник материалов")
+
+    attached = await _apply_positions_to_lessons(db, lessons_by_order, positions, data.mode, current_user)
+    await db.commit()
+    return {"ok": True, "attached": attached}
+
+
+# Массовое удаление всех уроков группы — шаг "удалить и пересоздать
+# заново" в диалоге генератора (см. generate_schedule выше). Отдельный
+# явный вызов с фронта, а не часть generate, чтобы не удалить уроки молча.
+@router.delete("/group/{group_id}")
+async def delete_group_lessons(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    await get_accessible_group(group_id, db, current_user)
+
+    lesson_ids_result = await db.execute(select(Lesson.id).where(Lesson.group_id == group_id))
+    lesson_ids = [row[0] for row in lesson_ids_result.all()]
+    if lesson_ids:
+        await db.execute(delete(LessonMark).where(LessonMark.lesson_id.in_(lesson_ids)))
+        await db.execute(delete(LessonResource).where(LessonResource.lesson_id.in_(lesson_ids)))
+        await db.execute(delete(Lesson).where(Lesson.group_id == group_id))
+        await db.commit()
+    return {"ok": True, "deleted": len(lesson_ids)}
+
+
+# Все уроки педагога (для главной страницы и календаря на /groups).
+# У admin — тот же выбор области видимости, что и в /groups/my:
+# teacher_id=<id> — уроки групп конкретного препода, mine=true — только
+# своих (если они у админа есть), ни то ни другое — уроки вообще всех групп.
 @router.get("/my", response_model=list[LessonOut])
 async def get_my_lessons(
+    teacher_id: Optional[int] = None,
+    mine: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    groups_result = await db.execute(
-        select(Group).where(Group.teacher_id == current_user.id)
-    )
+    groups_query = select(Group)
+    if current_user.role != "admin":
+        groups_query = groups_query.where(Group.teacher_id == current_user.id)
+    elif mine:
+        groups_query = groups_query.where(Group.teacher_id == current_user.id)
+    elif teacher_id is not None:
+        groups_query = groups_query.where(Group.teacher_id == teacher_id)
+
+    groups_result = await db.execute(groups_query)
     group_ids = [g.id for g in groups_result.scalars().all()]
     if not group_ids:
         return []
@@ -352,6 +658,43 @@ async def toggle_lesson_open(
     lesson.is_open = not lesson.is_open
     await db.commit()
     return {"is_open": lesson.is_open}
+
+
+# "Это выходной" — для непредвиденного праздника (не учтённого при
+# генерации, никакого справочника праздников в системе нет — см.
+# claude/group-schedule-plan.md). Действует только на ЭТУ группу: сам
+# урок и его материалы/оценки не трогаем — просто сдвигаем даты у него и
+# у всех последующих уроков этой серии на одну позицию вперёд (по тому же
+# шагу, что был между последними двумя уроками серии), а в конце
+# добавляется одна новая дата по этому же шагу.
+@router.post("/{lesson_id}/mark-holiday", response_model=list[LessonOut])
+async def mark_lesson_as_holiday(
+    lesson_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    if lesson.date is None:
+        raise HTTPException(status_code=400, detail="У урока не задана дата")
+
+    tail_result = await db.execute(
+        select(Lesson)
+        .where(Lesson.group_id == lesson.group_id, Lesson.order >= lesson.order)
+        .order_by(Lesson.order)
+    )
+    tail = tail_result.scalars().all()
+
+    old_dates = [l.date for l in tail]
+    step = (old_dates[-1] - old_dates[-2]) if len(tail) >= 2 else timedelta(days=7)
+
+    for i in range(len(tail) - 1):
+        tail[i].date = old_dates[i + 1]
+    tail[-1].date = old_dates[-1] + step
+
+    await db.commit()
+    for l in tail:
+        await db.refresh(l)
+    return tail
 
 
 async def _get_active_group_student_ids(lesson: Lesson, db: AsyncSession) -> set[int]:

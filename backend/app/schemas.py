@@ -58,6 +58,7 @@ class GroupCreate(BaseModel):
     teacher_id: int  # какому педагогу принадлежит
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
+    sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
 
 class GroupOut(BaseModel):
     id: int
@@ -66,6 +67,7 @@ class GroupOut(BaseModel):
     teacher_id: int
     telegram_chat_id: Optional[str]
     whatsapp: Optional[str] = None
+    sector: Optional[str] = None
     status: str
     invite_code: str
     created_at: datetime

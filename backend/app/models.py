@@ -41,6 +41,7 @@ class Group(Base):
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False, default="active")  # active | archived
     invite_code = Column(String, unique=True, nullable=False)  # для регистрации студентов по QR
+    sector = Column(String, nullable=True)  # ru | az — направление группы, независимо от тегов материалов
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -97,6 +98,9 @@ class Material(Base):
     size_bytes = Column(Integer, nullable=False)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)  # каталог по темам — этап 2
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    sector = Column(String, nullable=True)  # ru | az — направление, для шаблонов курсов; ставит только admin
+    template_lesson_no = Column(String, nullable=True)  # "5.2" и т.п. — номер урока в шаблоне; ставит только admin
+    template_status = Column(String, nullable=True)  # draft | approved — статус шаблонного материала
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -109,6 +113,10 @@ class Link(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     added_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)  # каталог по темам — как у Material
+    sector = Column(String, nullable=True)  # ru | az — направление, для шаблонов курсов; ставит только admin
+    template_lesson_no = Column(String, nullable=True)  # "5.2" и т.п. — номер урока в шаблоне; ставит только admin
+    template_status = Column(String, nullable=True)  # draft | approved — статус шаблонного материала
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -125,6 +133,10 @@ class Quiz(Base):
     html_translations = Column(JSON, default={})
     questions_data = Column(JSON, nullable=True)  # live/sprint — структурированные вопросы, не переводится
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)  # каталог по темам — как у Material
+    sector = Column(String, nullable=True)  # ru | az — направление, для шаблонов курсов; ставит только admin
+    template_lesson_no = Column(String, nullable=True)  # "5.2" и т.п. — номер урока в шаблоне; ставит только admin
+    template_status = Column(String, nullable=True)  # draft | approved — статус шаблонного материала
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

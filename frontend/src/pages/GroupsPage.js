@@ -4,6 +4,8 @@ import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
+import Calendar from '../components/Calendar';
+import { getMyLessons } from '../api/lessons';
 
 function GroupsPage() {
   const navigate = useNavigate();
@@ -13,8 +15,16 @@ function GroupsPage() {
   const [groups, setGroups] = useState([]);
   const [courses, setCourses] = useState([]);
   const [allGroups, setAllGroups] = useState([]); // только у admin — для списка «Препод»
+  const [lessons, setLessons] = useState([]); // для календаря — уроки всех видимых групп
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Таблица/Календарь — по умолчанию таблица, выбор запоминается отдельно
+  // от того же переключателя на странице группы (GroupPage.js).
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('la_groups_viewmode') || 'table'); // table | calendar
+  useEffect(() => {
+    localStorage.setItem('la_groups_viewmode', viewMode);
+  }, [viewMode]);
 
   // Выбор «Препод/Мои» запоминаем в localStorage — чтобы не сбрасывался
   // при возврате на страницу (уходишь в группу и назад — фильтр на месте).
@@ -53,8 +63,12 @@ function GroupsPage() {
       const params = {};
       if (isAdmin && mine) params.mine = true;
       if (isAdmin && !mine && teacherId) params.teacher_id = teacherId;
-      const res = await api.get('/groups/my', { params });
-      setGroups(res.data);
+      const [groupsRes, lessonsRes] = await Promise.all([
+        api.get('/groups/my', { params }),
+        getMyLessons(params),
+      ]);
+      setGroups(groupsRes.data);
+      setLessons(lessonsRes);
     } catch (err) {
       setError(err?.response?.data?.detail || 'Не удалось загрузить группы');
     } finally {
@@ -64,6 +78,16 @@ function GroupsPage() {
 
   const courseName = (courseId) =>
     courses.find(c => c.id === courseId)?.title || '—';
+
+  // Для календаря — имя группы у каждого урока (сама LessonOut его не
+  // содержит), и, если видно несколько преподавателей сразу, добавляем
+  // имя препода — иначе на агрегированном календаре не различить, чей урок.
+  const calendarLessons = lessons.map(l => {
+    const g = groups.find(x => x.id === l.group_id);
+    const groupName = g?.name || `#${l.group_id}`;
+    const showTeacher = isAdmin && !mine && !teacherId;
+    return { ...l, group_name: showTeacher && g?.teacher_name ? `${groupName} (${g.teacher_name})` : groupName };
+  });
 
   // Список преподавателей — из полного списка групп (только те, у кого
   // реально есть группы), тот же приём, что и в StudentsPage.
@@ -104,43 +128,68 @@ function GroupsPage() {
         </div>
       )}
 
+      <div className="toolbar__filters">
+        <button
+          type="button"
+          className={`tab${viewMode === 'table' ? ' tab--active' : ''}`}
+          onClick={() => setViewMode('table')}
+        >
+          {'Таблица'}
+        </button>
+        <button
+          type="button"
+          className={`tab${viewMode === 'calendar' ? ' tab--active' : ''}`}
+          onClick={() => setViewMode('calendar')}
+        >
+          {'Календарь'}
+        </button>
+      </div>
+
       {error && <div className="error-text error-text--top">{error}</div>}
 
-      <table className="table">
-        <thead>
-          <tr>
-            <th>{'Название группы'}</th>
-            <th>{'Курс'}</th>
-            {isAdmin && !mine && !teacherId && <th>{'Учитель'}</th>}
-            <th>{'Учеников'}</th>
-            <th>{'Контакты'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {groups.length === 0 && (
+      {viewMode === 'calendar' ? (
+        <Calendar
+          lessons={calendarLessons}
+          colorByGroup
+          onSelectLesson={(l) => navigate(`/dashboard/lessons/${l.id}`)}
+        />
+      ) : (
+        <table className="table">
+          <thead>
             <tr>
-              <td colSpan={isAdmin && !mine && !teacherId ? 5 : 4} className="table__empty">
-                {'Групп пока нет'}
-              </td>
+              <th>{'Название группы'}</th>
+              <th>{'Курс'}</th>
+              {isAdmin && !mine && !teacherId && <th>{'Учитель'}</th>}
+              <th>{'Учеников'}</th>
+              <th>{'Контакты'}</th>
             </tr>
-          )}
-          {groups.map(g => (
-            <tr
-              key={g.id}
-              className="table__row--clickable"
-              onClick={() => navigate(`/dashboard/groups/${g.id}`)}
-            >
-              <td>{g.name}</td>
-              <td>{courseName(g.course_id)}</td>
-              {isAdmin && !mine && !teacherId && <td>{g.teacher_name || `#${g.teacher_id}`}</td>}
-              <td>{g.student_count ?? 0}</td>
-              <td>
-                <StudentContactIcons telegram={g.telegram_chat_id} whatsapp={g.whatsapp} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {groups.length === 0 && (
+              <tr>
+                <td colSpan={isAdmin && !mine && !teacherId ? 5 : 4} className="table__empty">
+                  {'Групп пока нет'}
+                </td>
+              </tr>
+            )}
+            {groups.map(g => (
+              <tr
+                key={g.id}
+                className="table__row--clickable"
+                onClick={() => navigate(`/dashboard/groups/${g.id}`)}
+              >
+                <td>{g.name}</td>
+                <td>{courseName(g.course_id)}</td>
+                {isAdmin && !mine && !teacherId && <td>{g.teacher_name || `#${g.teacher_id}`}</td>}
+                <td>{g.student_count ?? 0}</td>
+                <td>
+                  <StudentContactIcons telegram={g.telegram_chat_id} whatsapp={g.whatsapp} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ from typing import Optional
 from uuid import uuid4
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Form
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -76,6 +76,10 @@ class MaterialOut(BaseModel):
     uploaded_by: int
     uploaded_by_name: Optional[str] = None
     created_at: datetime
+    course_id: Optional[int] = None
+    sector: Optional[str] = None
+    template_lesson_no: Optional[str] = None
+    template_status: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -100,13 +104,25 @@ async def list_materials(
     return out
 
 
-# Загрузка — доступна teacher и admin
+# Загрузка — доступна teacher и admin. Теги шаблона курса (course_id/
+# sector/template_lesson_no) может проставить только admin — см.
+# claude/course-templates-plan.md, раздел "Права". Обычный teacher их
+# просто не передаёт (форма "+ Файл" их не показывает); если их всё же
+# передал не-admin — 403, а не молчаливое игнорирование, чтобы не
+# маскировать ошибку на фронте/в прямом вызове API.
 @router.post("/upload", response_model=MaterialOut)
 async def upload_material(
     file: UploadFile = FastAPIFile(...),
+    course_id: Optional[int] = Form(None),
+    sector: Optional[str] = Form(None),
+    template_lesson_no: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
+    if (course_id is not None or sector is not None or template_lesson_no is not None) \
+            and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Теги шаблона курса может проставлять только администратор")
+
     contents = await file.read()
     size_bytes = len(contents)
     if size_bytes == 0:
@@ -123,6 +139,15 @@ async def upload_material(
         content_type=file.content_type,
         size_bytes=size_bytes,
         uploaded_by=current_user.id,
+        course_id=course_id,
+        sector=sector,
+        template_lesson_no=template_lesson_no,
+        # "Шаблонность" материала — заполненность course_id+sector+
+        # template_lesson_no разом (см. course-templates-plan.md). Статус
+        # выставляем в draft, только если номер урока реально указан —
+        # файл, у которого проставлен только курс/сектор, но нет номера
+        # урока, не становится "черновиком шаблона" сам по себе.
+        template_status="draft" if template_lesson_no else None,
     )
     db.add(material)
     await db.commit()
@@ -131,6 +156,70 @@ async def upload_material(
     item = MaterialOut.model_validate(material)
     item.uploaded_by_name = current_user.full_name or current_user.username
     return item
+
+
+class MaterialTemplateUpdate(BaseModel):
+    course_id: Optional[int] = None
+    sector: Optional[str] = None
+    template_lesson_no: Optional[str] = None
+    template_status: Optional[str] = None  # draft | approved | rejected
+
+
+class MaterialTemplateBulkUpdate(BaseModel):
+    course_id: int
+    sector: str
+    template_status: str  # approved | rejected
+
+
+# Правка тегов шаблона курса у уже загруженного файла — только admin.
+# PATCH, а не отдельные ручки: обновляем только те поля, что реально
+# прислали (exclude_unset), поэтому одиночное "одобрить"/"забраковать"
+# ({"template_status": "..."}) не затирает course_id/sector/номер урока.
+@router.patch("/{material_id}/template", response_model=MaterialOut)
+async def update_material_template(
+    material_id: int,
+    data: MaterialTemplateUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    result = await db.execute(
+        select(Material, User.full_name, User.username)
+        .join(User, User.id == Material.uploaded_by)
+        .where(Material.id == material_id)
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    material, full_name, username = row
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(material, field, value)
+
+    await db.commit()
+    await db.refresh(material)
+
+    item = MaterialOut.model_validate(material)
+    item.uploaded_by_name = full_name or username
+    return item
+
+
+# Массовое решение по всему пакету материалов курса+сектора разом (см.
+# claude/course-templates-plan.md) — меняет только template_status,
+# сами course_id/sector/template_lesson_no не трогает.
+@router.patch("/template/bulk")
+async def bulk_update_material_template(
+    data: MaterialTemplateBulkUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    result = await db.execute(
+        select(Material).where(Material.course_id == data.course_id, Material.sector == data.sector)
+    )
+    materials = result.scalars().all()
+    for material in materials:
+        material.template_status = data.template_status
+    await db.commit()
+    return {"updated": len(materials)}
 
 
 def _content_disposition(filename: str, disposition: str = "attachment") -> str:

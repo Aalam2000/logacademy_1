@@ -4,6 +4,7 @@
 @import './components.css';
 @import './layout.css';
 @import './media.css';
+@import './calendar.css';
 
 /* Базовый шрифт для всего приложения. Noto Sans подобран под AZ/RU/EN:
  * поддерживает кириллицу, латиницу и азербайджанские буквы (ə, ı, ğ, ş,

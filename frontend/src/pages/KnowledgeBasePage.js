@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
+import { getCourses } from '../api/admin';
+import { uploadMaterial, updateMaterialTemplate, bulkUpdateMaterialTemplate } from '../api/materials';
 import { useAuth } from '../context/AuthContext';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
 import { IconBadgeFile, IconBadgeQuiz, IconBadgeLink } from '../components/TypeBadgeIcons';
@@ -36,10 +38,39 @@ function KnowledgeBasePage() {
   const [linkUrl, setLinkUrl] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
 
+  // "Загрузить курс" — массовая загрузка папки как шаблона курса (только
+  // admin). См. claude/course-templates-plan.md.
+  const [showCourseUpload, setShowCourseUpload] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [coursesLoaded, setCoursesLoaded] = useState(false);
+  const [courseId, setCourseId] = useState('');
+  const [courseSector, setCourseSector] = useState('');
+  const [courseRows, setCourseRows] = useState([]); // [{file, relPath, lessonNo}]
+  const [isUploadingCourse, setIsUploadingCourse] = useState(false);
+  const [courseUploadProgress, setCourseUploadProgress] = useState(null); // {done, total, failed}
+  const [courseUploadError, setCourseUploadError] = useState('');
+  const courseFolderInputRef = useRef(null);
+
+  // Фильтры по курсу/сектору в базе знаний — только admin, для проверки/
+  // утверждения пакета шаблонных материалов. См. course-templates-plan.md.
+  const [filterCourseId, setFilterCourseId] = useState('');
+  const [filterSector, setFilterSector] = useState('');
+  const [bulkTemplateSaving, setBulkTemplateSaving] = useState(false);
+  const [savingTemplateKey, setSavingTemplateKey] = useState(null);
+
+  // Материалы шаблонов уроков курса по умолчанию скрыты — мешают в
+  // обычной работе с БЗ; этот флажок их показывает (см. library.py).
+  const [showTemplates, setShowTemplates] = useState(false);
+
   useEffect(() => {
     loadItems();
     // eslint-disable-next-line
-  }, [typeFilter, onlyMine, sort]);
+  }, [typeFilter, onlyMine, sort, filterCourseId, filterSector, showTemplates]);
+
+  useEffect(() => {
+    if (isAdmin) ensureCoursesLoaded();
+    // eslint-disable-next-line
+  }, [isAdmin]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -48,6 +79,9 @@ function KnowledgeBasePage() {
       const params = { sort };
       if (typeFilter) params.type = typeFilter;
       if (onlyMine && user) params.uploader = user.id;
+      if (isAdmin && filterCourseId) params.course_id = filterCourseId;
+      if (isAdmin && filterSector) params.sector = filterSector;
+      if (showTemplates) params.include_templates = true;
       const res = await api.get('/library/items', { params });
       setItems(res.data);
     } catch (err) {
@@ -70,11 +104,7 @@ function KnowledgeBasePage() {
     setIsUploading(true);
     setError('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      await api.post('/materials/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await uploadMaterial(file);
       if (fileInputRef.current) fileInputRef.current.value = '';
       loadItems();
     } catch (err) {
@@ -100,6 +130,84 @@ function KnowledgeBasePage() {
     } finally {
       setIsAddingLink(false);
     }
+  };
+
+  // Номер урока из имени файла: "Урок 5.2 — ....html" -> "5.2",
+  // "Урок 5.docx" -> "5". Папка вокруг файла (её название) не участвует —
+  // источник номера всегда само имя файла. Не распознано — пусто,
+  // admin вводит вручную в предпросмотре (загрузка ничего не блокирует).
+  const parseLessonNo = (filename) => {
+    const m = filename.match(/урок\s*№?\s*(\d+)(?:[.\-_](\d+))?/i);
+    if (!m) return '';
+    return m[2] ? `${m[1]}.${m[2]}` : m[1];
+  };
+
+  // Список курсов нужен и загрузчику, и фильтрам БЗ — грузим один раз.
+  const ensureCoursesLoaded = async () => {
+    if (coursesLoaded) return;
+    try {
+      const data = await getCourses();
+      setCourses(data);
+      setCoursesLoaded(true);
+    } catch (err) {
+      setCourseUploadError(err?.response?.data?.detail || 'Не удалось загрузить список курсов');
+    }
+  };
+
+  const handleOpenCourseUpload = () => {
+    setShowCourseUpload(v => !v);
+    setCourseUploadError('');
+    ensureCoursesLoaded();
+  };
+
+  const handleCourseFolderSelected = (e) => {
+    const files = Array.from(e.target.files || []);
+    const rows = files.map(file => ({
+      file,
+      relPath: file.webkitRelativePath || file.name,
+      lessonNo: parseLessonNo(file.name),
+    }));
+    setCourseRows(rows);
+    setCourseUploadProgress(null);
+    setCourseUploadError('');
+  };
+
+  const updateCourseRowLessonNo = (index, value) => {
+    setCourseRows(prev => prev.map((row, i) => i === index ? { ...row, lessonNo: value } : row));
+  };
+
+  const handleConfirmCourseUpload = async () => {
+    if (!courseId || !courseSector || courseRows.length === 0) return;
+    setIsUploadingCourse(true);
+    setCourseUploadError('');
+    const total = courseRows.length;
+    let done = 0;
+    let failed = 0;
+    setCourseUploadProgress({ done, total, failed });
+    for (const row of courseRows) {
+      try {
+        await uploadMaterial(row.file, {
+          course_id: courseId,
+          sector: courseSector,
+          template_lesson_no: row.lessonNo.trim() || null,
+        });
+      } catch (err) {
+        failed += 1;
+      }
+      done += 1;
+      setCourseUploadProgress({ done, total, failed });
+    }
+    setIsUploadingCourse(false);
+    if (failed === 0) {
+      setCourseRows([]);
+      setCourseId('');
+      setCourseSector('');
+      setShowCourseUpload(false);
+      if (courseFolderInputRef.current) courseFolderInputRef.current.value = '';
+    } else {
+      setCourseUploadError(`Загружено ${total - failed} из ${total}, ${failed} файл(ов) — с ошибкой (см. список выше)`);
+    }
+    loadItems();
   };
 
   // Окно под файл/квиз открываем сразу, синхронно по клику — если открыть
@@ -146,6 +254,37 @@ function KnowledgeBasePage() {
     }
   };
 
+  // Массовое решение по всему пакету материалов курса+сектора (оба фильтра
+  // должны быть выбраны) — см. course-templates-plan.md.
+  const handleBulkTemplateStatus = async (status) => {
+    if (!filterCourseId || !filterSector) return;
+    setBulkTemplateSaving(true);
+    setError('');
+    try {
+      await bulkUpdateMaterialTemplate({ course_id: filterCourseId, sector: filterSector, template_status: status });
+      loadItems();
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Не удалось обновить статус пакета');
+    } finally {
+      setBulkTemplateSaving(false);
+    }
+  };
+
+  // Решение по одному файлу — независимо от массового.
+  const handleSetMaterialTemplateStatus = async (item, status) => {
+    const key = itemKey(item);
+    setSavingTemplateKey(key);
+    setError('');
+    try {
+      await updateMaterialTemplate(item.id, { template_status: status });
+      loadItems();
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Не удалось обновить статус');
+    } finally {
+      setSavingTemplateKey(null);
+    }
+  };
+
   const canDelete = (item) => {
     if (item.attached_lessons_count > 0) return false;
     if (item.resource_type === 'quiz') return isAdmin || item.uploaded_by === user?.id;
@@ -172,7 +311,7 @@ function KnowledgeBasePage() {
     }
   };
 
-  const columnCount = 7;
+  const columnCount = 8;
 
   return (
     <div className="page">
@@ -195,12 +334,43 @@ function KnowledgeBasePage() {
           <button type="button" className={`tab tab--underline${onlyMine ? ' tab--active' : ''}`} onClick={() => setOnlyMine(v => !v)}>
             {'Моё'}
           </button>
+          <label className="checkbox-row">
+            <input type="checkbox" checked={showTemplates} onChange={e => setShowTemplates(e.target.checked)} />
+            {'Показывать материалы из шаблонов уроков'}
+          </label>
+          {isAdmin && (
+            <>
+              <select className="input input--min160" value={filterCourseId} onChange={e => setFilterCourseId(e.target.value)}>
+                <option value="">{'Курс: все'}</option>
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
+              <select className="input input--min160" value={filterSector} onChange={e => setFilterSector(e.target.value)}>
+                <option value="">{'Сектор: все'}</option>
+                <option value="ru">{'Русский сектор'}</option>
+                <option value="az">{'Azərbaycan sektoru'}</option>
+              </select>
+            </>
+          )}
           <select className="input" value={sort} onChange={e => setSort(e.target.value)}>
             <option value="date">{'По дате'}</option>
             <option value="title">{'По названию'}</option>
           </select>
         </div>
       </div>
+
+      {isAdmin && filterCourseId && filterSector && (
+        <div className="form-toolbar">
+          <span>{'Пакет материалов курса — решение разом:'}</span>
+          <button type="button" className="btn btn--outline btn--sm" onClick={() => handleBulkTemplateStatus('approved')} disabled={bulkTemplateSaving}>
+            {'Одобрить пакет'}
+          </button>
+          <button type="button" className="btn btn--outline btn--sm" onClick={() => handleBulkTemplateStatus('rejected')} disabled={bulkTemplateSaving}>
+            {'Заблокировать пакет'}
+          </button>
+        </div>
+      )}
 
       <div className="form-toolbar">
         <input
@@ -218,6 +388,11 @@ function KnowledgeBasePage() {
         <button type="button" className="btn btn--outline" onClick={() => navigate('/dashboard/add-quiz')}>
           {'+ Создать квиз'}
         </button>
+        {isAdmin && (
+          <button type="button" className="btn btn--outline" onClick={handleOpenCourseUpload}>
+            {'Загрузить курс'}
+          </button>
+        )}
       </div>
 
       {showLinkForm && (
@@ -247,6 +422,81 @@ function KnowledgeBasePage() {
         </div>
       )}
 
+      {isAdmin && showCourseUpload && (
+        <div>
+          <div className="form-toolbar">
+            <select className="input" value={courseId} onChange={e => setCourseId(e.target.value)}>
+              <option value="">{'Курс...'}</option>
+              {courses.map(c => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+            <select className="input" value={courseSector} onChange={e => setCourseSector(e.target.value)}>
+              <option value="">{'Направление...'}</option>
+              <option value="ru">{'Русский сектор'}</option>
+              <option value="az">{'Azərbaycan sektoru'}</option>
+            </select>
+            <input
+              type="file"
+              ref={courseFolderInputRef}
+              onChange={handleCourseFolderSelected}
+              webkitdirectory="true"
+              directory="true"
+              multiple
+              hidden
+            />
+            <button type="button" className="btn" onClick={() => courseFolderInputRef.current?.click()}>
+              {'Выбрать папку курса'}
+            </button>
+          </div>
+
+          {courseRows.length > 0 && (
+            <>
+              <div className="table-scroll">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{'Файл'}</th>
+                      <th>{'Номер урока'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseRows.map((row, i) => (
+                      <tr key={row.relPath + i}>
+                        <td className="table__cell--truncate" title={row.relPath}>{row.relPath}</td>
+                        <td>
+                          <input
+                            type="text"
+                            className="input"
+                            value={row.lessonNo}
+                            placeholder={'не распознано'}
+                            onChange={e => updateCourseRowLessonNo(i, e.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="form-toolbar">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleConfirmCourseUpload}
+                  disabled={!courseId || !courseSector || isUploadingCourse}
+                >
+                  {isUploadingCourse
+                    ? `Загрузка ${courseUploadProgress?.done ?? 0} из ${courseUploadProgress?.total ?? courseRows.length}...`
+                    : `Загрузить ${courseRows.length} файл(ов)`}
+                </button>
+              </div>
+            </>
+          )}
+
+          {courseUploadError && <div className="error-text error-text--muted">{courseUploadError}</div>}
+        </div>
+      )}
+
       {error && <div className="error-text error-text--muted">{error}</div>}
 
       <div className="table-scroll">
@@ -259,6 +509,7 @@ function KnowledgeBasePage() {
               <th>{'Загрузил'}</th>
               <th>{'Дата'}</th>
               <th>{'В уроках'}</th>
+              <th>{'Статус'}</th>
               <th>{'Удалить'}</th>
             </tr>
           </thead>
@@ -295,6 +546,34 @@ function KnowledgeBasePage() {
                     <td>{item.uploaded_by_name || '—'}</td>
                     <td className="nowrap">{new Date(item.created_at).toLocaleDateString('ru-RU')}</td>
                     <td className="nowrap">{item.attached_lessons_count > 0 ? item.attached_lessons_count : '—'}</td>
+                    <td className="nowrap">
+                      {isAdmin && item.resource_type === 'material' && item.template_lesson_no ? (
+                        <>
+                          {item.template_status === 'approved' ? 'Одобрено'
+                            : item.template_status === 'rejected' ? 'Отклонено'
+                            : 'На проверке'}
+                          {' '}
+                          <button
+                            type="button"
+                            className="btn btn--sm"
+                            title={'Одобрить'}
+                            onClick={() => handleSetMaterialTemplateStatus(item, 'approved')}
+                            disabled={savingTemplateKey === key || item.template_status === 'approved'}
+                          >
+                            {'✅'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn--sm"
+                            title={'Заблокировать'}
+                            onClick={() => handleSetMaterialTemplateStatus(item, 'rejected')}
+                            disabled={savingTemplateKey === key || item.template_status === 'rejected'}
+                          >
+                            {'🚫'}
+                          </button>
+                        </>
+                      ) : '—'}
+                    </td>
                     <td>
                       <button
                         type="button"

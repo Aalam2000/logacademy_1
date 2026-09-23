@@ -19,6 +19,7 @@ class GroupUpdate(BaseModel):
     teacher_id: int
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
+    sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
 
 class UserAdminUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -331,7 +332,8 @@ async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), ad
         teacher_id=data.teacher_id,
         invite_code=invite_code,
         telegram_chat_id=data.telegram_chat_id,
-        whatsapp=data.whatsapp
+        whatsapp=data.whatsapp,
+        sector=data.sector
     )
     db.add(group)
     await db.commit()
@@ -366,6 +368,7 @@ async def update_group(
     group.teacher_id = data.teacher_id
     group.telegram_chat_id = data.telegram_chat_id
     group.whatsapp = data.whatsapp
+    group.sector = data.sector
     await db.commit()
     await db.refresh(group)
     return group

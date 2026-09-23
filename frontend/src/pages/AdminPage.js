@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import api from '../api/auth';
@@ -6,11 +7,16 @@ import api from '../api/auth';
 const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyAdmin   = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyCourse  = { title: '', description: '' };
-const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '', whatsapp: '' };
+const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '', whatsapp: '', sector: '' };
+
+// 'ru' | 'az' — см. course-templates-plan.md
+const SECTOR_LABELS = { ru: 'Русский сектор', az: 'Azərbaycan sektoru' };
+const sectorLabel = (sector) => SECTOR_LABELS[sector] || '—';
 const emptyUserEdit = { full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyCourseEdit = { title: '', description: '' };
 
 function AdminPage() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('teachers');
 
   const [teachers, setTeachers] = useState([]);
@@ -162,6 +168,7 @@ function AdminPage() {
         ...newGroup,
         course_id:  parseInt(newGroup.course_id),
         teacher_id: parseInt(newGroup.teacher_id),
+        sector: newGroup.sector || null,
       });
       closeAddModal();
       loadGroups();
@@ -261,6 +268,7 @@ function AdminPage() {
       teacher_id: String(group.teacher_id || ''),
       telegram_chat_id: group.telegram_chat_id || '',
       whatsapp: group.whatsapp || '',
+      sector: group.sector || '',
     });
   };
 
@@ -281,6 +289,7 @@ function AdminPage() {
         teacher_id: parseInt(editingGroupDraft.teacher_id),
         telegram_chat_id: editingGroupDraft.telegram_chat_id.trim(),
         whatsapp: editingGroupDraft.whatsapp.trim(),
+        sector: editingGroupDraft.sector || null,
       };
       const res = await api.patch(`/admin/groups/${editingGroupId}`, payload);
       setGroups(prev => prev.map(g => g.id === editingGroupId ? res.data : g));
@@ -479,6 +488,7 @@ function AdminPage() {
               <thead><tr>
                 <th>{'Название'}</th>
                 <th>{'Курс'}</th>
+                <th>{'Сектор'}</th>
                 <th>{'Педагог'}</th>
                 <th>{'Telegram'}</th>
                 <th>{'WhatsApp'}</th>
@@ -514,6 +524,19 @@ function AdminPage() {
                       {editingGroupId === g.id ? (
                         <select
                           className="input input--min160"
+                          value={editingGroupDraft.sector}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, sector: e.target.value })}
+                        >
+                          <option value="">{'— Сектор —'}</option>
+                          <option value="ru">{'Русский сектор'}</option>
+                          <option value="az">{'Azərbaycan sektoru'}</option>
+                        </select>
+                      ) : sectorLabel(g.sector)}
+                    </td>
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <select
+                          className="input input--min160"
                           value={editingGroupDraft.teacher_id}
                           onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
                         >
@@ -543,9 +566,18 @@ function AdminPage() {
                     <td><code>{g.invite_code}</code></td>
                     <td>{g.status}</td>
                     <td>
-                      <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="danger" className="btn--del-compact">
-                        {'Удалить'}
-                      </Button>
+                      <div className="button-row">
+                        <button
+                          type="button"
+                          className="btn btn--outline btn--del-compact"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/groups/${g.id}`); }}
+                        >
+                          {'Расписание'}
+                        </button>
+                        <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="danger" className="btn--del-compact">
+                          {'Удалить'}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -623,6 +655,12 @@ function AdminPage() {
               onChange={e => setNewGroup({ ...newGroup, course_id: e.target.value })}>
               <option value="">{'— Курс —'}</option>
               {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+            </select>
+            <select className="input input--min160" value={newGroup.sector}
+              onChange={e => setNewGroup({ ...newGroup, sector: e.target.value })}>
+              <option value="">{'— Сектор —'}</option>
+              <option value="ru">{'Русский сектор'}</option>
+              <option value="az">{'Azərbaycan sektoru'}</option>
             </select>
             <select className="input input--min160" value={newGroup.teacher_id}
               onChange={e => setNewGroup({ ...newGroup, teacher_id: e.target.value })}>
