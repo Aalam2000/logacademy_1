@@ -7,25 +7,56 @@
 // препода сразу) сам решает, откуда взялись уроки и как их красить
 // (getEventColor), и сам показывает список групп для выбора рядом —
 // это не забота календаря.
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/ru';
+import 'moment/locale/az';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '../styles/calendar.css';
+import { useLang } from '../hooks/useLang';
 
-moment.locale('ru');
+// Локаль moment завязана на текущий язык интерфейса (useLang) — иначе
+// названия месяцев/дней в сетке календаря (их рисует сам moment, а не
+// autoi18n) всегда оставались бы русскими независимо от переключателя языка.
+const MOMENT_LOCALE_BY_LANG = { ru: 'ru', az: 'az', en: 'en' };
 const localizer = momentLocalizer(moment);
 
-const MESSAGES = {
-  month: 'Месяц',
-  week: 'Неделя',
-  day: 'День',
-  today: 'Сегодня',
-  previous: 'Назад',
-  next: 'Вперёд',
-  noEventsInRange: 'Уроков нет',
-  showMore: (count) => `ещё ${count}`,
+// MESSAGES передаётся как проп в react-big-calendar (не JSX-текст), поэтому
+// autoi18n-сканер его в принципе не видит — переводим вручную, по языку.
+// Слов немного и они фиксированные, так что платный AI-перевод тут ни к
+// чему; az-варианты — стандартные календарные подписи (как в Google Calendar).
+const MESSAGES_BY_LANG = {
+  ru: {
+    month: 'Месяц',
+    week: 'Неделя',
+    day: 'День',
+    today: 'Сегодня',
+    previous: 'Назад',
+    next: 'Вперёд',
+    noEventsInRange: 'Уроков нет',
+    showMore: (count) => `ещё ${count}`,
+  },
+  az: {
+    month: 'Ay',
+    week: 'Həftə',
+    day: 'Gün',
+    today: 'Bu gün',
+    previous: 'Geri',
+    next: 'İrəli',
+    noEventsInRange: 'Dərs yoxdur',
+    showMore: (count) => `daha ${count}`,
+  },
+  en: {
+    month: 'Month',
+    week: 'Week',
+    day: 'Day',
+    today: 'Today',
+    previous: 'Back',
+    next: 'Next',
+    noEventsInRange: 'No lessons',
+    showMore: (count) => `+${count} more`,
+  },
 };
 
 // Общая палитра для раскраски «по группе» — используется здесь через
@@ -36,6 +67,13 @@ export const GROUP_COLORS = ['#EC3013', '#2E5FA3', '#3B6D11', '#C026D3', '#0891B
 // lessons: [{id, group_id, group_name?, title, date}]
 // getEventColor(lesson) => css-цвет; не задан — все события фирменным красным.
 function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month' }) {
+  const { lang } = useLang();
+  const momentLocale = MOMENT_LOCALE_BY_LANG[lang] || 'ru';
+
+  useEffect(() => {
+    moment.locale(momentLocale);
+  }, [momentLocale]);
+
   const events = useMemo(() => lessons
     .filter(l => l.date)
     .map(l => {
@@ -56,8 +94,8 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
         events={events}
         views={['month', 'week', 'day']}
         defaultView={defaultView}
-        messages={MESSAGES}
-        culture="ru"
+        messages={MESSAGES_BY_LANG[momentLocale] || MESSAGES_BY_LANG.ru}
+        culture={momentLocale}
         popup
         eventPropGetter={(event) => ({
           className: 'la-calendar__event',
