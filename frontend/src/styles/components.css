@@ -675,6 +675,15 @@
 .datetime-picker__icon {
   font-size: var(--font-sm);
 }
+/* Маленькая кнопка-значок вместо поля (смена даты урока в LessonPage) */
+.datetime-picker__trigger--icon {
+  padding: 2px 6px;
+}
+.lesson-toolbar__date {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
 .datetime-picker__popover {
   position: absolute;
   top: calc(100% + var(--space-2));

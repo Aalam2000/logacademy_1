@@ -23,6 +23,12 @@ chmod -R o+rX frontend/src
 
 docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
+# nginx запоминает IP frontend/backend при старте. После пересоздания
+# контейнеров у них новые IP → 502 (connection refused на старый адрес).
+# Перезапуск nginx заново резолвит имена сервисов.
+echo "[deploy] restarting nginx (re-resolve frontend/backend)"
+docker compose -f docker-compose.prod.yml restart nginx
+
 echo "[deploy] running containers"
 docker compose -f docker-compose.prod.yml ps
 

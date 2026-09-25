@@ -117,11 +117,17 @@
 .group-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
-  margin-top: var(--space-4); /* отступ от кнопки «Назад» (GroupPage) */
   margin-bottom: var(--space-6);
+}
+/* «Назад» + название группы в одной строке (GroupPage) */
+.group-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
 }
 .group-header__title {
   margin: 0 0 var(--space-1) 0;

@@ -52,11 +52,17 @@ function roundMinutesDown(minutes) {
  */
 // hourOnly — выбор только часа (минуты всегда :00), напр. дедлайн ДЗ;
 // placeholder — текст кнопки, пока значение не выбрано;
-// floating — попап position:fixed (внутри таблицы со скроллом, чтобы не обрезался).
-function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeholder, floating }) {
+// floating — попап position:fixed (внутри таблицы со скроллом, чтобы не обрезался);
+// iconOnly — вместо поля с датой маленькая кнопка 📅 с подсказкой tip.
+function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeholder, floating, iconOnly, tip }) {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => value || new Date());
   const containerRef = useRef(null);
+  // Всегда свежий onCommit: обработчик «клик мимо» вешается при открытии
+  // попапа, и без ref он вызывал onCommit со старым значением даты —
+  // вызывающий видел «ничего не изменилось» и не сохранял.
+  const commitRef = useRef(onCommit);
+  commitRef.current = onCommit;
 
   useEffect(() => {
     if (value) setViewDate(value);
@@ -67,7 +73,7 @@ function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeho
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpen(false);
-        if (onCommit) onCommit();
+        if (commitRef.current) commitRef.current();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -77,7 +83,7 @@ function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeho
 
   const closeAndCommit = () => {
     setOpen(false);
-    if (onCommit) onCommit();
+    if (commitRef.current) commitRef.current();
   };
 
   const handleTriggerClick = () => {
@@ -129,15 +135,28 @@ function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeho
 
   return (
     <div className="datetime-picker" ref={containerRef}>
-      <button
-        type="button"
-        className="datetime-picker__trigger"
-        onClick={handleTriggerClick}
-        disabled={disabled}
-      >
-        <span>{formatDisplay(value) || placeholder || 'Выбрать дату и время'}</span>
-        <span className="datetime-picker__icon">📅</span>
-      </button>
+      {iconOnly ? (
+        <button
+          type="button"
+          className="datetime-picker__trigger datetime-picker__trigger--icon"
+          onClick={handleTriggerClick}
+          disabled={disabled}
+          data-tip={tip}
+        >
+          <span className="datetime-picker__icon">📅</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="datetime-picker__trigger"
+          onClick={handleTriggerClick}
+          disabled={disabled}
+          data-tip={tip}
+        >
+          <span>{formatDisplay(value) || placeholder || 'Выбрать дату и время'}</span>
+          <span className="datetime-picker__icon">📅</span>
+        </button>
+      )}
 
       {open && (
         <div className="datetime-picker__popover" style={floating ? floatingStyle(containerRef.current) : undefined}>
@@ -199,6 +218,8 @@ function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeho
     </div>
   );
 }
+
+export { formatDisplay as formatDateTime };
 
 // Попап под полем, но в координатах окна; не вылезает за нижний край.
 function floatingStyle(el) {

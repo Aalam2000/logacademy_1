@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
-import DateTimePicker from '../components/DateTimePicker';
+import DateTimePicker, { formatDateTime } from '../components/DateTimePicker';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
@@ -532,12 +532,18 @@ function LessonPage() {
             {'Назад'}
           </button>
           <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
-          <DateTimePicker
-            value={dateValue}
-            onChange={setDateValue}
-            onCommit={handleCommitDate}
-            disabled={isSavingDate}
-          />
+          <span className="lesson-toolbar__date">
+            {formatDateTime(dateValue) || '—'}
+            <DateTimePicker
+              value={dateValue}
+              onChange={setDateValue}
+              onCommit={handleCommitDate}
+              disabled={isSavingDate || lesson.is_locked}
+              iconOnly
+              floating
+              tip={lesson.is_locked ? 'Прошла полночь — перенести урок нельзя' : 'Смена даты и времени урока'}
+            />
+          </span>
           <button
             type="button"
             className={`btn btn--sm${lesson.is_open ? '' : ' btn--muted'}`}
@@ -550,8 +556,8 @@ function LessonPage() {
             type="button"
             className="btn btn--sm btn--outline"
             onClick={handleDelete}
-            disabled={isDeleting}
-            data-tip="Удалить урок"
+            disabled={isDeleting || lesson.is_locked}
+            data-tip={lesson.is_locked ? 'Прошла полночь — удалить урок нельзя' : 'Удалить урок'}
           >
             <TrashIcon size={16} />
           </button>
@@ -727,7 +733,7 @@ function LessonPage() {
             <>
               {marksLocked && (
                 <p className="text-muted">
-                  {'Урок заблокирован для редактирования (прошла полночь по Баку).'}
+                  {'Прошла полночь по Баку: присутствие и оценку за урок менять нельзя (отсутствующему можно отметить уважительную причину). Экзамен, звёзды, ДЗ и диалог — можно.'}
                 </p>
               )}
 
@@ -811,7 +817,7 @@ function LessonPage() {
                                     type="button"
                                     className={`attendance-btn attendance-btn--${btn.kind}${row.attendance_status === btn.status ? ' attendance-btn--active' : ''}`}
                                     data-tip={btn.label}
-                                    disabled={marksLocked}
+                                    disabled={marksLocked && !(btn.kind === 'excused' && !LATE_STATUSES.has(row.attendance_status))}
                                     onClick={() => handleAttendanceClick(row.student_id, btn)}
                                   />
                                 ))}
@@ -843,7 +849,6 @@ function LessonPage() {
                                 max="100"
                                 className="input input--sm-num"
                                 value={row.exam_score}
-                                disabled={marksLocked}
                                 onChange={e => updateRowField(row.student_id, 'exam_score', e.target.value)}
                                 onBlur={() => handleExamScoreBlur(row.student_id)}
                               />
@@ -855,7 +860,6 @@ function LessonPage() {
                                     key={n}
                                     type="button"
                                     className={`star-picker__btn${row.stars >= n ? ' star-picker__btn--active' : ''}`}
-                                    disabled={marksLocked}
                                     onClick={() => handleStarsClick(row.student_id, n)}
                                   >
                                     ★

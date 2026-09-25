@@ -23,30 +23,9 @@ ALLOWED_ATTENDANCE_STATUSES = {"in_person", "online", "excused", "absent"}
 
 
 # Схемы прямо здесь — потом перенесём в schemas.py
-# Слово «Урок» для автоназваний на языке интерфейса педагога. Берём готовый
-# перевод из реестра autoi18n (translations/{lang}.json, ключ — sha1 исходной
-# строки); перевода нет — остаётся «Урок».
-LESSON_WORD = "Урок"
-
-
-def lesson_word(lang: Optional[str]) -> str:
-    import hashlib
-    import json
-    import os
-    from .i18n import translator
-    if not lang or lang == translator.source_lang:
-        return LESSON_WORD
-    try:
-        with open(os.path.join(translator.cache_dir, f"{os.path.basename(lang)}.json"), encoding="utf-8") as f:
-            return json.load(f).get(hashlib.sha1(LESSON_WORD.encode("utf-8")).hexdigest()) or LESSON_WORD
-    except (OSError, ValueError):
-        return LESSON_WORD
-
-
 class LessonCreate(BaseModel):
     group_id: int
-    title: Optional[str] = None  # не задано — «Урок» на языке интерфейса педагога (lang)
-    lang: Optional[str] = None
+    title: Optional[str] = None  # не задано — «Урок» (переводится при показе, см. LessonTitle.js)
     order: int = 0
     date: Optional[datetime] = None
     source: Optional[str] = "teacher"  # academy | teacher
@@ -69,6 +48,9 @@ class LessonOut(BaseModel):
     created_at: datetime
     # Есть ответы на ДЗ без оценки — подсветка урока в списке и календаре
     has_unreviewed_homework: bool = False
+    # Прошла полночь по Баку — нельзя удалить/перенести, менять присутствие и оценку за урок
+    # (для админа всегда False)
+    is_locked: bool = False
     # Только для /lessons/student: что у студента в уроке не закрыто
     hw_todo: Optional[str] = None  # pending — сдать ДЗ | returned — вернули на доработку
     new_messages: int = 0          # новые реплики педагога в диалоге
@@ -158,7 +140,6 @@ class ScheduleGenerate(BaseModel):
     lesson_count: int = Field(ge=1, le=200)
     fill_source: Optional[str] = None  # "template" | "group"
     fill_group_id: Optional[int] = None  # обязателен при fill_source == "group"
-    lang: Optional[str] = None  # язык интерфейса педагога — на нём названия «Урок N»
 
 
 # Дозаполнение/обновление материалов уже существующих уроков по шаблону
@@ -180,6 +161,31 @@ def is_lesson_locked(lesson: Lesson) -> bool:
     now_baku = datetime.now(BAKU_TZ)
     lesson_day_baku = lesson.date.astimezone(BAKU_TZ).date()
     return now_baku.date() > lesson_day_baku
+
+
+# После полуночи (по Баку) урок частично блокируется (решение Андрея, 2026-09-25):
+#  - нельзя удалить урок и перенести его (дата, «выходной»);
+#  - нельзя менять оценку за урок и присутствие (включая «опоздал»),
+#    КРОМЕ «уважительной причины» у отсутствовавшего — её можно ставить/снимать всегда;
+#  - экзамен, звёзды, ДЗ, диалог, материалы — не блокируются.
+# Админ блокировку не видит.
+LOCK_DETAIL = "Прошла полночь по Баку — {what} менять нельзя"
+_NOT_PRESENT = {None, "absent", "excused"}
+
+
+def lesson_locked_for(lesson: Lesson, user: User) -> bool:
+    return is_lesson_locked(lesson) and user.role != "admin"
+
+
+def _check_mark_lock(old: Optional["LessonMark"], data: "LessonMarkIn") -> None:
+    old_status = (old.attendance_status if old else None) or None
+    new_status = data.attendance_status or None
+    if (old.score if old else None) != data.score:
+        raise HTTPException(status_code=403, detail=LOCK_DETAIL.format(what="оценку за урок"))
+    if bool(old.is_late if old else False) != bool(data.is_late):
+        raise HTTPException(status_code=403, detail=LOCK_DETAIL.format(what="опоздание"))
+    if old_status != new_status and not (old_status in _NOT_PRESENT and new_status in _NOT_PRESENT):
+        raise HTTPException(status_code=403, detail=LOCK_DETAIL.format(what="присутствие (можно только уважительную причину)"))
 
 
 def validate_attendance_status(value: Optional[str]) -> None:
@@ -407,8 +413,10 @@ async def delete_lessons_homework(db: AsyncSession, lesson_ids: list[int]) -> No
     await db.execute(delete(LessonMessage).where(LessonMessage.lesson_id.in_(lesson_ids)))
 
 
-async def with_unreviewed_flag(db: AsyncSession, lessons: list[Lesson]) -> list[LessonOut]:
+async def with_unreviewed_flag(db: AsyncSession, lessons: list[Lesson], user: Optional[User] = None) -> list[LessonOut]:
     out = [LessonOut.model_validate(l) for l in lessons]
+    for item, l in zip(out, lessons):
+        item.is_locked = lesson_locked_for(l, user) if user else is_lesson_locked(l)
     if not out:
         return out
     rows = await db.execute(
@@ -447,7 +455,7 @@ async def get_group_lessons(
     result = await db.execute(
         select(Lesson).where(Lesson.group_id == group_id).order_by(Lesson.order)
     )
-    return await with_unreviewed_flag(db, result.scalars().all())
+    return await with_unreviewed_flag(db, result.scalars().all(), current_user)
 
 
 # Создать урок
@@ -467,7 +475,7 @@ async def create_lesson(
 
     lesson = Lesson(
         group_id=data.group_id,
-        title=(data.title or "").strip() or lesson_word(data.lang),
+        title=(data.title or "").strip() or "Урок",
         order=data.order,
         date=data.date,
         source=data.source,
@@ -534,11 +542,11 @@ async def generate_schedule(
         raise HTTPException(status_code=422, detail="Не удалось подобрать достаточно дат — проверьте дни недели и период")
 
     lessons_by_order: dict[int, Lesson] = {}
-    word = lesson_word(data.lang)
     for i, lesson_date in enumerate(dates, start=1):
         lesson = Lesson(
             group_id=data.group_id,
-            title=f"{word} {i}",
+            # «Урок N» всегда по-русски — часть платформы, переводится при показе (LessonTitle.js)
+            title=f"Урок {i}",
             order=i,
             date=lesson_date,
             source="academy",
@@ -643,8 +651,10 @@ async def delete_group_lessons(
 ):
     await get_accessible_group(group_id, db, current_user)
 
-    lesson_ids_result = await db.execute(select(Lesson.id).where(Lesson.group_id == group_id))
-    lesson_ids = [row[0] for row in lesson_ids_result.all()]
+    group_lessons = (await db.execute(select(Lesson).where(Lesson.group_id == group_id))).scalars().all()
+    if any(lesson_locked_for(l, current_user) for l in group_lessons):
+        raise HTTPException(status_code=403, detail="В группе есть прошедшие уроки — после полуночи их удалять нельзя")
+    lesson_ids = [l.id for l in group_lessons]
     if lesson_ids:
         await delete_lessons_homework(db, lesson_ids)
         await db.execute(delete(LessonMark).where(LessonMark.lesson_id.in_(lesson_ids)))
@@ -682,7 +692,7 @@ async def get_my_lessons(
         .where(Lesson.group_id.in_(group_ids))
         .order_by(Lesson.date)
     )
-    return await with_unreviewed_flag(db, result.scalars().all())
+    return await with_unreviewed_flag(db, result.scalars().all(), current_user)
 
 
 # Уроки студента — только открытые
@@ -892,6 +902,8 @@ async def mark_lesson_as_holiday(
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
     if lesson.date is None:
         raise HTTPException(status_code=400, detail="У урока не задана дата")
+    if lesson_locked_for(lesson, current_user):
+        raise HTTPException(status_code=403, detail="Прошла полночь по Баку — прошедший урок переносить нельзя")
 
     tail_result = await db.execute(
         select(Lesson)
@@ -929,6 +941,7 @@ async def _upsert_mark(
     student_id: int,
     data: LessonMarkIn,
     current_user: User,
+    locked: bool = False,
 ) -> LessonMark:
     validate_attendance_status(data.attendance_status)
 
@@ -939,6 +952,8 @@ async def _upsert_mark(
         )
     )
     mark = result.scalar_one_or_none()
+    if locked:
+        _check_mark_lock(mark, data)
     if not mark:
         mark = LessonMark(lesson_id=lesson_id, student_id=student_id)
         db.add(mark)
@@ -1042,14 +1057,12 @@ async def save_lesson_mark(
     current_user: User = Depends(require_teacher)
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-    if is_lesson_locked(lesson) and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Урок заблокирован для редактирования (прошла полночь по Баку)")
 
     active_ids = await _get_active_group_student_ids(lesson, db)
     if student_id not in active_ids:
         raise HTTPException(status_code=404, detail="Студент не найден в группе урока")
 
-    mark = await _upsert_mark(db, lesson_id, student_id, data, current_user)
+    mark = await _upsert_mark(db, lesson_id, student_id, data, current_user, locked=lesson_locked_for(lesson, current_user))
     await db.commit()
     await db.refresh(mark)
     return {"ok": True, "marked_at": mark.marked_at}
@@ -1064,8 +1077,7 @@ async def save_lesson_marks_bulk(
     current_user: User = Depends(require_teacher)
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-    if is_lesson_locked(lesson) and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Урок заблокирован для редактирования (прошла полночь по Баку)")
+    locked = lesson_locked_for(lesson, current_user)
 
     active_ids = await _get_active_group_student_ids(lesson, db)
     unknown = [item.student_id for item in data if item.student_id not in active_ids]
@@ -1073,7 +1085,7 @@ async def save_lesson_marks_bulk(
         raise HTTPException(status_code=404, detail=f"Студенты не найдены в группе урока: {unknown}")
 
     for item in data:
-        await _upsert_mark(db, lesson_id, item.student_id, item, current_user)
+        await _upsert_mark(db, lesson_id, item.student_id, item, current_user, locked=locked)
 
     await db.commit()
     return {"ok": True, "saved": len(data)}
@@ -1212,7 +1224,9 @@ async def get_lesson(
         lesson = await get_lesson_for_student(lesson_id, db, current_user)
     else:
         lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-    return lesson
+    out = LessonOut.model_validate(lesson)
+    out.is_locked = lesson_locked_for(lesson, current_user)
+    return out
 
 
 @router.patch("/{lesson_id}", response_model=LessonOut)
@@ -1225,12 +1239,16 @@ async def update_lesson(
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
 
     update_data = data.dict(exclude_unset=True)
+    if "date" in update_data and update_data["date"] != lesson.date and lesson_locked_for(lesson, current_user):
+        raise HTTPException(status_code=403, detail=LOCK_DETAIL.format(what="дату урока"))
     for field, value in update_data.items():
         setattr(lesson, field, value)
 
     await db.commit()
     await db.refresh(lesson)
-    return lesson
+    out = LessonOut.model_validate(lesson)
+    out.is_locked = lesson_locked_for(lesson, current_user)
+    return out
 
 
 @router.delete("/{lesson_id}")
@@ -1240,6 +1258,8 @@ async def delete_lesson(
     current_user: User = Depends(require_teacher)
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    if lesson_locked_for(lesson, current_user):
+        raise HTTPException(status_code=403, detail="Прошла полночь по Баку — урок удалить нельзя")
 
     # lesson_marks/lesson_resources ссылаются на lessons.id без ON DELETE
     # CASCADE (и без ORM-relationship с каскадом) — без этого удаление

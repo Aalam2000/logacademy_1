@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
 import Calendar from '../components/Calendar';
-import { useLang } from '../hooks/useLang';
+import DateTimePicker from '../components/DateTimePicker';
 import { getMyGroups, getCourses } from '../api/groups';
 import {
   getGroupLessons, createLesson, generateSchedule,
@@ -25,11 +25,10 @@ function GroupPage() {
   const [error, setError] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newLessonDate, setNewLessonDate] = useState('');
+  const [newLessonDate, setNewLessonDate] = useState(null); // Date | null
   const [createError, setCreateError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-  const { lang } = useLang(); // автоназвания «Урок N» — на языке интерфейса педагога
   const [isStudentsModalOpen, setIsStudentsModalOpen] = useState(false);
   const [rangeFilter, setRangeFilter] = useState('upcoming'); // upcoming | week | month | all
 
@@ -140,7 +139,7 @@ function GroupPage() {
 
   const openCreateModal = () => {
     setCreateError('');
-    setNewLessonDate('');
+    setNewLessonDate(null);
     setIsModalOpen(true);
   };
 
@@ -162,8 +161,8 @@ function GroupPage() {
     try {
       const payload = {
         group_id: gid,
-        lang,
-        date: new Date(newLessonDate).toISOString(),
+        title: 'Урок',
+        date: newLessonDate.toISOString(),
       };
       const created = await createLesson(payload);
       setLessons(prev => [...prev, created]);
@@ -242,7 +241,6 @@ function GroupPage() {
         start_time: genStartTime,
         weekdays: genWeekdays,
         lesson_count: parseInt(genLessonCount, 10),
-        lang,
       };
       if (genFillSource) {
         payload.fill_source = genFillSource;
@@ -340,18 +338,19 @@ function GroupPage() {
 
   return (
     <div className="page page--group">
-      <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
-        {'Назад'}
-      </button>
-
-      {/* Шапка группы */}
+      {/* Шапка группы в одну строку: «Назад», название/курс/педагог — слева; QR и ученики — справа */}
       <div className="group-header">
-        <div>
-          <h2 className="group-header__title">{group.name}</h2>
-          <div className="meta-row">
-            <span>{'Курс'}: <b>{courseName}</b></span>
-            <span>·</span>
-            <span>{'Преподаватель'}: <b>{group.teacher_name || '—'}</b></span>
+        <div className="group-header__left">
+          <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
+            {'Назад'}
+          </button>
+          <div>
+            <h2 className="group-header__title">{group.name}</h2>
+            <div className="meta-row">
+              <span>{'Курс'}: <b>{courseName}</b></span>
+              <span>·</span>
+              <span>{'Преподаватель'}: <b>{group.teacher_name || '—'}</b></span>
+            </div>
           </div>
         </div>
         <div className="button-row">
@@ -364,9 +363,24 @@ function GroupPage() {
         </div>
       </div>
 
-      {/* Тулбар уроков */}
+      {/* Тулбар уроков: Таблица/Календарь — слева, действия с уроками — справа */}
       <div className="toolbar">
-        <h3 className="toolbar__title">{'Уроки'}</h3>
+        <div className="toolbar__filters">
+          <button
+            type="button"
+            className={`tab${viewMode === 'table' ? ' tab--active' : ''}`}
+            onClick={() => setViewMode('table')}
+          >
+            {'Таблица'}
+          </button>
+          <button
+            type="button"
+            className={`tab${viewMode === 'calendar' ? ' tab--active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+          >
+            {'Календарь'}
+          </button>
+        </div>
         <div className="button-row">
           <button className="btn" onClick={openCreateModal}>
             {'+ Урок'}
@@ -378,23 +392,6 @@ function GroupPage() {
             {'Обновить материалы'}
           </button>
         </div>
-      </div>
-
-      <div className="toolbar__filters">
-        <button
-          type="button"
-          className={`tab${viewMode === 'table' ? ' tab--active' : ''}`}
-          onClick={() => setViewMode('table')}
-        >
-          {'Таблица'}
-        </button>
-        <button
-          type="button"
-          className={`tab${viewMode === 'calendar' ? ' tab--active' : ''}`}
-          onClick={() => setViewMode('calendar')}
-        >
-          {'Календарь'}
-        </button>
       </div>
 
       {viewMode === 'table' && (
@@ -473,9 +470,9 @@ function GroupPage() {
                       <button
                         type="button"
                         className="btn btn--sm"
-                        data-tip={'Отметить праздником — сдвинуть эту и следующие даты'}
+                        data-tip={l.is_locked ? 'Прошла полночь — прошедший урок переносить нельзя' : 'Отметить праздником — сдвинуть эту и следующие даты'}
                         onClick={(e) => { e.stopPropagation(); handleMarkHoliday(l); }}
-                        disabled={markingHolidayId === l.id}
+                        disabled={markingHolidayId === l.id || l.is_locked}
                       >
                         {'🎉'}
                       </button>
@@ -505,16 +502,13 @@ function GroupPage() {
           )}
         >
           <form id="new-lesson-form" onSubmit={handleCreateLesson} className="form-stack">
-            <label className="field-label">
+            {/* Тот же выбор даты, что в уроке: минуты шагом 10, по умолчанию :00 */}
+            <div className="field-label">
               {'Дата и время начала'}
-              <input
-                type="datetime-local"
-                className="input"
-                value={newLessonDate}
-                onChange={e => setNewLessonDate(e.target.value)}
-                required
-              />
-            </label>
+              <div>
+                <DateTimePicker value={newLessonDate} onChange={setNewLessonDate} floating />
+              </div>
+            </div>
 
             {createError && <div className="form-field__error">{createError}</div>}
           </form>
