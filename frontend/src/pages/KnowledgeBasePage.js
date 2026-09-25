@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
+import DeleteButton from '../components/DeleteButton';
+import IconButton from '../components/IconButton';
 import { getCourses } from '../api/admin';
 import { uploadMaterial, updateMaterialTemplate, bulkUpdateMaterialTemplate } from '../api/materials';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +29,6 @@ function KnowledgeBasePage() {
   const [typeFilter, setTypeFilter] = useState(''); // '' | material | quiz | link
   const [onlyMine, setOnlyMine] = useState(false);
   const [sort, setSort] = useState('date'); // date | title
-  const [deletingKey, setDeletingKey] = useState(null);
   const [openingKey, setOpeningKey] = useState(null);
 
   const [isUploading, setIsUploading] = useState(false);
@@ -104,10 +105,18 @@ function KnowledgeBasePage() {
     setIsUploading(true);
     setError('');
     try {
-      await uploadMaterial(file);
+      try {
+        await uploadMaterial(file);
+      } catch (err) {
+        // Одноимённый файл с другим содержимым — только после подтверждения
+        const data = err?.response?.data;
+        if (err?.response?.status !== 409 || data?.code !== 'same_name' || !window.confirm(data.detail)) throw err;
+        await uploadMaterial(file, undefined, true);
+      }
       if (fileInputRef.current) fileInputRef.current.value = '';
       loadItems();
     } catch (err) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setError(err?.response?.data?.detail || 'Не удалось загрузить файл');
     } finally {
       setIsUploading(false);
@@ -285,31 +294,14 @@ function KnowledgeBasePage() {
     }
   };
 
+  // Право удалять (где используется — проверяет сама DeleteButton)
   const canDelete = (item) => {
-    if (item.attached_lessons_count > 0) return false;
     if (item.resource_type === 'quiz') return isAdmin || item.uploaded_by === user?.id;
     return isAdmin; // файлы и ссылки — только admin
   };
 
-  const handleDelete = async (item) => {
-    const confirmed = window.confirm(`Удалить «${item.title}» из базы знаний?`);
-    if (!confirmed) return;
-
-    const key = itemKey(item);
-    const path = item.resource_type === 'material' ? 'materials'
-      : item.resource_type === 'quiz' ? 'quizzes' : 'links';
-
-    setDeletingKey(key);
-    setError('');
-    try {
-      await api.delete(`/${path}/${item.id}`);
-      setItems(prev => prev.filter(i => itemKey(i) !== key));
-    } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось удалить');
-    } finally {
-      setDeletingKey(null);
-    }
-  };
+  const DELETE_PATH = { material: 'materials', quiz: 'quizzes', link: 'links' };
+  const DELETE_TIP = { material: 'Удалить файл', quiz: 'Удалить квиз', link: 'Удалить ссылку' };
 
   const columnCount = 8;
 
@@ -463,7 +455,7 @@ function KnowledgeBasePage() {
                   <tbody>
                     {courseRows.map((row, i) => (
                       <tr key={row.relPath + i}>
-                        <td className="table__cell--truncate" title={row.relPath}>{row.relPath}</td>
+                        <td className="table__cell--truncate" data-tip={row.relPath}>{row.relPath}</td>
                         <td>
                           <input
                             type="text"
@@ -530,6 +522,9 @@ function KnowledgeBasePage() {
                         <BadgeIcon type={item.resource_type} />
                         {subtypeLabel(item)}
                       </span>
+                      {item.is_homework && (
+                        <span className="badge badge--homework badge--inline" data-tip={'Используется как ДЗ в уроке'}>{'ДЗ'}</span>
+                      )}
                     </td>
                     <td>
                       <button type="button" className="link" onClick={() => handleOpen(item)} disabled={openingKey === key}>
@@ -540,7 +535,7 @@ function KnowledgeBasePage() {
                       {item.resource_type === 'material' && formatSize(item.size_bytes || 0)}
                       {item.resource_type === 'quiz' && (item.topic || '—')}
                       {item.resource_type === 'link' && (
-                        <span className="table__cell--truncate" title={item.url}>{item.url}</span>
+                        <span className="table__cell--truncate" data-tip={item.url}>{item.url}</span>
                       )}
                     </td>
                     <td>{item.uploaded_by_name || '—'}</td>
@@ -556,7 +551,7 @@ function KnowledgeBasePage() {
                           <button
                             type="button"
                             className="btn btn--sm"
-                            title={'Одобрить'}
+                            data-tip={'Одобрить'}
                             onClick={() => handleSetMaterialTemplateStatus(item, 'approved')}
                             disabled={savingTemplateKey === key || item.template_status === 'approved'}
                           >
@@ -565,7 +560,7 @@ function KnowledgeBasePage() {
                           <button
                             type="button"
                             className="btn btn--sm"
-                            title={'Заблокировать'}
+                            data-tip={'Заблокировать'}
                             onClick={() => handleSetMaterialTemplateStatus(item, 'rejected')}
                             disabled={savingTemplateKey === key || item.template_status === 'rejected'}
                           >
@@ -575,15 +570,25 @@ function KnowledgeBasePage() {
                       ) : '—'}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn btn--sm"
-                        onClick={() => handleDelete(item)}
-                        disabled={!deletable || deletingKey === key}
-                        title={item.attached_lessons_count > 0 ? 'Сначала отвяжите от уроков' : undefined}
-                      >
-                        🗑️
-                      </button>
+                      {deletable ? (
+                        <DeleteButton
+                          entity={item.resource_type}
+                          id={item.id}
+                          name={item.title}
+                          tip={DELETE_TIP[item.resource_type]}
+                          onDelete={() => api.delete(`/${DELETE_PATH[item.resource_type]}/${item.id}`)}
+                          onDeleted={() => setItems(prev => prev.filter(i => itemKey(i) !== key))}
+                          onError={setError}
+                        />
+                      ) : (
+                        <IconButton
+                          icon="delete"
+                          disabled
+                          tip={item.resource_type === 'quiz'
+                            ? 'Удалить может только автор или администратор'
+                            : 'Удалить может только администратор'}
+                        />
+                      )}
                     </td>
                   </tr>
                 );

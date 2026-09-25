@@ -7,17 +7,27 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
+import { useAuth } from '../context/AuthContext';
+import StudentHomework from '../components/HomeworkStudent';
+import { DialogThread } from '../components/LessonDialog';
+import { getMyHomework, getMessages } from '../api/homework';
 
 function StudentLessonPage() {
   const { lessonId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [mark, setMark] = useState(null);
+  // Вкладки: Материалы | ДЗ | Диалог (набросок «В»). Над вкладками — строка
+  // «моя отметка» за урок (посещаемость, оценки, звёзды), только просмотр.
+  const [tab, setTab] = useState('materials');
   const [items, setItems] = useState([]);
+  const [homework, setHomework] = useState({ tasks: [], answer: { status: 'none', files: [] } });
+  const [newMessages, setNewMessages] = useState(0);
+  const [mark, setMark] = useState(null); // моя отметка за урок — только просмотр
   const [itemsError, setItemsError] = useState('');
   const [openingKey, setOpeningKey] = useState(null);
 
@@ -27,14 +37,16 @@ function StudentLessonPage() {
       setError('');
       setItemsError('');
       try {
-        const [lessonRes, markRes, itemsRes] = await Promise.all([
+        const [lessonRes, itemsRes, hwRes, markRes] = await Promise.all([
           api.get(`/lessons/${lessonId}`),
-          api.get(`/lessons/${lessonId}/marks/me`),
           api.get(`/lessons/${lessonId}/items`),
+          getMyHomework(lessonId),
+          api.get(`/lessons/${lessonId}/marks/me`).catch(() => ({ data: null })),
         ]);
         setLesson(lessonRes.data);
         setMark(markRes.data);
         setItems(itemsRes.data);
+        setHomework(hwRes);
       } catch (err) {
         setError(extractErrorMessage(err, 'Не удалось загрузить урок'));
       } finally {
@@ -44,6 +56,26 @@ function StudentLessonPage() {
 
     load();
   }, [lessonId]);
+
+  // Счётчик на вкладке «Диалог»: сообщения педагога после моего последнего
+  const refreshMessagesCount = async () => {
+    if (!user) return;
+    try {
+      const msgs = await getMessages(lessonId, user.id);
+      let n = 0;
+      for (let i = msgs.length - 1; i >= 0 && !msgs[i].is_mine; i--) n += 1;
+      setNewMessages(n);
+    } catch {
+      setNewMessages(0);
+    }
+  };
+
+  useEffect(() => {
+    refreshMessagesCount();
+    // eslint-disable-next-line
+  }, [lessonId, user]);
+
+  const pendingHw = ['pending', 'returned'].includes(homework.answer.status) ? 1 : 0;
 
   // Та же логика открытия файла/ссылки, что в LessonPage.js (blob + JWT
   // для файлов, синхронный window.open по клику, чтобы браузер не считал
@@ -83,19 +115,25 @@ function StudentLessonPage() {
   };
 
   if (loading) {
-    return <div className="page page--md">{'Загрузка...'}</div>;
+    return <div className="page">{'Загрузка...'}</div>;
   }
 
   if (!lesson) {
     return (
-      <div className="page page--md">
+      <div className="page">
         {error || 'Урок не найден'}
       </div>
     );
   }
 
+  const TABS = [
+    { key: 'materials', label: 'Материалы', count: 0 },
+    { key: 'homework', label: 'ДЗ', count: pendingHw },
+    { key: 'dialog', label: 'Диалог', count: newMessages },
+  ];
+
   return (
-    <div className="page page--md">
+    <div className="page">
       <div className="toolbar">
         <div className="lesson-toolbar__info">
           <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
@@ -110,95 +148,96 @@ function StudentLessonPage() {
 
       {error && <div className="error-text error-text--muted">{error}</div>}
 
-      <div className="toolbar">
-        <h3 className="toolbar__title">{'Моя отметка'}</h3>
-      </div>
-
+      {/* Моя отметка за урок — только просмотр: посещаемость, три оценки, звёзды */}
       {mark && (
-        <table className="table table--fixed">
-          <thead>
-            <tr>
-              <th className="table__col--attendance">{'Посещаемость'}</th>
-              <th className="table__col--score">{'Оценка'}</th>
-              <th className="table__col--score">{'Экзамен'}</th>
-              <th className="table__col--stars">{'Звёзды'}</th>
-              <th>{'Комментарий'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{mark.status_label}</td>
-              <td>{mark.score ?? '—'}</td>
-              <td>{mark.exam_score ?? '—'}</td>
-              <td>{'★'.repeat(mark.stars || 0)}{'☆'.repeat(3 - (mark.stars || 0))}</td>
-              <td>{mark.comment || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className="table table--fixed">
+            <thead>
+              <tr>
+                <th className="table__col--attendance">{'Посещаемость'}</th>
+                <th className="table__col--score">{'Оценка'}</th>
+                <th className="table__col--score">{'Экзамен'}</th>
+                <th className="table__col--score">{'ДЗ'}</th>
+                <th className="table__col--stars">{'Звёзды'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{mark.status_label}</td>
+                <td>{mark.score ?? '—'}</td>
+                <td>{mark.exam_score ?? '—'}</td>
+                <td>{homework.answer.grade ?? (homework.answer.status === 'accepted' ? '✓' : '—')}</td>
+                <td>{'★'.repeat(mark.stars || 0)}{'☆'.repeat(3 - (mark.stars || 0))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <div className="toolbar">
-        <h3 className="toolbar__title">{'Материалы урока'}</h3>
+      <div className="lesson-tabs">
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            type="button"
+            className={`lesson-tabs__tab${tab === t.key ? ' lesson-tabs__tab--active' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+            {t.count > 0 && <span className="lesson-tabs__count">{t.count}</span>}
+          </button>
+        ))}
       </div>
 
-      {itemsError && <div className="error-text error-text--muted">{itemsError}</div>}
+      <div className="lesson-tabs__pane">
+        {tab === 'materials' && (
+          <>
+            {itemsError && <div className="error-text error-text--muted">{itemsError}</div>}
+            {items.length === 0 ? (
+              <p className="text-muted">{'К уроку ничего не привязано'}</p>
+            ) : (
+              <div className="material-list">
+                {items.map(item => {
+                  const meta = TYPE_META[item.resource_type];
+                  const key = resourceKey(item.resource_type, item.resource_id);
+                  return (
+                    <div key={key} className={`material-list__row table__row--${item.resource_type}`}>
+                      <span className={`type-badge type-badge--${item.resource_type}`}>
+                        {meta.icon} {subtypeLabel(item)}
+                      </span>
+                      {/* Материал просто открывается в новой вкладке */}
+                      <button
+                        type="button"
+                        className="link material-list__title"
+                        data-tip="Открыть в новой вкладке"
+                        onClick={() => handleOpenItem(item)}
+                        disabled={openingKey === key}
+                      >
+                        {openingKey === key ? `${item.title} — открываем...` : item.title}
+                      </button>
+                      {item.resource_type === 'material' && (
+                        <span className="text-muted nowrap">{formatSize(item.size_bytes || 0)}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {lesson.comment && (
+              <div className="lesson-note">
+                <b>{'Заметки педагога: '}</b>{lesson.comment}
+              </div>
+            )}
+          </>
+        )}
 
-      <table className="table table--fixed">
-        <thead>
-          <tr>
-            <th>{'Тип'}</th>
-            <th>{'Название'}</th>
-            <th>{'Детали'}</th>
-            <th>{'Добавил'}</th>
-            <th className="table__col--date">{'Дата'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.length === 0 ? (
-            <tr><td colSpan="5" className="table__empty">{'К уроку ничего не привязано'}</td></tr>
-          ) : (
-            items.map(item => {
-              const meta = TYPE_META[item.resource_type];
-              const key = resourceKey(item.resource_type, item.resource_id);
-              return (
-                <tr key={key} className={`table__row--${item.resource_type}`}>
-                  <td>
-                    <span className={`type-badge type-badge--${item.resource_type}`}>
-                      {meta.icon} {subtypeLabel(item)}
-                    </span>
-                  </td>
-                  <td>
-                    <button type="button" className="link" onClick={() => handleOpenItem(item)} disabled={openingKey === key}>
-                      {openingKey === key ? `${item.title} — открываем...` : item.title}
-                    </button>
-                  </td>
-                  <td>
-                    {item.resource_type === 'material' && (
-                      <span className="table__cell--clip">{formatSize(item.size_bytes || 0)}</span>
-                    )}
-                    {item.resource_type === 'link' && (
-                      <span className="table__cell--clip" title={item.url}>{item.url}</span>
-                    )}
-                  </td>
-                  <td>{item.added_by_name || '—'}</td>
-                  <td className="table__col--date nowrap">{item.added_at ? new Date(item.added_at).toLocaleDateString('ru-RU') : '—'}</td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+        {tab === 'homework' && (
+          <StudentHomework lessonId={lessonId} homework={homework} onUpdated={setHomework} />
+        )}
 
-      <label className="field-label field-label--top-gap">
-        {'Комментарий к уроку'}
-        <textarea
-          className="input input--textarea"
-          value={lesson.comment || ''}
-          disabled
-          readOnly
-          placeholder={'Комментариев пока нет'}
-        />
-      </label>
+        {tab === 'dialog' && user && (
+          <DialogThread lessonId={lessonId} studentId={user.id} onChanged={refreshMessagesCount} />
+        )}
+      </div>
     </div>
   );
 }

@@ -50,7 +50,10 @@ function roundMinutesDown(minutes) {
  * onChange(date: Date): вызывается на каждое изменение (день/час/минута)
  * onCommit(): вызывается при закрытии попапа (клик вне поля)
  */
-function DateTimePicker({ value, onChange, onCommit, disabled }) {
+// hourOnly — выбор только часа (минуты всегда :00), напр. дедлайн ДЗ;
+// placeholder — текст кнопки, пока значение не выбрано;
+// floating — попап position:fixed (внутри таблицы со скроллом, чтобы не обрезался).
+function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeholder, floating }) {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => value || new Date());
   const containerRef = useRef(null);
@@ -96,7 +99,7 @@ function DateTimePicker({ value, onChange, onCommit, disabled }) {
   const selectDay = (day) => {
     const base = value || viewDate;
     const next = new Date(day);
-    next.setHours(base.getHours(), base.getMinutes(), 0, 0);
+    next.setHours(base.getHours(), hourOnly ? 0 : base.getMinutes(), 0, 0);
     onChange(next);
   };
 
@@ -104,6 +107,7 @@ function DateTimePicker({ value, onChange, onCommit, disabled }) {
     const base = value || viewDate;
     const next = new Date(base);
     next.setHours(Number(h));
+    if (hourOnly) next.setMinutes(0, 0, 0);
     onChange(next);
   };
 
@@ -131,12 +135,12 @@ function DateTimePicker({ value, onChange, onCommit, disabled }) {
         onClick={handleTriggerClick}
         disabled={disabled}
       >
-        <span>{formatDisplay(value) || 'Выбрать дату и время'}</span>
+        <span>{formatDisplay(value) || placeholder || 'Выбрать дату и время'}</span>
         <span className="datetime-picker__icon">📅</span>
       </button>
 
       {open && (
-        <div className="datetime-picker__popover">
+        <div className="datetime-picker__popover" style={floating ? floatingStyle(containerRef.current) : undefined}>
           <div className="datetime-picker__calendar-header">
             <button type="button" className="datetime-picker__nav" onClick={() => navMonth(-1)}>{'‹'}</button>
             <span>{MONTHS[gridMonth]} {gridYear}</span>
@@ -178,20 +182,30 @@ function DateTimePicker({ value, onChange, onCommit, disabled }) {
               ))}
             </select>
             <span>{':'}</span>
-            <select
-              className="input"
-              value={value ? roundMinutesDown(value.getMinutes()) : 0}
-              onChange={e => changeMinute(e.target.value)}
-            >
-              {MINUTE_STEPS.map(m => (
-                <option key={m} value={m}>{pad(m)}</option>
-              ))}
-            </select>
+            {hourOnly ? <span>{'00'}</span> : (
+              <select
+                className="input"
+                value={value ? roundMinutesDown(value.getMinutes()) : 0}
+                onChange={e => changeMinute(e.target.value)}
+              >
+                {MINUTE_STEPS.map(m => (
+                  <option key={m} value={m}>{pad(m)}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
       )}
     </div>
   );
+}
+
+// Попап под полем, но в координатах окна; не вылезает за нижний край.
+function floatingStyle(el) {
+  if (!el) return undefined;
+  const r = el.getBoundingClientRect();
+  const top = Math.min(r.bottom + 8, window.innerHeight - 340);
+  return { position: 'fixed', top: Math.max(8, top), left: Math.min(r.left, window.innerWidth - 270), zIndex: 1000 };
 }
 
 export default DateTimePicker;

@@ -289,6 +289,7 @@
 .star-picker {
   display: inline-flex;
   gap: 2px;
+  white-space: nowrap;
 }
 .star-picker__btn {
   background: none;
@@ -309,6 +310,7 @@
 /* ===== Кружки посещаемости ===== */
 .attendance-group {
   display: flex;
+  flex-wrap: nowrap;
   gap: var(--space-2);
 }
 .attendance-btn {
@@ -410,14 +412,16 @@
 .table--fixed {
   table-layout: fixed;
 }
+/* 4 кружка по 26px + 3 зазора по 8px + отступы ячейки 2×12px = 152px */
 .table__col--attendance {
-  width: 150px;
+  width: 160px;
 }
 .table__col--score {
   width: 80px;
 }
+/* 3 звезды по ~28px + зазоры + отступы ячейки — меньше 120px наезжает на соседнюю колонку */
 .table__col--stars {
-  width: 90px;
+  width: 120px;
 }
 .table__col--icons {
   width: 90px;
@@ -1101,4 +1105,653 @@ a.row-icon:hover {
   height: 30px;
   background: rgba(255,255,255,0.85);
   color: var(--color-text);
+}
+/* ===== ДЗ ===== */
+.homework-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.homework-cell__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.homework-cell__flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.badge--homework {
+  background: var(--color-warning);
+}
+.btn--attention {
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+  color: var(--color-white);
+}
+.homework-comment {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.homework-comment--editable {
+  cursor: pointer;
+  min-height: 48px;
+  padding: var(--space-2);
+  border: 1px dashed var(--color-border-light);
+  border-radius: var(--radius-sm, 4px);
+}
+/* Урок, где есть непроверенные решения ДЗ */
+.table__row--homework-pending td:first-child {
+  box-shadow: inset 4px 0 0 var(--color-warning);
+}
+.badge--homework-pending {
+  background: var(--color-warning);
+}
+
+/* ===== Кнопка-значок «HUD-контур» (IconButton.js) ===== */
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--color-white);
+  border: 2px solid var(--color-primary-border);
+  color: var(--color-primary-border);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.icon-btn__svg {
+  width: 18px;
+  height: 18px;
+}
+.icon-btn:hover:not(:disabled),
+.icon-btn--active {
+  background: var(--color-primary-border);
+  color: var(--color-white);
+}
+.icon-btn--warn:hover:not(:disabled) {
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+}
+.icon-btn--danger:hover:not(:disabled) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.icon-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* ===== Всплывающая подсказка «Комикс» (Tooltip.js) =====
+   Появление мгновенное — никаких transition/animation. */
+.la-tip {
+  position: fixed;
+  z-index: 3000;
+  pointer-events: none;
+}
+.la-tip__bubble {
+  background: var(--color-white);
+  color: var(--color-primary-border);
+  border: 3px solid var(--color-primary-border);
+  border-radius: 50% / 60%;
+  box-shadow: 4px 4px 0 var(--color-primary);
+  padding: 12px 24px;
+  font-size: 19px;
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+}
+/* Длинный текст (адрес ссылки, путь, тема квиза) — с переносами, без капса */
+.la-tip--long .la-tip__bubble {
+  white-space: normal;
+  word-break: break-word;
+  max-width: min(520px, calc(100vw - 16px));
+  border-radius: 28px;
+  text-transform: none;
+  font-size: 17px;
+}
+/* Неактивную кнопку с подсказкой ищет по координатам Tooltip.js */
+[data-tip]:disabled {
+  pointer-events: none;
+}
+.la-tip__dot {
+  position: absolute;
+  background: var(--color-white);
+  border: 3px solid var(--color-primary-border);
+  border-radius: 50%;
+}
+/* Пузырьки от облака к кнопке: крупный ближе к облаку, мелкий — к кнопке */
+.la-tip__dot--big {
+  width: 13px;
+  height: 13px;
+  top: calc(100% + 1px);
+  margin-left: -4px;
+}
+.la-tip__dot--small {
+  width: 9px;
+  height: 9px;
+  top: calc(100% + 12px);
+  margin-left: 2px;
+}
+.la-tip--below .la-tip__dot--big {
+  top: auto;
+  bottom: calc(100% + 1px);
+}
+.la-tip--below .la-tip__dot--small {
+  top: auto;
+  bottom: calc(100% + 12px);
+}
+
+/* ===== Окно «Нельзя удалить — используется здесь» (DeleteButton.js) ===== */
+.usages {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.usages__group {
+  margin-bottom: var(--space-4);
+}
+.usages__kind {
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-1);
+}
+.usages__list {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+.usages__list li {
+  margin: 2px 0;
+}
+
+/* Таблица «Студенты» в уроке: колонки фиксированной ширины (кружки,
+   оценки, звёзды, контакты), имя и комментарий делят остаток. Ниже этой
+   ширины не сжимается — вместо наездов появляется прокрутка таблицы. */
+.table--marks {
+  min-width: 880px;
+}
+.table--marks td {
+  vertical-align: middle;
+}
+
+/* ===== ДЗ во вкладке «Студенты» урока (HomeworkTeacher.js) ===== */
+.table__col--hw {
+  width: 260px;
+}
+.table--marks {
+  min-width: 1140px;
+}
+.hw-bar {
+  border: 1px solid var(--color-border-light);
+  background: var(--color-white);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.hw-bar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.hw-bar__item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+.hw-whom {
+  font-weight: 800;
+  white-space: nowrap;
+}
+.hw-whom--all {
+  color: var(--color-role-student);
+}
+.hw-whom--personal {
+  color: var(--color-warning);
+}
+.hw-deadline {
+  background: none;
+  border: 1px dashed var(--color-border-light);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.hw-deadline--expired {
+  color: var(--color-danger-text);
+  border-color: var(--color-danger);
+}
+.hw-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.hw-cell__task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+.hw-cell__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+}
+.hw-status {
+  font-size: var(--font-xs);
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+}
+.hw-status--pending {
+  color: var(--color-muted);
+}
+.hw-status--expired {
+  color: var(--color-danger-text);
+  background: var(--color-danger-bg-light);
+}
+.hw-status--submitted {
+  color: var(--color-white);
+  background: var(--color-warning);
+  font-weight: 700;
+}
+.hw-status--graded {
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+}
+.hw-files {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+}
+.hw-grade-input {
+  width: 90px;
+}
+.deadline-picker {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* ===== Диалог педагог ↔ студент (LessonDialog.js) ===== */
+.dialog__messages {
+  max-height: 45vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.dialog__msg {
+  align-self: flex-start;
+  max-width: 85%;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border-light);
+  padding: var(--space-2) var(--space-3);
+}
+.dialog__msg--mine {
+  align-self: flex-end;
+  background: var(--color-white);
+  border-color: var(--color-primary-border);
+}
+.dialog__meta {
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+  margin-bottom: 2px;
+}
+.dialog__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dialog__edit {
+  font-size: var(--font-xs);
+}
+.dialog-cell {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px dashed var(--color-border-light);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialog-cell__who {
+  font-weight: 700;
+}
+.dialog-cell__who--student {
+  color: var(--color-warning);
+}
+.hw-task-card {
+  border-top: 1px solid var(--color-border-light);
+  padding: var(--space-2) 0;
+}
+.hw-task-card:first-of-type {
+  border-top: none;
+}
+.hw-task-card__answer {
+  padding-left: var(--space-4);
+}
+
+/* ===== Плитки трёх средних оценок (StudentPerformancePage) ===== */
+.grade-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 var(--space-6);
+}
+.grade-tile {
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-4);
+  background: var(--color-white);
+  border: 2px solid var(--color-primary-border);
+  cursor: pointer;
+  text-align: left;
+}
+.grade-tile:hover {
+  border-color: var(--color-primary);
+}
+.grade-tile__value {
+  font-size: var(--font-xl);
+  font-weight: var(--weight-black, 900);
+  color: var(--color-primary);
+  line-height: 1.1;
+}
+.grade-tile__label {
+  font-weight: 700;
+}
+.grade-tile__sub {
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+}
+
+/* ===== Страница урока у студента: вкладки Материалы | ДЗ | Диалог ===== */
+.lesson-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--color-primary-border);
+  margin-top: var(--space-4);
+}
+.lesson-tabs__tab {
+  position: relative;
+  top: 2px;
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  border: 2px solid transparent;
+  border-bottom: none;
+  font-weight: 800;
+  font-size: var(--font-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.lesson-tabs__tab:hover {
+  color: var(--color-primary);
+}
+.lesson-tabs__tab--active {
+  background: var(--color-white);
+  border-color: var(--color-primary-border);
+}
+.lesson-tabs__count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: 11px;
+  text-align: center;
+}
+.lesson-tabs__pane {
+  background: var(--color-white);
+  border: 2px solid var(--color-primary-border);
+  border-top: none;
+  padding: var(--space-4);
+}
+.material-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.material-list__row:last-child {
+  border-bottom: none;
+}
+.material-list__title {
+  flex: 1;
+  text-align: left;
+}
+.lesson-note {
+  margin-top: var(--space-4);
+  background: var(--color-warning-bg);
+  border-left: 4px solid var(--color-warning);
+  padding: var(--space-2) var(--space-4);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.chip--red { background: var(--color-danger-bg-light); color: var(--color-danger-text); }
+.chip--amber { background: var(--color-warning-bg); color: #8a5a00; }
+.chip--green { background: var(--color-success-bg); color: var(--color-success-text); }
+.chip--grey { background: var(--color-bg-muted); color: var(--color-muted); }
+.answer-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.answer-files__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.answer-files__x {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-white);
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ===== ДЗ: флажки, режим проверки, панель справа (HomeworkTeacher.js) ===== */
+.table__col--flag {
+  width: 58px;
+  text-align: center;
+}
+.hw-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--color-white);
+  font-weight: 900;
+  font-size: 13px;
+}
+.hw-flag--green { background: var(--color-role-student); }
+.hw-flag--red { background: var(--color-danger); }
+.hw-flag--amber { background: var(--color-warning); }
+.hw-flag--grey { background: var(--color-bg-muted); color: var(--color-muted); }
+.hw-flag--btn { border: none; padding: 0; cursor: pointer; }
+.hw-flag--btn:hover { outline: 2px solid var(--color-primary-border); }
+.hw-deadline .datetime-picker__trigger { padding: 2px var(--space-2); font-size: var(--font-sm); }
+.hw-deadline--red .datetime-picker__trigger { color: var(--color-danger); border-color: var(--color-danger); }
+.btn__count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-warning);
+  color: var(--color-white);
+  font-size: 11px;
+  text-align: center;
+}
+.hw-files {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.hw-review {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hw-review__grade {
+  width: 64px;
+}
+.hw-review__grade--todo {
+  border: 2px solid var(--color-warning);
+}
+.hw-review__btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--color-primary-border);
+  background: var(--color-white);
+  font-weight: 900;
+  cursor: pointer;
+}
+.hw-review__btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.hw-review__btn--on,
+.hw-review__btn--on:disabled {
+  background: var(--color-role-student);
+  border-color: var(--color-role-student);
+  color: var(--color-white);
+  opacity: 1;
+}
+.hw-review__btn--undo {
+  border-color: var(--color-muted);
+  color: var(--color-muted);
+}
+.review-panel__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.2);
+}
+.review-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 100vw);
+  background: var(--color-white);
+  border-left: 2px solid var(--color-primary-border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+}
+.review-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.review-panel__name {
+  margin: 0;
+}
+.review-panel__meta {
+  font-size: var(--font-xs);
+}
+.review-panel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.review-panel__tab {
+  border: 1px solid var(--color-border-light);
+  background: var(--color-white);
+  padding: 3px 8px;
+  font-size: var(--font-xs);
+  cursor: pointer;
+}
+.review-panel__tab--active {
+  border-color: var(--color-primary-border);
+  background: var(--color-bg-soft);
+  font-weight: 700;
+}
+.review-panel__viewer {
+  border: 1px solid var(--color-border-light);
+  background: #fafafa;
+  min-height: 220px;
+  max-height: 45vh;
+  overflow: auto;
+}
+.review-panel__viewer img {
+  display: block;
+  max-width: 100%;
+}
+.review-panel__viewer iframe {
+  width: 100%;
+  height: 45vh;
+  border: none;
+}
+.review-panel__viewer pre {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.review-panel__viewer > p {
+  padding: var(--space-3);
+}
+.review-panel__dialog .dialog__messages {
+  max-height: 25vh;
+}
+.review-panel__nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+.my-answer {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.my-answer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }

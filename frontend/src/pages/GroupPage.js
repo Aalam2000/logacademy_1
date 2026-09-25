@@ -4,6 +4,7 @@ import Modal from '../components/Modal';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
 import Calendar from '../components/Calendar';
+import { useLang } from '../hooks/useLang';
 import { getMyGroups, getCourses } from '../api/groups';
 import {
   getGroupLessons, createLesson, generateSchedule,
@@ -28,6 +29,7 @@ function GroupPage() {
   const [createError, setCreateError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const { lang } = useLang(); // автоназвания «Урок N» — на языке интерфейса педагога
   const [isStudentsModalOpen, setIsStudentsModalOpen] = useState(false);
   const [rangeFilter, setRangeFilter] = useState('upcoming'); // upcoming | week | month | all
 
@@ -160,7 +162,7 @@ function GroupPage() {
     try {
       const payload = {
         group_id: gid,
-        title: 'Урок',
+        lang,
         date: new Date(newLessonDate).toISOString(),
       };
       const created = await createLesson(payload);
@@ -240,6 +242,7 @@ function GroupPage() {
         start_time: genStartTime,
         weekdays: genWeekdays,
         lesson_count: parseInt(genLessonCount, 10),
+        lang,
       };
       if (genFillSource) {
         payload.fill_source = genFillSource;
@@ -423,57 +426,66 @@ function GroupPage() {
         />
       ) : (
         /* Таблица уроков */
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{'Дата'}</th>
-              <th>{'Тема урока'}</th>
-              <th>{'Доступ'}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.length === 0 && (
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
               <tr>
-                <td colSpan={4} className="table__empty">
-                  {'Уроков нет'}
-                </td>
+                <th>{'Дата'}</th>
+                <th>{'Тема урока'}</th>
+                <th>{'Доступ'}</th>
+                <th></th>
               </tr>
-            )}
-            {visible.map(l => {
-              const today = isToday(l.date);
-              return (
-                <tr
-                  key={l.id}
-                  className={`table__row--clickable${today ? ' table__row--today' : ''}`}
-                  onClick={() => navigate(`/dashboard/lessons/${l.id}`)}
-                >
-                  <td>
-                    {l.date ? new Date(l.date).toLocaleDateString('ru-RU') : '—'}
-                    {today && <span className="badge badge--today badge--inline">{'Сегодня'}</span>}
-                  </td>
-                  <td>{l.title}</td>
-                  <td>
-                    <span className={`badge ${l.is_open ? 'badge--open' : 'badge--closed'}`}>
-                      {l.is_open ? 'Открыт' : 'Закрыт'}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn--sm"
-                      title={'Отметить праздником — сдвинуть эту и следующие даты'}
-                      onClick={(e) => { e.stopPropagation(); handleMarkHoliday(l); }}
-                      disabled={markingHolidayId === l.id}
-                    >
-                      {'🎉'}
-                    </button>
+            </thead>
+            <tbody>
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="table__empty">
+                    {'Уроков нет'}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+              {visible.map(l => {
+                const today = isToday(l.date);
+                return (
+                  <tr
+                    key={l.id}
+                    className={`table__row--clickable${today ? ' table__row--today' : ''}${l.has_unreviewed_homework ? ' table__row--homework-pending' : ''}`}
+                    onClick={() => navigate(`/dashboard/lessons/${l.id}`)}
+                  >
+                    <td>
+                      {l.date ? new Date(l.date).toLocaleDateString('ru-RU') : '—'}
+                      {today && <span className="badge badge--today badge--inline">{'Сегодня'}</span>}
+                    </td>
+                    <td>
+                      {l.title}
+                      {l.has_unreviewed_homework && (
+                        <span className="badge badge--homework-pending badge--inline" data-tip={'Есть непроверенные решения ДЗ'}>
+                          {'ДЗ: проверить'}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge ${l.is_open ? 'badge--open' : 'badge--closed'}`}>
+                        {l.is_open ? 'Открыт' : 'Закрыт'}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn--sm"
+                        data-tip={'Отметить праздником — сдвинуть эту и следующие даты'}
+                        onClick={(e) => { e.stopPropagation(); handleMarkHoliday(l); }}
+                        disabled={markingHolidayId === l.id}
+                      >
+                        {'🎉'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Модалка создания урока */}
@@ -694,7 +706,11 @@ function GroupPage() {
       )}
 
       {isQRModalOpen && (
-        <QRModal group={group} onClose={() => setIsQRModalOpen(false)} />
+        <QRModal
+          group={group}
+          onClose={() => setIsQRModalOpen(false)}
+          onAdded={() => setGroups(gs => gs.map(g => (g.id === gid ? { ...g, student_count: (g.student_count || 0) + 1 } : g)))}
+        />
       )}
 
       {isStudentsModalOpen && (

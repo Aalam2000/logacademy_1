@@ -8,7 +8,11 @@ from zoneinfo import ZoneInfo
 from typing import Optional
 from pydantic import BaseModel, Field
 from ..database import get_db
-from ..models import Lesson, Group, GroupMember, User, LessonMark, LessonResource, Material, Link, Quiz
+from .. import storage
+from ..models import (
+    Lesson, Group, GroupMember, User, LessonMark, LessonResource, Material, Link, Quiz,
+    HomeworkTask, HomeworkAnswer, HomeworkAnswerFile, LessonMessage,
+)
 from ..dependencies import require_teacher, get_current_user
 from ..resources import RESOURCE_MODELS, RESOURCE_NOT_FOUND, fetch_resource_details, resource_exists
 
@@ -19,9 +23,30 @@ ALLOWED_ATTENDANCE_STATUSES = {"in_person", "online", "excused", "absent"}
 
 
 # Схемы прямо здесь — потом перенесём в schemas.py
+# Слово «Урок» для автоназваний на языке интерфейса педагога. Берём готовый
+# перевод из реестра autoi18n (translations/{lang}.json, ключ — sha1 исходной
+# строки); перевода нет — остаётся «Урок».
+LESSON_WORD = "Урок"
+
+
+def lesson_word(lang: Optional[str]) -> str:
+    import hashlib
+    import json
+    import os
+    from .i18n import translator
+    if not lang or lang == translator.source_lang:
+        return LESSON_WORD
+    try:
+        with open(os.path.join(translator.cache_dir, f"{os.path.basename(lang)}.json"), encoding="utf-8") as f:
+            return json.load(f).get(hashlib.sha1(LESSON_WORD.encode("utf-8")).hexdigest()) or LESSON_WORD
+    except (OSError, ValueError):
+        return LESSON_WORD
+
+
 class LessonCreate(BaseModel):
     group_id: int
-    title: str
+    title: Optional[str] = None  # не задано — «Урок» на языке интерфейса педагога (lang)
+    lang: Optional[str] = None
     order: int = 0
     date: Optional[datetime] = None
     source: Optional[str] = "teacher"  # academy | teacher
@@ -42,6 +67,11 @@ class LessonOut(BaseModel):
     source: Optional[str]
     comment: Optional[str] = None
     created_at: datetime
+    # Есть ответы на ДЗ без оценки — подсветка урока в списке и календаре
+    has_unreviewed_homework: bool = False
+    # Только для /lessons/student: что у студента в уроке не закрыто
+    hw_todo: Optional[str] = None  # pending — сдать ДЗ | returned — вернули на доработку
+    new_messages: int = 0          # новые реплики педагога в диалоге
 
     class Config:
         from_attributes = True
@@ -94,9 +124,12 @@ class MyPerformanceRowOut(BaseModel):
     score: Optional[int]
     exam_score: Optional[int]
     comment: Optional[str]
+    hw_grades: list[int] = []      # оценки за ДЗ этого урока (заданий может быть несколько)
+    status_label: str = "—"        # посещаемость текстом: «Пришёл», «Онлайн», «Пропуск»…
 
 
 class LessonItemOut(BaseModel):
+    id: int  # lesson_resources.id
     resource_type: str  # material | quiz | link
     resource_id: int
     title: str
@@ -125,6 +158,7 @@ class ScheduleGenerate(BaseModel):
     lesson_count: int = Field(ge=1, le=200)
     fill_source: Optional[str] = None  # "template" | "group"
     fill_group_id: Optional[int] = None  # обязателен при fill_source == "group"
+    lang: Optional[str] = None  # язык интерфейса педагога — на нём названия «Урок N»
 
 
 # Дозаполнение/обновление материалов уже существующих уроков по шаблону
@@ -317,6 +351,83 @@ async def get_lesson_for_student(
     return lesson
 
 
+# ---------- ДЗ: общее для уроков (сами эндпойнты ДЗ — routers/homework.py) ----------
+
+def _safe_delete_object(object_key: str) -> None:
+    try:
+        storage.delete_object(object_key)
+    except Exception:
+        pass
+
+
+def answer_is_submitted():
+    """Ответ «пришёл», если в нём есть хотя бы один файл."""
+    return select(HomeworkAnswerFile.id).where(HomeworkAnswerFile.answer_id == HomeworkAnswer.id).exists()
+
+
+async def delete_homework_tasks(db: AsyncSession, task_ids: list[int]) -> None:
+    """Задания + их персональные файлы (если больше нигде не используются).
+    Ответы студентов привязаны к уроку, а не к заданию, — их не трогаем."""
+    if not task_ids:
+        return
+    material_ids = {r[0] for r in (await db.execute(
+        select(HomeworkTask.material_id).where(HomeworkTask.id.in_(task_ids))
+    )).all()}
+    await db.execute(delete(HomeworkTask).where(HomeworkTask.id.in_(task_ids)))
+    for m in (await db.execute(
+        select(Material).where(Material.id.in_(material_ids), Material.is_personal == True)
+    )).scalars().all():
+        still_used = (await db.execute(
+            select(HomeworkTask.id).where(HomeworkTask.material_id == m.id).limit(1)
+        )).first()
+        if not still_used:
+            _safe_delete_object(m.object_key)
+            await db.delete(m)
+
+
+async def delete_lessons_homework(db: AsyncSession, lesson_ids: list[int]) -> None:
+    """Вызывать перед удалением уроков: задания, ответы студентов (+ файлы
+    в MinIO) и диалоги в строках студентов."""
+    if not lesson_ids:
+        return
+    answer_ids = [r[0] for r in (await db.execute(
+        select(HomeworkAnswer.id).where(HomeworkAnswer.lesson_id.in_(lesson_ids))
+    )).all()]
+    if answer_ids:
+        for (key,) in (await db.execute(
+            select(HomeworkAnswerFile.object_key).where(HomeworkAnswerFile.answer_id.in_(answer_ids))
+        )).all():
+            _safe_delete_object(key)
+        await db.execute(delete(HomeworkAnswerFile).where(HomeworkAnswerFile.answer_id.in_(answer_ids)))
+        await db.execute(delete(HomeworkAnswer).where(HomeworkAnswer.id.in_(answer_ids)))
+    task_ids = [r[0] for r in (await db.execute(
+        select(HomeworkTask.id).where(HomeworkTask.lesson_id.in_(lesson_ids))
+    )).all()]
+    await delete_homework_tasks(db, task_ids)
+    await db.execute(delete(LessonMessage).where(LessonMessage.lesson_id.in_(lesson_ids)))
+
+
+async def with_unreviewed_flag(db: AsyncSession, lessons: list[Lesson]) -> list[LessonOut]:
+    out = [LessonOut.model_validate(l) for l in lessons]
+    if not out:
+        return out
+    rows = await db.execute(
+        select(HomeworkAnswer.lesson_id)
+        .where(
+            HomeworkAnswer.lesson_id.in_([l.id for l in out]),
+            HomeworkAnswer.grade.is_(None),
+            HomeworkAnswer.accepted == False,
+            HomeworkAnswer.reviewed_at.is_(None),  # не «вернули на доработку»
+            answer_is_submitted(),
+        )
+        .distinct()
+    )
+    flagged = {row[0] for row in rows.all()}
+    for item in out:
+        item.has_unreviewed_homework = item.id in flagged
+    return out
+
+
 # Уроки группы
 @router.get("/group/{group_id}", response_model=list[LessonOut])
 async def get_group_lessons(
@@ -336,7 +447,7 @@ async def get_group_lessons(
     result = await db.execute(
         select(Lesson).where(Lesson.group_id == group_id).order_by(Lesson.order)
     )
-    return result.scalars().all()
+    return await with_unreviewed_flag(db, result.scalars().all())
 
 
 # Создать урок
@@ -356,7 +467,7 @@ async def create_lesson(
 
     lesson = Lesson(
         group_id=data.group_id,
-        title=data.title,
+        title=(data.title or "").strip() or lesson_word(data.lang),
         order=data.order,
         date=data.date,
         source=data.source,
@@ -423,10 +534,11 @@ async def generate_schedule(
         raise HTTPException(status_code=422, detail="Не удалось подобрать достаточно дат — проверьте дни недели и период")
 
     lessons_by_order: dict[int, Lesson] = {}
+    word = lesson_word(data.lang)
     for i, lesson_date in enumerate(dates, start=1):
         lesson = Lesson(
             group_id=data.group_id,
-            title=f"Урок {i}",
+            title=f"{word} {i}",
             order=i,
             date=lesson_date,
             source="academy",
@@ -534,6 +646,7 @@ async def delete_group_lessons(
     lesson_ids_result = await db.execute(select(Lesson.id).where(Lesson.group_id == group_id))
     lesson_ids = [row[0] for row in lesson_ids_result.all()]
     if lesson_ids:
+        await delete_lessons_homework(db, lesson_ids)
         await db.execute(delete(LessonMark).where(LessonMark.lesson_id.in_(lesson_ids)))
         await db.execute(delete(LessonResource).where(LessonResource.lesson_id.in_(lesson_ids)))
         await db.execute(delete(Lesson).where(Lesson.group_id == group_id))
@@ -569,15 +682,18 @@ async def get_my_lessons(
         .where(Lesson.group_id.in_(group_ids))
         .order_by(Lesson.date)
     )
-    return result.scalars().all()
+    return await with_unreviewed_flag(db, result.scalars().all())
 
 
 # Уроки студента — только открытые
 # ВАЖНО: должен идти раньше маршрутов с /{lesson_id} ниже — иначе FastAPI
 # сопоставляет "/lessons/student" с /{lesson_id} (lesson_id="student"),
 # который требует роль teacher/admin, и студент получает 403.
+# include_closed=1 — ещё и закрытые педагогом уроки (только дата/тема — для
+# календаря студента; открыть закрытый урок студент по-прежнему не может)
 @router.get("/student", response_model=list[LessonOut])
 async def get_student_lessons(
+    include_closed: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -593,10 +709,15 @@ async def get_student_lessons(
         return []
     result = await db.execute(
         select(Lesson)
-        .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True)
+        .where(Lesson.group_id.in_(group_ids), *([] if include_closed else [Lesson.is_open == True]))
         .order_by(Lesson.date.desc())
     )
-    return result.scalars().all()
+    from .homework import student_open_items  # homework.py сам импортирует lessons.py
+    out = [LessonOut.model_validate(l) for l in result.scalars().all()]
+    flags = await student_open_items(db, [l.id for l in out], current_user.id)
+    for item in out:
+        item.hw_todo, item.new_messages = flags.get(item.id, (None, 0))
+    return out
 
 
 # Успеваемость студента: оценки/экзамены/комменты и посещаемость по всем
@@ -631,6 +752,20 @@ async def get_student_marks(
         .order_by(Lesson.date.desc())
     )
 
+    rows = rows.all()
+    hw_by_lesson: dict[int, list[int]] = {}
+    lesson_ids = [lesson.id for lesson, _ in rows]
+    if lesson_ids:
+        for lesson_id, grade in (await db.execute(
+            select(HomeworkAnswer.lesson_id, HomeworkAnswer.grade)
+            .where(
+                HomeworkAnswer.lesson_id.in_(lesson_ids),
+                HomeworkAnswer.student_id == current_user.id,
+                HomeworkAnswer.grade.isnot(None),
+            )
+        )).all():
+            hw_by_lesson.setdefault(lesson_id, []).append(grade)
+
     return [
         MyPerformanceRowOut(
             lesson_id=lesson.id,
@@ -641,9 +776,90 @@ async def get_student_marks(
             score=mark.score if mark else None,
             exam_score=mark.exam_score if mark else None,
             comment=mark.comment if mark else None,
+            hw_grades=hw_by_lesson.get(lesson.id, []),
+            status_label=_STATUS_LABELS.get(mark.attendance_status, "—") if mark else "—",
         )
-        for lesson, mark in rows.all()
+        for lesson, mark in rows
     ]
+
+
+class GradeItemOut(BaseModel):
+    date: Optional[datetime] = None
+    lesson_title: str
+    title: Optional[str] = None   # для ДЗ — название задания
+    grade: int
+
+
+class GradeGroupOut(BaseModel):
+    avg: Optional[float] = None
+    max: Optional[int] = None
+    items: list[GradeItemOut] = []
+
+
+class MyGradesOut(BaseModel):
+    lesson: GradeGroupOut     # оценка за урок
+    homework: GradeGroupOut   # оценка за ДЗ
+    exam: GradeGroupOut       # экзаменационная
+
+
+def _grade_group(items: list[GradeItemOut]) -> GradeGroupOut:
+    grades = [i.grade for i in items]
+    return GradeGroupOut(
+        avg=round(sum(grades) / len(grades), 1) if grades else None,
+        max=max(grades) if grades else None,
+        items=items,
+    )
+
+
+# Три вида оценок студента (за урок / за ДЗ / экзаменационная) — каждая со
+# своей средней и списком «дата — оценка». Открытые уроки активных групп,
+# как и /student/marks. ДОЛЖЕН идти раньше маршрутов с /{lesson_id}.
+@router.get("/student/grades", response_model=MyGradesOut)
+async def get_student_grades(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+
+    group_ids = [r[0] for r in (await db.execute(
+        select(GroupMember.group_id).where(
+            GroupMember.student_id == current_user.id, GroupMember.status == "active",
+        )
+    )).all()]
+    lesson_items: list[GradeItemOut] = []
+    exam_items: list[GradeItemOut] = []
+    hw_items: list[GradeItemOut] = []
+    if group_ids:
+        for lesson, mark in (await db.execute(
+            select(Lesson, LessonMark)
+            .join(LessonMark, (LessonMark.lesson_id == Lesson.id) & (LessonMark.student_id == current_user.id))
+            .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True)
+            .order_by(Lesson.date.desc())
+        )).all():
+            if mark.score is not None:
+                lesson_items.append(GradeItemOut(date=lesson.date, lesson_title=lesson.title, grade=mark.score))
+            if mark.exam_score is not None:
+                exam_items.append(GradeItemOut(date=lesson.date, lesson_title=lesson.title, grade=mark.exam_score))
+
+        for lesson, answer in (await db.execute(
+            select(Lesson, HomeworkAnswer)
+            .join(HomeworkAnswer, HomeworkAnswer.lesson_id == Lesson.id)
+            .where(
+                Lesson.group_id.in_(group_ids), Lesson.is_open == True,
+                HomeworkAnswer.student_id == current_user.id, HomeworkAnswer.grade.isnot(None),
+            )
+            .order_by(Lesson.date.desc())
+        )).all():
+            hw_items.append(GradeItemOut(
+                date=answer.reviewed_at or lesson.date, lesson_title=lesson.title, grade=answer.grade,
+            ))
+
+    return MyGradesOut(
+        lesson=_grade_group(lesson_items),
+        homework=_grade_group(hw_items),
+        exam=_grade_group(exam_items),
+    )
 
 
 # Открыть / закрыть доступ к уроку
@@ -903,6 +1119,7 @@ async def get_lesson_items(
             continue  # ресурс удалён из библиотеки, привязка осиротела
 
         items.append(LessonItemOut(
+            id=attachment.id,
             resource_type=detail["resource_type"],
             resource_id=detail["id"],
             title=detail["title"],
@@ -1029,6 +1246,9 @@ async def delete_lesson(
     # урока с уже проставленными оценками или привязанными материалами
     # падало на ограничении внешнего ключа. Сами материалы/квизы/ссылки
     # в «Базе знаний» не трогаем — удаляем только привязки этого урока.
+    # ДЗ урока (задания, ответы, их файлы в MinIO) и диалоги — тоже данные
+    # внутри урока, удаляются вместе с ним.
+    await delete_lessons_homework(db, [lesson_id])
     await db.execute(delete(LessonMark).where(LessonMark.lesson_id == lesson_id))
     await db.execute(delete(LessonResource).where(LessonResource.lesson_id == lesson_id))
 

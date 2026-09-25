@@ -6,13 +6,20 @@ import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
 import Calendar, { GROUP_COLORS } from '../components/Calendar';
 import { getMyLessons } from '../api/lessons';
+import IconButton from '../components/IconButton';
 
 function GroupsPage() {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
 
-  const [groups, setGroups] = useState([]);
+  const [allMyGroups, setGroups] = useState([]);
+  // Группы в архиве показываются только по кнопке «Архив»
+  const [showArchived, setShowArchived] = useState(false);
+  const groups = useMemo(
+    () => allMyGroups.filter(g => (g.status === 'archived') === showArchived),
+    [allMyGroups, showArchived],
+  );
   const [courses, setCourses] = useState([]);
   const [allGroups, setAllGroups] = useState([]); // только у admin — для списка «Препод»
   const [lessons, setLessons] = useState([]); // для календаря — уроки всех видимых групп
@@ -82,7 +89,7 @@ function GroupsPage() {
   // Для календаря — имя группы у каждого урока (сама LessonOut его не
   // содержит), и, если видно несколько преподавателей сразу, добавляем
   // имя препода — иначе на агрегированном календаре не различить, чей урок.
-  const calendarLessons = lessons.map(l => {
+  const calendarLessons = lessons.filter(l => groups.some(g => g.id === l.group_id)).map(l => {
     const g = groups.find(x => x.id === l.group_id);
     const groupName = g?.name || `#${l.group_id}`;
     const showTeacher = isAdmin && !mine && !teacherId;
@@ -122,7 +129,15 @@ function GroupsPage() {
   return (
     <div className="page">
       <div className="toolbar">
-        <h2 className="toolbar__title">{isAdmin ? 'Группы' : 'Мои группы'}</h2>
+        <h2 className="toolbar__title">
+          {showArchived ? 'Архив групп' : (isAdmin ? 'Группы' : 'Мои группы')}
+        </h2>
+        <IconButton
+          icon="archive"
+          tip={showArchived ? 'Вернуться к активным группам' : 'Показать архив'}
+          active={showArchived}
+          onClick={() => setShowArchived(v => !v)}
+        />
       </div>
 
       {isAdmin && (
@@ -184,41 +199,43 @@ function GroupsPage() {
           </div>
         </>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{'Название группы'}</th>
-              <th>{'Курс'}</th>
-              {isAdmin && !mine && !teacherId && <th>{'Учитель'}</th>}
-              <th>{'Учеников'}</th>
-              <th>{'Контакты'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.length === 0 && (
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
               <tr>
-                <td colSpan={isAdmin && !mine && !teacherId ? 5 : 4} className="table__empty">
-                  {'Групп пока нет'}
-                </td>
+                <th>{'Название группы'}</th>
+                <th>{'Курс'}</th>
+                {isAdmin && !mine && !teacherId && <th>{'Учитель'}</th>}
+                <th>{'Учеников'}</th>
+                <th>{'Контакты'}</th>
               </tr>
-            )}
-            {groups.map(g => (
-              <tr
-                key={g.id}
-                className="table__row--clickable"
-                onClick={() => navigate(`/dashboard/groups/${g.id}`)}
-              >
-                <td>{g.name}</td>
-                <td>{courseName(g.course_id)}</td>
-                {isAdmin && !mine && !teacherId && <td>{g.teacher_name || `#${g.teacher_id}`}</td>}
-                <td>{g.student_count ?? 0}</td>
-                <td>
-                  <StudentContactIcons telegram={g.telegram_chat_id} whatsapp={g.whatsapp} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {groups.length === 0 && (
+                <tr>
+                  <td colSpan={isAdmin && !mine && !teacherId ? 5 : 4} className="table__empty">
+                    {showArchived ? 'Архив пуст' : 'Групп пока нет'}
+                  </td>
+                </tr>
+              )}
+              {groups.map(g => (
+                <tr
+                  key={g.id}
+                  className="table__row--clickable"
+                  onClick={() => navigate(`/dashboard/groups/${g.id}`)}
+                >
+                  <td>{g.name}</td>
+                  <td>{courseName(g.course_id)}</td>
+                  {isAdmin && !mine && !teacherId && <td>{g.teacher_name || `#${g.teacher_id}`}</td>}
+                  <td>{g.student_count ?? 0}</td>
+                  <td>
+                    <StudentContactIcons telegram={g.telegram_chat_id} whatsapp={g.whatsapp} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

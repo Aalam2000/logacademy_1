@@ -120,3 +120,16 @@
   background: var(--la-event-color, var(--color-primary));
   flex-shrink: 0;
 }
+
+/* Урок с непроверенными решениями ДЗ */
+.la-calendar .rbc-event.la-calendar__event--homework {
+  outline: 2px solid var(--color-warning);
+  outline-offset: 1px;
+  font-weight: 600;
+}
+
+/* Урок закрыт педагогом — виден в календаре студента, но не открывается */
+.la-calendar .rbc-event.la-calendar__event--disabled {
+  opacity: 0.45;
+  cursor: default;
+}

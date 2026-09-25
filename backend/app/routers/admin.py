@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 from ..database import get_db
 from ..models import User, Course, Group, GroupMember, Lesson, LessonMark
+from ..usages import ensure_not_used
 from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
@@ -86,10 +87,9 @@ async def delete_teacher(user_id: int, db: AsyncSession = Depends(get_db), admin
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Педагог не найден")
-    # Проверяем — есть ли группы у этого педагога
-    groups = await db.execute(select(Group).where(Group.teacher_id == user_id))
-    if groups.scalars().first():
-        raise HTTPException(status_code=400, detail="Нельзя удалить — у педагога есть группы")
+    # Используется где-либо (группы, в т.ч. архивные; материалы, оценки…) —
+    # 409 со списком мест, см. app/usages.py
+    await ensure_not_used(db, "user", user_id)
     await db.delete(user)
     await db.commit()
     return {"detail": "Удалён"}
@@ -231,6 +231,9 @@ async def delete_admin(user_id: int, db: AsyncSession = Depends(get_db), admin: 
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Админ не найден")
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Нельзя удалить самого себя")
+    await ensure_not_used(db, "user", user_id)
     await db.delete(user)
     await db.commit()
     return {"detail": "Удалён"}
@@ -273,10 +276,9 @@ async def delete_course(course_id: int, db: AsyncSession = Depends(get_db), admi
     course = result.scalar_one_or_none()
     if not course:
         raise HTTPException(status_code=404, detail="Курс не найден")
-    # Проверяем — есть ли группы с этим курсом
-    groups = await db.execute(select(Group).where(Group.course_id == course_id))
-    if groups.scalars().first():
-        raise HTTPException(status_code=400, detail="Нельзя удалить — курс используется в группах")
+    # Используется где-либо (группы, в т.ч. архивные; шаблонные материалы) —
+    # 409 со списком мест, см. app/usages.py
+    await ensure_not_used(db, "course", course_id)
     await db.delete(course)
     await db.commit()
     return {"detail": "Удалён"}
@@ -373,12 +375,37 @@ async def update_group(
     await db.refresh(group)
     return group
 
+# Архив группы: активную группу нельзя удалить — только отправить в архив.
+# Группа в архиве видна только по кнопке «Архив» (фильтр на фронте по status).
+async def _set_group_status(db: AsyncSession, group_id: int, status: str) -> Group:
+    result = await db.execute(select(Group).where(Group.id == group_id))
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Группа не найдена")
+    group.status = status
+    await db.commit()
+    await db.refresh(group)
+    return group
+
+
+@router.post("/groups/{group_id}/archive", response_model=GroupOut)
+async def archive_group(group_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
+    return await _set_group_status(db, group_id, "archived")
+
+
+@router.post("/groups/{group_id}/restore", response_model=GroupOut)
+async def restore_group(group_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
+    return await _set_group_status(db, group_id, "active")
+
+
 @router.delete("/groups/{group_id}")
 async def delete_group(group_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
     result = await db.execute(select(Group).where(Group.id == group_id))
     group = result.scalar_one_or_none()
     if not group:
         raise HTTPException(status_code=404, detail="Группа не найдена")
+    if group.status != "archived":
+        raise HTTPException(status_code=400, detail="Активную группу удалить нельзя — сначала отправьте её в архив")
     # Проверяем студентов
     members = await db.execute(select(GroupMember).where(GroupMember.group_id == group_id))
     if members.scalars().first():

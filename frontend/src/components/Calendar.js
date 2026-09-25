@@ -66,7 +66,12 @@ export const GROUP_COLORS = ['#EC3013', '#2E5FA3', '#3B6D11', '#C026D3', '#0891B
 
 // lessons: [{id, group_id, group_name?, title, date}]
 // getEventColor(lesson) => css-цвет; не задан — все события фирменным красным.
-function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month' }) {
+// highlight(lesson) => значок-префикс ('' — не подсвечивать). По умолчанию —
+// урок педагога с непроверенными ДЗ; у студента своё (StudentHome.js).
+const TEACHER_HIGHLIGHT = (l) => (l.has_unreviewed_homework ? '📥 ' : '');
+
+// isDisabled(lesson) — урок показан, но не открывается (у студента: закрыт педагогом)
+function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month', highlight = TEACHER_HIGHLIGHT, isDisabled }) {
   const { lang } = useLang();
   const momentLocale = MOMENT_LOCALE_BY_LANG[lang] || 'ru';
 
@@ -80,12 +85,12 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
       const start = new Date(l.date);
       return {
         id: l.id,
-        title: l.group_name ? `${l.group_name}: ${l.title}` : l.title,
+        title: `${highlight(l)}${l.group_name ? `${l.group_name}: ${l.title}` : l.title}`,
         start,
         end: start,
         resource: l,
       };
-    }), [lessons]);
+    }), [lessons, highlight]);
 
   return (
     <div className="la-calendar">
@@ -98,10 +103,14 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
         culture={momentLocale}
         popup
         eventPropGetter={(event) => ({
-          className: 'la-calendar__event',
+          // Урок с непроверенными решениями ДЗ — подсвечиваем
+          className: `la-calendar__event${highlight(event.resource) ? ' la-calendar__event--homework' : ''}${isDisabled && isDisabled(event.resource) ? ' la-calendar__event--disabled' : ''}`,
           style: { '--la-event-color': getEventColor ? getEventColor(event.resource) : 'var(--color-primary)' },
         })}
-        onSelectEvent={(event) => onSelectLesson && onSelectLesson(event.resource)}
+        onSelectEvent={(event) => {
+          if (isDisabled && isDisabled(event.resource)) return;
+          if (onSelectLesson) onSelectLesson(event.resource);
+        }}
       />
     </div>
   );

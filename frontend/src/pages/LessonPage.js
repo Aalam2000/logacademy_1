@@ -8,6 +8,14 @@ import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } fro
 import { extractErrorMessage } from '../utils/errors';
 import { StudentContactIcons } from '../components/ContactIcons';
 import { subscribeLessonMarksUpdated } from '../utils/lessonMarksChannel';
+import { HomeworkAddModal, HomeworkFlags, HomeworkCheckView, personalOrCommonDeadline } from '../components/HomeworkTeacher';
+import { DialogCell } from '../components/LessonDialog';
+import { getHomeworkBoard } from '../api/homework';
+import { uploadMaterial } from '../api/materials';
+
+// 409 от бэкенда при контроле дублей: code=same_name — спросить и
+// повторить с подтверждением; code=duplicate — вернуть existing_id.
+const conflictOf = (err) => (err?.response?.status === 409 ? err.response.data : null);
 
 // Кружки посещаемости вместо select'а. Пришёл/Онлайн/Уважительная —
 // взаимоисключающие («ИЛИ», attendance_status), «Опоздал» — независимый
@@ -62,6 +70,15 @@ function LessonPage() {
   const [linkTitle, setLinkTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
+
+  // ДЗ: загрузка файла сразу как ДЗ (+ «Кому») и список студентов для «Кому»
+  // ДЗ (схема v2): задания урока + по каждому студенту статусы/оценки и диалог
+  const [hwBoard, setHwBoard] = useState({ tasks: [], students: [], to_review: 0 });
+  const [hwAddOpen, setHwAddOpen] = useState(false);
+  const [hwAddFor, setHwAddFor] = useState(null); // строка студента — персональный файл в ДЗ
+  // «Проверить ДЗ»: таблица перестраивается под приём и оценку ДЗ
+  const [hwCheckMode, setHwCheckMode] = useState(false);
+  const [itemsNotice, setItemsNotice] = useState('');
 
   useEffect(() => {
     marksRowsRef.current = marksRows;
@@ -122,7 +139,10 @@ function LessonPage() {
     setMarksLoading(true);
     setMarksError('');
     try {
-      const res = await api.get(`/lessons/${lessonId}/marks`);
+      const [res] = await Promise.all([
+        api.get(`/lessons/${lessonId}/marks`),
+        loadHomework(),
+      ]);
       setMarksLocked(res.data.locked);
       setMarksRows(res.data.students.map(s => ({
         student_id: s.student_id,
@@ -141,6 +161,15 @@ function LessonPage() {
       setMarksError(extractErrorMessage(err, 'Не удалось загрузить студентов'));
     } finally {
       setMarksLoading(false);
+    }
+  };
+
+  // Тихо (без «Загрузка...»): вызывается и после каждой правки ДЗ/диалога
+  const loadHomework = async () => {
+    try {
+      setHwBoard(await getHomeworkBoard(lessonId));
+    } catch (err) {
+      setMarksError(extractErrorMessage(err, 'Не удалось загрузить домашние задания'));
     }
   };
 
@@ -231,21 +260,32 @@ function LessonPage() {
 
     setIsUploadingMaterial(true);
     setItemsError('');
+    setItemsNotice('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const uploadRes = await api.post('/materials/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      if (materialInputRef.current) materialInputRef.current.value = '';
+      let materialId;
+      try {
+        materialId = (await uploadMaterial(file)).id;
+      } catch (err) {
+        const c = conflictOf(err);
+        if (c?.code === 'duplicate') {
+          // Такой файл уже есть в БЗ — привязываем существующий, копию не создаём
+          materialId = c.existing_id;
+          setItemsNotice(`${c.detail} — привязан существующий`);
+        } else if (c?.code === 'same_name' && window.confirm(c.detail)) {
+          materialId = (await uploadMaterial(file, undefined, true)).id;
+        } else {
+          throw err;
+        }
+      }
       await api.post(`/lessons/${lessonId}/items`, {
         resource_type: 'material',
-        resource_id: uploadRes.data.id,
+        resource_id: materialId,
       });
       await loadItems();
     } catch (err) {
       setItemsError(extractErrorMessage(err, 'Не удалось загрузить файл'));
     } finally {
+      if (materialInputRef.current) materialInputRef.current.value = '';
       setIsUploadingMaterial(false);
     }
   };
@@ -256,11 +296,21 @@ function LessonPage() {
 
     setIsAddingLink(true);
     setItemsError('');
+    setItemsNotice('');
     try {
-      const res = await api.post('/links/', { title: linkTitle.trim(), url: linkUrl.trim() });
+      let linkId;
+      try {
+        linkId = (await api.post('/links/', { title: linkTitle.trim(), url: linkUrl.trim() })).data.id;
+      } catch (err) {
+        const c = conflictOf(err);
+        if (c?.code !== 'duplicate') throw err;
+        // Такая ссылка уже есть в БЗ — привязываем существующую
+        linkId = c.existing_id;
+        setItemsNotice(`${c.detail} — привязана существующая`);
+      }
       await api.post(`/lessons/${lessonId}/items`, {
         resource_type: 'link',
-        resource_id: res.data.id,
+        resource_id: linkId,
       });
       setLinkTitle('');
       setLinkUrl('');
@@ -314,10 +364,6 @@ function LessonPage() {
     if (!current) return;
     const newValue = current.stars === value ? 0 : value;
     handleImmediateChange(studentId, 'stars', newValue);
-  };
-
-  const handleBlurSave = (studentId) => {
-    saveRow(studentId);
   };
 
   // Клик по кружку Пришёл/Онлайн/Уважительная — как и звёзды, сохраняется
@@ -465,12 +511,12 @@ function LessonPage() {
   };
 
   if (loading) {
-    return <div className="page page--md">{'Загрузка...'}</div>;
+    return <div className="page">{'Загрузка...'}</div>;
   }
 
   if (!lesson) {
     return (
-      <div className="page page--md">
+      <div className="page">
         {error || 'Урок не найден'}
       </div>
     );
@@ -479,7 +525,7 @@ function LessonPage() {
   const groupName = groups.find(g => g.id === lesson.group_id)?.name || `#${lesson.group_id}`;
 
   return (
-    <div className="page page--md">
+    <div className="page">
       <div className="toolbar">
         <div className="lesson-toolbar__info">
           <button className="btn btn--outline" onClick={() => navigate(`/dashboard/groups/${lesson.group_id}`)}>
@@ -505,7 +551,7 @@ function LessonPage() {
             className="btn btn--sm btn--outline"
             onClick={handleDelete}
             disabled={isDeleting}
-            title="Удалить урок"
+            data-tip="Удалить урок"
           >
             <TrashIcon size={16} />
           </button>
@@ -599,11 +645,14 @@ function LessonPage() {
 
           {itemsLoading && <p className="text-muted">{'Загрузка...'}</p>}
           {itemsError && <div className="error-text error-text--muted">{itemsError}</div>}
+          {itemsNotice && <p className="text-muted">{itemsNotice}</p>}
 
           {!itemsLoading && itemsLoaded && (
             <>
-              <div>
-                <table className="table table--fixed">
+              {/* Ширина по содержимому, прокрутка — только у таблицы и только
+                  когда места действительно не хватает */}
+              <div className="table-scroll">
+                <table className="table">
                   <thead>
                     <tr>
                       <th>{'Тип'}</th>
@@ -635,13 +684,13 @@ function LessonPage() {
                             </td>
                             <td>
                               {item.resource_type === 'material' && (
-                                <span className="table__cell--clip">{formatSize(item.size_bytes || 0)}</span>
+                                <span className="nowrap">{formatSize(item.size_bytes || 0)}</span>
                               )}
                               {item.resource_type === 'quiz' && (
-                                <span className="table__cell--clip" title={item.topic || ''}>{item.topic || '—'}</span>
+                                <span className="table__cell--truncate" data-tip={item.topic || ''}>{item.topic || '—'}</span>
                               )}
                               {item.resource_type === 'link' && (
-                                <span className="table__cell--clip" title={item.url}>{item.url}</span>
+                                <span className="table__cell--truncate" data-tip={item.url}>{item.url}</span>
                               )}
                             </td>
                             <td>{item.added_by_name || '—'}</td>
@@ -665,6 +714,7 @@ function LessonPage() {
               </div>
             </>
           )}
+
         </>
       )}
 
@@ -683,14 +733,54 @@ function LessonPage() {
 
               {marksRows.length > 0 && (
                 <div className="button-row">
-                  <button type="button" className="btn btn--outline" onClick={handleMarkAllPresent} disabled={isSavingAll || marksLocked}>
-                    {'Все пришли'}
+                  {!hwCheckMode && (
+                    <button type="button" className="btn btn--outline" onClick={handleMarkAllPresent} disabled={isSavingAll || marksLocked}>
+                      {'Все пришли'}
+                    </button>
+                  )}
+                  <button type="button" className="btn btn--outline" onClick={() => setHwAddOpen(true)} data-tip="Добавить домашнее задание ВСЕМ">
+                    {'+ ДЗ всем'}
                   </button>
+                  {hwCheckMode ? (
+                    <button type="button" className="btn" onClick={() => setHwCheckMode(false)}>
+                      {'← Обычный вид'}
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn--outline" onClick={() => setHwCheckMode(true)} data-tip="Принять и оценить домашние задания">
+                      {'Проверить ДЗ'}
+                      {hwBoard.to_review > 0 && <span className="btn__count">{hwBoard.to_review}</span>}
+                    </button>
+                  )}
                 </div>
               )}
 
-              <div>
-                <table className="table table--fixed">
+              {hwCheckMode && (
+                <HomeworkCheckView lessonId={lessonId} board={hwBoard} onChanged={loadHomework} onError={setMarksError} />
+              )}
+
+              {hwAddOpen && (
+                <HomeworkAddModal
+                  lessonId={lessonId}
+                  student={null}
+                  deadline={hwBoard.tasks.find(t => !t.student_id && t.deadline)?.deadline || null}
+                  onChanged={loadHomework}
+                  onClose={() => setHwAddOpen(false)}
+                />
+              )}
+
+              {hwAddFor && (
+                <HomeworkAddModal
+                  lessonId={lessonId}
+                  student={hwAddFor}
+                  deadline={personalOrCommonDeadline(hwBoard, hwAddFor.student_id)}
+                  onChanged={loadHomework}
+                  onClose={() => setHwAddFor(null)}
+                />
+              )}
+
+              {!hwCheckMode && (
+              <div className="table-scroll">
+                <table className="table table--fixed table--marks">
                   <thead>
                     <tr>
                       <th>{'Имя'}</th>
@@ -698,16 +788,20 @@ function LessonPage() {
                       <th className="table__col--score">{'Оценка'}</th>
                       <th className="table__col--score">{'Экзамен'}</th>
                       <th className="table__col--stars">{'Звёзды'}</th>
+                      <th className="table__col--flag">{'ДЗ'}</th>
+                      <th className="table__col--flag">{'Ответ'}</th>
                       <th>{'Комментарий'}</th>
                       <th className="table__col--icons">{'Контакты'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {marksRows.length === 0 ? (
-                      <tr><td colSpan="7" className="table__empty">{'В группе нет студентов'}</td></tr>
+                      <tr><td colSpan="9" className="table__empty">{'В группе нет студентов'}</td></tr>
                     ) : (
-                      marksRows.map(row => (
-                          <tr key={row.student_id}>
+                      marksRows.map(row => {
+                        const hwRow = hwBoard.students.find(h => h.student_id === row.student_id);
+                        return (
+                          <tr key={row.student_id} className={hwRow?.answer.status === 'submitted' ? 'table__row--homework-pending' : undefined}>
                             <td>{row.full_name}</td>
                             <td>
                               <div className="attendance-group">
@@ -716,7 +810,7 @@ function LessonPage() {
                                     key={btn.kind}
                                     type="button"
                                     className={`attendance-btn attendance-btn--${btn.kind}${row.attendance_status === btn.status ? ' attendance-btn--active' : ''}`}
-                                    title={btn.label}
+                                    data-tip={btn.label}
                                     disabled={marksLocked}
                                     onClick={() => handleAttendanceClick(row.student_id, btn)}
                                   />
@@ -724,7 +818,7 @@ function LessonPage() {
                                 <button
                                   type="button"
                                   className={`attendance-btn attendance-btn--late${row.is_late ? ' attendance-btn--active' : ''}`}
-                                  title={'Опоздал'}
+                                  data-tip={'Опоздал'}
                                   disabled={marksLocked || !LATE_STATUSES.has(row.attendance_status)}
                                   onClick={() => handleLateToggle(row.student_id)}
                                 />
@@ -769,14 +863,16 @@ function LessonPage() {
                                 ))}
                               </div>
                             </td>
+                            <HomeworkFlags row={hwRow} onAdd={setHwAddFor} />
                             <td>
-                              <input
-                                type="text"
-                                className="input input--full"
-                                value={row.comment}
-                                disabled={marksLocked}
-                                onChange={e => updateRowField(row.student_id, 'comment', e.target.value)}
-                                onBlur={() => handleBlurSave(row.student_id)}
+                              {/* Диалог педагог ↔ студент (вместо комментария); полуночная блокировка на него не действует */}
+                              <DialogCell
+                                lessonId={lessonId}
+                                studentId={row.student_id}
+                                studentName={row.full_name}
+                                lastMessage={hwRow?.last_message}
+                                count={hwRow?.messages_count || 0}
+                                onChanged={loadHomework}
                               />
                               {rowErrors[row.student_id] && (
                                 <div className="error-text--sm">{rowErrors[row.student_id]}</div>
@@ -786,11 +882,13 @@ function LessonPage() {
                               <StudentContactIcons telegram={row.telegram_username} whatsapp={row.whatsapp} />
                             </td>
                           </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
+              )}
 
             </>
           )}

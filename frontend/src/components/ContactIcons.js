@@ -31,7 +31,7 @@ export function ContactIcon({ type, value }) {
   );
   if (!href) {
     return (
-      <span className={`row-icon row-icon--${type === 'telegram' ? 'tg' : 'wa'} row-icon--disabled`} title={`${label} не указан`}>
+      <span className={`row-icon row-icon--${type === 'telegram' ? 'tg' : 'wa'} row-icon--disabled`} data-tip={`${label} не указан`}>
         {svg}
       </span>
     );
@@ -42,7 +42,7 @@ export function ContactIcon({ type, value }) {
       target="_blank"
       rel="noopener noreferrer"
       className={`row-icon row-icon--${type === 'telegram' ? 'tg' : 'wa'}`}
-      title={label}
+      data-tip={label}
       onClick={e => e.stopPropagation()}
     >
       {svg}

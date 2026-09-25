@@ -13,6 +13,8 @@ td, th { padding: 4px 8px; border-bottom: 1px solid #e8f4f0; text-align: left; f
 th { color: #4B5563; font-weight: normal; }
 .contacts th { width: 25%; }
 .stats-grid td { width: 25%; }
+.grades-grid th { text-align: left; font-size: 9pt; color: #4B5563; }
+.grades-grid td { width: 30%; }
 .stats-value { font-size: 16pt; font-weight: bold; color: #3dbdaa; }
 .stats-label { font-size: 8pt; color: #4B5563; }
 </style>
@@ -36,22 +38,31 @@ th { color: #4B5563; font-weight: normal; }
     <tr style="{{ empty_groups_display }}"><td colspan="3">Нет активных групп</td></tr>
   </table>
 
-  <h2>Успеваемость и посещаемость</h2>
-  <table class="stats-grid">
+  <h2>Успеваемость</h2>
+  <table class="stats-grid grades-grid">
+    <tr><th></th><th>Средняя</th><th>Максимальная</th></tr>
     <tr>
-      <td><div class="stats-value">{{ avg }}</div><div class="stats-label">Средний балл</div></td>
-      <td><div class="stats-value">{{ max_score }}</div><div class="stats-label">Максимальный балл</div></td>
-      <td><div class="stats-value">{{ unexcused }}</div><div class="stats-label">Пропуски (неуваж.)</div></td>
-      <td><div class="stats-value">{{ late }}</div><div class="stats-label">Опоздания</div></td>
+      <th>За уроки</th>
+      <td><div class="stats-value">{{ avg }}</div></td>
+      <td><div class="stats-value">{{ max_score }}</div></td>
+    </tr>
+    <tr>
+      <th>За домашние задания</th>
+      <td><div class="stats-value">{{ avg_hw }}</div></td>
+      <td><div class="stats-value">{{ max_hw }}</div></td>
+    </tr>
+    <tr>
+      <th>Экзамены</th>
+      <td><div class="stats-value">{{ avg_exam }}</div></td>
+      <td><div class="stats-value">{{ max_exam }}</div></td>
     </tr>
   </table>
 
-  <h2>Экзамены</h2>
+  <h2>Посещаемость</h2>
   <table class="stats-grid">
     <tr>
-      <td><div class="stats-value">{{ avg_exam }}</div><div class="stats-label">Средний балл за экзамены</div></td>
-      <td><div class="stats-value">{{ max_exam }}</div><div class="stats-label">Максимальный балл за экзамен</div></td>
-      <td><div class="stats-value">{{ exams_count }}</div><div class="stats-label">Сдано экзаменов</div></td>
+      <td><div class="stats-value">{{ unexcused }}</div><div class="stats-label">Пропуски (неуваж.)</div></td>
+      <td><div class="stats-value">{{ late }}</div><div class="stats-label">Опоздания</div></td>
     </tr>
   </table>
 </body>

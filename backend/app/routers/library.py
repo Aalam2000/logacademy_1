@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..dependencies import require_teacher
-from ..models import Link, Material, Quiz, User
+from ..models import HomeworkTask, Link, Material, Quiz, User
 from ..resources import count_attachments_map
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -37,6 +37,8 @@ class LibraryItemOut(BaseModel):
     uploaded_by_name: Optional[str] = None
     created_at: datetime
     attached_lessons_count: int = 0
+    # Файл используется как ДЗ хотя бы в одном уроке
+    is_homework: bool = False
     # Теги шаблона курса (см. claude/course-templates-plan.md) — сейчас
     # есть только у материалов, и видны только admin (проверка/утверждение
     # шаблонов — admin-функция); у quiz/link всегда None.
@@ -59,7 +61,11 @@ async def _list_materials(db: AsyncSession, current_user: User, include_template
     rows = await db.execute(
         select(Material, User.full_name, User.username)
         .join(User, User.id == Material.uploaded_by)
+        .where(Material.is_personal == False)  # персональные ДЗ в «Базу знаний» не попадают
     )
+    homework_ids = {row[0] for row in (await db.execute(
+        select(HomeworkTask.material_id).distinct()
+    )).all()}
     is_admin = current_user.role == "admin"
     items = []
     for material, full_name, username in rows.all():
@@ -78,6 +84,7 @@ async def _list_materials(db: AsyncSession, current_user: User, include_template
             sector=material.sector if is_admin else None,
             template_lesson_no=material.template_lesson_no if is_admin else None,
             template_status=material.template_status if is_admin else None,
+            is_homework=material.id in homework_ids,
         ))
     return items
 

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../hooks/useLang';
 import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
+import DeleteButton from '../components/DeleteButton';
 
 function StudentsPage() {
   const { user, hasRole } = useAuth();
@@ -15,7 +16,6 @@ function StudentsPage() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deletingId, setDeletingId] = useState(null);
 
   const [courseId, setCourseId] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -84,24 +84,6 @@ function StudentsPage() {
     } catch (err) {
       if (win) win.close();
       setError(err?.response?.data?.detail || 'Не удалось сформировать карточку');
-    }
-  };
-
-  // Удаление ученика — только admin. Каскадно чистит его группы/оценки на
-  // бэкенде (delete_student в students.py), тут просто убираем из списка.
-  const handleDelete = async (student) => {
-    const confirmed = window.confirm(`Удалить ученика «${student.full_name}»? Это действие необратимо.`);
-    if (!confirmed) return;
-
-    setDeletingId(student.id);
-    setError('');
-    try {
-      await api.delete(`/students/${student.id}`);
-      setStudents(prev => prev.filter(s => s.id !== student.id));
-    } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось удалить ученика');
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -181,9 +163,10 @@ function StudentsPage() {
               <th>{'Имя'}</th>
               <th>{'Группа'}</th>
               {showTeacherColumn && <th>{'Учитель'}</th>}
-              <th>{'Средний балл'}</th>
-              <th>{'Макс. балл'}</th>
-              <th>{'Экзамены'}</th>
+              {/* Три вида оценок — у каждой своя средняя */}
+              <th data-tip="Средняя оценка за уроки">{'Ср. уроки'}</th>
+              <th data-tip="Средняя оценка за домашние задания">{'Ср. ДЗ'}</th>
+              <th data-tip="Средняя экзаменационная оценка">{'Ср. экзамены'}</th>
               <th>{'Пропуски'}</th>
               <th>{'Опоздания'}</th>
               <th>{'Контакты'}</th>
@@ -208,7 +191,7 @@ function StudentsPage() {
                     <td>{[...new Set(s.groups.map(g => g.teacher_name).filter(Boolean))].join(', ') || '—'}</td>
                   )}
                   <td>{s.avg_score ?? '—'}</td>
-                  <td>{s.max_score ?? '—'}</td>
+                  <td>{s.avg_hw_score ?? '—'}</td>
                   <td>{s.avg_exam_score ?? '—'}</td>
                   <td>{s.unexcused_absences}</td>
                   <td>{s.late_count}</td>
@@ -217,14 +200,16 @@ function StudentsPage() {
                   </td>
                   {isAdmin && (
                     <td>
-                      <button
-                        type="button"
-                        className="btn btn--sm"
-                        onClick={() => handleDelete(s)}
-                        disabled={deletingId === s.id}
-                      >
-                        {'🗑️'}
-                      </button>
+                      {/* Общая кнопка удаления с контролем использования (app/usages.py) */}
+                      <DeleteButton
+                        entity="student"
+                        id={s.id}
+                        name={s.full_name}
+                        tip="Удалить студента"
+                        onDelete={() => api.delete(`/students/${s.id}`)}
+                        onDeleted={() => setStudents(prev => prev.filter(x => x.id !== s.id))}
+                        onError={setError}
+                      />
                     </td>
                   )}
                 </tr>

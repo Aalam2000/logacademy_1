@@ -53,6 +53,13 @@ class GroupMember(Base):
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False, default="active")  # active | expelled
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Заполняются только при status="expelled" (отчислен из ЭТОЙ группы —
+    # ученик может состоять в нескольких группах одновременно и быть
+    # отчислен только из одной), очищаются при восстановлении обратно в
+    # active — истории отчислений не храним, только последнее.
+    expel_reason = Column(Text, nullable=True)
+    expelled_at = Column(DateTime(timezone=True), nullable=True)
+    expelled_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 
 # Урок — одна запись на группу, копируется для новых групп
@@ -101,6 +108,11 @@ class Material(Base):
     sector = Column(String, nullable=True)  # ru | az — направление, для шаблонов курсов; ставит только admin
     template_lesson_no = Column(String, nullable=True)  # "5.2" и т.п. — номер урока в шаблоне; ставит только admin
     template_status = Column(String, nullable=True)  # draft | approved — статус шаблонного материала
+    # Персональный файл ДЗ конкретному студенту (homework-tasks/ в MinIO) —
+    # в «Базу знаний» не попадает, живёт только в своём уроке.
+    is_personal = Column(Boolean, nullable=False, default=False)
+    # sha256 содержимого — контроль повторной загрузки того же файла в БЗ
+    content_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -161,3 +173,64 @@ class LessonResource(Base):
     resource_id = Column(Integer, nullable=False)
     added_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     added_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ===================== Домашние задания (схема v2, claude/homework-plan.md) =====================
+# ДЗ живёт в таблице «Студенты» урока. Задание = файл (Material) в уроке:
+# student_id NULL — «всем» (одна запись; видят все активные студенты группы,
+# в т.ч. пришедшие позже), иначе — персонально одному студенту.
+class HomeworkTask(Base):
+    __tablename__ = "homework_tasks"
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
+    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # NULL — всем
+    deadline = Column(DateTime(timezone=True), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Ответ студента на всё ДЗ урока: одна запись на пару (урок, студент) —
+# файлы ответа, ОДНА оценка за всё ДЗ (0–100) и отметка «принято».
+# Оценка или «принято» = проверено, ответ заморожен; «вернуть на
+# доработку» снимает и то и другое. Оценка за ДЗ — отдельный вид оценки
+# (наряду с оценкой за урок и экзаменационной), своя средняя.
+class HomeworkAnswer(Base):
+    __tablename__ = "homework_answers"
+    __table_args__ = (
+        UniqueConstraint("lesson_id", "student_id", name="uq_homework_answers_lesson_student"),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    grade = Column(Integer, nullable=True)
+    accepted = Column(Boolean, nullable=False, default=False)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Файлы ответа студента (homework-answers/ в MinIO), в «Базу знаний» не попадают.
+class HomeworkAnswerFile(Base):
+    __tablename__ = "homework_answer_files"
+    id = Column(Integer, primary_key=True, index=True)
+    answer_id = Column(Integer, ForeignKey("homework_answers.id"), nullable=False, index=True)
+    object_key = Column(String, nullable=False, unique=True)
+    original_filename = Column(String, nullable=False)
+    content_type = Column(String, nullable=True)
+    size_bytes = Column(Integer, nullable=False)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Диалог педагог ↔ студент в строке студента урока (заменяет комментарий).
+# Только добавление; править можно лишь своё последнее сообщение в диалоге
+# и только пока на него не ответили.
+class LessonMessage(Base):
+    __tablename__ = "lesson_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # чей это диалог
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    edited_at = Column(DateTime(timezone=True), nullable=True)

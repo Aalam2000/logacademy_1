@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
 from ..models import Link, User
-from ..resources import ensure_deletable
+from ..resources import find_duplicate_link, conflict
+from ..usages import ensure_not_used
 
 router = APIRouter(prefix="/links", tags=["links"])
 
@@ -59,8 +60,14 @@ async def create_link(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
+    # Та же ссылка (адрес после нормализации) второй раз не создаётся
+    duplicate = await find_duplicate_link(db, data.url)
+    if duplicate:
+        existing, who = duplicate
+        return conflict("duplicate", f"Такая ссылка уже есть в Базе знаний: «{existing.title}» ({who})", existing.id)
+
     link = Link(
-        url=data.url,
+        url=data.url.strip(),
         title=data.title,
         description=data.description,
         added_by=current_user.id,
@@ -87,7 +94,7 @@ async def delete_link(
     if not link:
         raise HTTPException(status_code=404, detail="Ссылка не найдена")
 
-    await ensure_deletable(db, "link", link_id)
+    await ensure_not_used(db, "link", link_id)
 
     await db.delete(link)
     await db.commit()

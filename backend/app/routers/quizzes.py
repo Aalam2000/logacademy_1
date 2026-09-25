@@ -5,7 +5,7 @@ from ..database import get_db
 from ..models import Quiz, User
 from ..schemas import QuizCreate, QuizOut
 from ..dependencies import get_current_user
-from ..resources import ensure_deletable
+from ..usages import ensure_not_used
 from .i18n import translator
 import json
 import os
@@ -119,7 +119,7 @@ async def delete_quiz(quiz_id: int, db: AsyncSession = Depends(get_db), current_
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    await ensure_deletable(db, "quiz", quiz_id)
+    await ensure_not_used(db, "quiz", quiz_id)
 
     await db.delete(quiz)
     await db.commit()

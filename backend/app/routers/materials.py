@@ -10,14 +10,15 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Form
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import storage
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher, get_current_user
-from ..models import Material, User, Lesson, LessonResource, GroupMember
-from ..resources import ensure_deletable
+from ..models import Material, User, Lesson, LessonResource, GroupMember, HomeworkTask
+from ..resources import content_hash, find_duplicate_material, material_name_exists, conflict
+from ..usages import ensure_not_used
 
 router = APIRouter(prefix="/materials", tags=["materials"])
 
@@ -64,7 +65,22 @@ async def _verify_student_material_access(
             GroupMember.status == "active",
         )
     )
-    if result.first() is None:
+    if result.first() is not None:
+        return
+    # Файл задания ДЗ урока: общее (student_id NULL) или его персональное
+    task = await db.execute(
+        select(HomeworkTask.id)
+        .join(Lesson, Lesson.id == HomeworkTask.lesson_id)
+        .join(GroupMember, GroupMember.group_id == Lesson.group_id)
+        .where(
+            HomeworkTask.material_id == material_id,
+            Lesson.is_open == True,
+            GroupMember.student_id == current_user.id,
+            GroupMember.status == "active",
+            or_(HomeworkTask.student_id.is_(None), HomeworkTask.student_id == current_user.id),
+        )
+    )
+    if task.first() is None:
         raise HTTPException(status_code=403, detail="Нет доступа к файлу")
 
 
@@ -94,6 +110,7 @@ async def list_materials(
     result = await db.execute(
         select(Material, User.full_name, User.username)
         .join(User, User.id == Material.uploaded_by)
+        .where(Material.is_personal == False)  # персональные ДЗ — не библиотека
         .order_by(Material.created_at.desc())
     )
     out = []
@@ -116,6 +133,7 @@ async def upload_material(
     course_id: Optional[int] = Form(None),
     sector: Optional[str] = Form(None),
     template_lesson_no: Optional[str] = Form(None),
+    confirm_same_name: bool = Form(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
@@ -130,6 +148,19 @@ async def upload_material(
     if size_bytes > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Файл слишком большой (максимум 50 МБ)")
 
+    # Контроль дублей: тот же файл (по содержимому) второй раз не кладём;
+    # одноимённый с другим содержимым — только после подтверждения
+    # (для пакета шаблонов курса имя не проверяем — там одинаковые имена
+    # в разных курсах/секторах нормальны).
+    digest = content_hash(contents)
+    duplicate = await find_duplicate_material(db, digest)
+    if duplicate:
+        existing, who = duplicate
+        return conflict("duplicate", f"Такой файл уже есть в Базе знаний: «{existing.original_filename}» ({who})", existing.id)
+    is_template_upload = course_id is not None or sector is not None or template_lesson_no is not None
+    if not is_template_upload and not confirm_same_name and await material_name_exists(db, file.filename):
+        return conflict("same_name", f"В Базе знаний уже есть файл с именем «{file.filename}» (с другим содержимым). Загрузить всё равно?")
+
     object_key = f"materials/{uuid4()}/{file.filename}"
     storage.upload_bytes(object_key, contents, file.content_type)
 
@@ -138,6 +169,7 @@ async def upload_material(
         original_filename=file.filename,
         content_type=file.content_type,
         size_bytes=size_bytes,
+        content_hash=digest,
         uploaded_by=current_user.id,
         course_id=course_id,
         sector=sector,
@@ -302,7 +334,7 @@ async def delete_material(
     if not material:
         raise HTTPException(status_code=404, detail="Файл не найден")
 
-    await ensure_deletable(db, "material", material_id)
+    await ensure_not_used(db, "material", material_id)
 
     storage.delete_object(material.object_key)
     await db.delete(material)

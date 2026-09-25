@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import api from '../api/auth';
+import { ContactIcon } from '../components/ContactIcons';
+import IconButton from '../components/IconButton';
+import DeleteButton from '../components/DeleteButton';
 
 const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyAdmin   = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
@@ -127,10 +130,6 @@ function AdminPage() {
       loadTeachers();
     } catch(e) { handleError(e); }
   };
-  const deleteTeacher = async (id) => {
-    try { await api.delete(`/admin/teachers/${id}`); loadTeachers(); }
-    catch(e) { handleError(e); }
-  };
 
   const createAdmin = async () => {
     try {
@@ -139,10 +138,6 @@ function AdminPage() {
       loadAdmins();
     } catch(e) { handleError(e); }
   };
-  const deleteAdmin = async (id) => {
-    try { await api.delete(`/admin/admins/${id}`); loadAdmins(); }
-    catch(e) { handleError(e); }
-  };
 
   const createCourse = async () => {
     try {
@@ -150,10 +145,6 @@ function AdminPage() {
       closeAddModal();
       loadCourses();
     } catch(e) { handleError(e); }
-  };
-  const deleteCourse = async (id) => {
-    try { await api.delete(`/admin/courses/${id}`); loadCourses(); }
-    catch(e) { handleError(e); }
   };
 
   const createGroup = async () => {
@@ -174,8 +165,21 @@ function AdminPage() {
       loadGroups();
     } catch(e) { handleError(e); }
   };
-  const deleteGroup = async (id) => {
-    try { await api.delete(`/admin/groups/${id}`); loadGroups(); }
+  // Активную группу можно только отправить в архив; удалить навсегда —
+  // только из архива (бэкенд это тоже проверяет).
+  const [showArchivedGroups, setShowArchivedGroups] = useState(false);
+  const archiveGroup = async (g) => {
+    if (!window.confirm(`Отправить группу «${g.name}» в архив?`)) return;
+    try { await api.post(`/admin/groups/${g.id}/archive`); loadGroups(); }
+    catch(e) { handleError(e); }
+  };
+  const restoreGroup = async (g) => {
+    try { await api.post(`/admin/groups/${g.id}/restore`); loadGroups(); }
+    catch(e) { handleError(e); }
+  };
+  const deleteGroup = async (g) => {
+    if (!window.confirm(`Удалить группу «${g.name}» навсегда? Это действие нельзя отменить.`)) return;
+    try { await api.delete(`/admin/groups/${g.id}`); loadGroups(); }
     catch(e) { handleError(e); }
   };
 
@@ -334,8 +338,11 @@ function AdminPage() {
     />
   ));
 
-  const userTable = (list, onDelete, editingId, editingDraft, setEditingDraft, onRowClick, tableRef) => (
-    <div ref={tableRef}>
+  // del: {path, reload, tip} — удаление через общую кнопку с контролем
+  // использования (DeleteButton, entity "user")
+  const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 4000); };
+  const userTable = (list, del, editingId, editingDraft, setEditingDraft, onRowClick, tableRef) => (
+    <div className="table-scroll" ref={tableRef}>
       <table className="table">
         <thead><tr>
           <th>{'Имя'}</th>
@@ -386,9 +393,15 @@ function AdminPage() {
                 ) : u.whatsapp}
               </td>
               <td>
-                <Button onClick={(e) => { e.stopPropagation(); onDelete(u.id); }} variant="danger" className="btn--del-compact">
-                  {'Удалить'}
-                </Button>
+                <DeleteButton
+                  entity="user"
+                  id={u.id}
+                  name={u.full_name || u.username}
+                  tip={del.tip}
+                  onDelete={() => api.delete(`${del.path}/${u.id}`)}
+                  onDeleted={del.reload}
+                  onError={showError}
+                />
               </td>
             </tr>
           ))}
@@ -417,7 +430,7 @@ function AdminPage() {
             <h3 className="toolbar__title">{'Список педагогов'}</h3>
             <Button onClick={() => setOpenAddModal('teacher')}>{'+ Добавить педагога'}</Button>
           </div>
-          {userTable(teachers, deleteTeacher, editingTeacherId, editingTeacherDraft, setEditingTeacherDraft, startEditTeacher, teachersTableRef)}
+          {userTable(teachers, { path: '/admin/teachers', reload: loadTeachers, tip: 'Удалить педагога' }, editingTeacherId, editingTeacherDraft, setEditingTeacherDraft, startEditTeacher, teachersTableRef)}
         </div>
       )}
 
@@ -428,7 +441,7 @@ function AdminPage() {
             <h3 className="toolbar__title">{'Список администраторов'}</h3>
             <Button onClick={() => setOpenAddModal('admin')}>{'+ Добавить администратора'}</Button>
           </div>
-          {userTable(admins, deleteAdmin, editingAdminId, editingAdminDraft, setEditingAdminDraft, startEditAdmin, adminsTableRef)}
+          {userTable(admins, { path: '/admin/admins', reload: loadAdmins, tip: 'Удалить админа' }, editingAdminId, editingAdminDraft, setEditingAdminDraft, startEditAdmin, adminsTableRef)}
         </div>
       )}
 
@@ -439,7 +452,7 @@ function AdminPage() {
             <h3 className="toolbar__title">{'Список курсов'}</h3>
             <Button onClick={() => setOpenAddModal('course')}>{'+ Добавить курс'}</Button>
           </div>
-          <div ref={coursesTableRef}>
+          <div className="table-scroll" ref={coursesTableRef}>
             <table className="table">
               <thead><tr>
                 <th>{'Название'}</th>
@@ -464,9 +477,15 @@ function AdminPage() {
                       ) : c.description}
                     </td>
                     <td>
-                      <Button onClick={(e) => { e.stopPropagation(); deleteCourse(c.id); }} variant="danger" className="btn--del-compact">
-                        {'Удалить'}
-                      </Button>
+                      <DeleteButton
+                        entity="course"
+                        id={c.id}
+                        name={c.title}
+                        tip="Удалить курс"
+                        onDelete={() => api.delete(`/admin/courses/${c.id}`)}
+                        onDeleted={loadCourses}
+                        onError={showError}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -480,10 +499,20 @@ function AdminPage() {
       {tab === 'groups' && (
         <div>
           <div className="toolbar">
-            <h3 className="toolbar__title">{'Список групп'}</h3>
-            <Button onClick={() => setOpenAddModal('group')}>{'+ Добавить группу'}</Button>
+            <h3 className="toolbar__title">{showArchivedGroups ? 'Архив групп' : 'Список групп'}</h3>
+            <div className="icon-row">
+              <IconButton
+                icon="archive"
+                tip={showArchivedGroups ? 'Вернуться к активным группам' : 'Показать архив'}
+                active={showArchivedGroups}
+                onClick={() => setShowArchivedGroups(v => !v)}
+              />
+              {!showArchivedGroups && (
+                <Button onClick={() => setOpenAddModal('group')}>{'+ Добавить группу'}</Button>
+              )}
+            </div>
           </div>
-          <div ref={groupsTableRef}>
+          <div className="table-scroll" ref={groupsTableRef}>
             <table className="table">
               <thead><tr>
                 <th>{'Название'}</th>
@@ -492,12 +521,13 @@ function AdminPage() {
                 <th>{'Педагог'}</th>
                 <th>{'Telegram'}</th>
                 <th>{'WhatsApp'}</th>
-                <th>{'Invite-код'}</th>
-                <th>{'Статус'}</th>
                 <th></th>
               </tr></thead>
               <tbody>
-                {groups.map(g => (
+                {groups.filter(g => (g.status === 'archived') === showArchivedGroups).length === 0 && (
+                  <tr><td colSpan="7" className="table__empty">{showArchivedGroups ? 'Архив пуст' : 'Групп пока нет'}</td></tr>
+                )}
+                {groups.filter(g => (g.status === 'archived') === showArchivedGroups).map(g => (
                   <tr key={g.id} onClick={() => startEditGroup(g)} className="table__row--clickable">
                     <td>
                       {editingGroupId === g.id ? (
@@ -552,7 +582,7 @@ function AdminPage() {
                           value={editingGroupDraft.telegram_chat_id}
                           onChange={e => setEditingGroupDraft({ ...editingGroupDraft, telegram_chat_id: e.target.value })}
                         />
-                      ) : g.telegram_chat_id}
+                      ) : <ContactIcon type="telegram" value={g.telegram_chat_id} />}
                     </td>
                     <td>
                       {editingGroupId === g.id ? (
@@ -561,22 +591,37 @@ function AdminPage() {
                           value={editingGroupDraft.whatsapp}
                           onChange={e => setEditingGroupDraft({ ...editingGroupDraft, whatsapp: e.target.value })}
                         />
-                      ) : g.whatsapp}
+                      ) : <ContactIcon type="whatsapp" value={g.whatsapp} />}
                     </td>
-                    <td><code>{g.invite_code}</code></td>
-                    <td>{g.status}</td>
                     <td>
-                      <div className="button-row">
-                        <button
-                          type="button"
-                          className="btn btn--outline btn--del-compact"
+                      <div className="icon-row">
+                        <IconButton
+                          icon="schedule"
+                          tip="Расписание группы"
                           onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/groups/${g.id}`); }}
-                        >
-                          {'Расписание'}
-                        </button>
-                        <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="danger" className="btn--del-compact">
-                          {'Удалить'}
-                        </Button>
+                        />
+                        {g.status === 'archived' ? (
+                          <>
+                            <IconButton
+                              icon="restore"
+                              tip="Вернуть из архива"
+                              onClick={(e) => { e.stopPropagation(); restoreGroup(g); }}
+                            />
+                            <IconButton
+                              icon="delete"
+                              tip="Удалить навсегда"
+                              variant="danger"
+                              onClick={(e) => { e.stopPropagation(); deleteGroup(g); }}
+                            />
+                          </>
+                        ) : (
+                          <IconButton
+                            icon="archive"
+                            tip="Отправить в архив"
+                            variant="warn"
+                            onClick={(e) => { e.stopPropagation(); archiveGroup(g); }}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

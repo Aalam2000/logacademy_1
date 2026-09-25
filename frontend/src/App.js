@@ -19,6 +19,7 @@ import QuizLiveHostPage from './pages/QuizLiveHostPage';
 import QuizLiveJoinPage from './pages/QuizLiveJoinPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoleRoute from './components/RoleRoute';
+import TooltipLayer from './components/Tooltip';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -28,6 +29,8 @@ function PrivateRoute({ children }) {
 function App() {
   return (
     <AuthProvider>
+      {/* Единая мгновенная подсказка для всех элементов с data-tip */}
+      <TooltipLayer />
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/login" element={<Login />} />

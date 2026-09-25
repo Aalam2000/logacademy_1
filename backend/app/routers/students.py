@@ -6,13 +6,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
 
+from ..usages import ensure_not_used
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
-from ..models import Course, Group, GroupMember, Lesson, LessonMark, User
+from ..models import Course, Group, GroupMember, HomeworkAnswer, Lesson, LessonMark, User
 from .i18n import translator
 
 router = APIRouter(prefix="/students", tags=["students"])
@@ -34,9 +35,13 @@ class StudentStatsOut(BaseModel):
     full_name: str
     telegram_username: Optional[str] = None
     whatsapp: Optional[str] = None
-    avg_score: Optional[float] = None
+    # Три вида оценок, у каждой своя средняя (claude/homework-plan.md, «Оценки»)
+    avg_score: Optional[float] = None       # за урок
     max_score: Optional[int] = None
-    avg_exam_score: Optional[float] = None
+    avg_hw_score: Optional[float] = None    # за ДЗ
+    max_hw_score: Optional[int] = None
+    avg_exam_score: Optional[float] = None  # экзаменационная
+    max_exam_score: Optional[int] = None
     unexcused_absences: int = 0
     late_count: int = 0
     groups: list[StudentGroupOut] = []
@@ -96,7 +101,7 @@ async def _scope_group_ids(
 async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: list[int]) -> dict[int, dict]:
     """Средний/макс балл + пропуски/опоздания по фактическим отметкам
     (LessonMark) в пределах заданных групп."""
-    stats = {sid: {"scores": [], "exam_scores": [], "unexcused": 0, "late": 0} for sid in student_ids}
+    stats = {sid: {"scores": [], "exam_scores": [], "hw_scores": [], "unexcused": 0, "late": 0} for sid in student_ids}
     if not student_ids or not group_ids:
         return stats
 
@@ -118,16 +123,37 @@ async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: li
             row["unexcused"] += 1
         if is_late:
             row["late"] += 1
+
+    # Оценки за ДЗ — по заданиям уроков этих групп
+    hw_result = await db.execute(
+        select(HomeworkAnswer.student_id, HomeworkAnswer.grade)
+        .join(Lesson, Lesson.id == HomeworkAnswer.lesson_id)
+        .where(
+            Lesson.group_id.in_(group_ids),
+            HomeworkAnswer.student_id.in_(student_ids),
+            HomeworkAnswer.grade.isnot(None),
+        )
+    )
+    for student_id, grade in hw_result.all():
+        stats[student_id]["hw_scores"].append(grade)
     return stats
+
+
+def _avg(values: list[int]) -> Optional[float]:
+    return round(sum(values) / len(values), 1) if values else None
 
 
 def _stats_summary(stats_row: dict) -> dict:
     scores = stats_row["scores"]
     exam_scores = stats_row["exam_scores"]
+    hw_scores = stats_row["hw_scores"]
     return {
-        "avg_score": round(sum(scores) / len(scores), 1) if scores else None,
+        "avg_score": _avg(scores),
         "max_score": max(scores) if scores else None,
-        "avg_exam_score": round(sum(exam_scores) / len(exam_scores), 1) if exam_scores else None,
+        "avg_hw_score": _avg(hw_scores),
+        "max_hw_score": max(hw_scores) if hw_scores else None,
+        "hw_count": len(hw_scores),
+        "avg_exam_score": _avg(exam_scores),
         "max_exam_score": max(exam_scores) if exam_scores else None,
         "exams_count": len(exam_scores),
         "unexcused_absences": stats_row["unexcused"],
@@ -245,6 +271,8 @@ def render_student_card_html(lang: str, student: User, groups: list[dict], summa
         "empty_groups_display": "" if not groups else "display:none",
         "avg": summary["avg_score"] if summary["avg_score"] is not None else "—",
         "max_score": summary["max_score"] if summary["max_score"] is not None else "—",
+        "avg_hw": summary["avg_hw_score"] if summary["avg_hw_score"] is not None else "—",
+        "max_hw": summary["max_hw_score"] if summary["max_hw_score"] is not None else "—",
         "unexcused": summary["unexcused_absences"],
         "late": summary["late_count"],
         "avg_exam": summary["avg_exam_score"] if summary["avg_exam_score"] is not None else "—",
@@ -304,11 +332,9 @@ async def get_student_card(
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
 
-# Удалить ученика — только admin. group_members/lesson_marks ссылаются на
-# users.id без ON DELETE CASCADE (тот же случай, что и с lessons — см.
-# delete_lesson в lessons.py), поэтому чистим их явно: это личная история
-# самого ученика (его группы и его оценки), ни на что общее она не
-# ссылается, блокировать удаление из-за неё смысла нет.
+# Удалить ученика — только admin. Общий контроль удаления (app/usages.py):
+# если ученик где-либо есть — группы (в т.ч. отчислен / архив), оценки,
+# решения ДЗ, персональные ДЗ — 409 со списком мест, ничего не удаляется.
 @router.delete("/{student_id}")
 async def delete_student(
     student_id: int,
@@ -320,8 +346,7 @@ async def delete_student(
     if not student:
         raise HTTPException(status_code=404, detail="Ученик не найден")
 
-    await db.execute(delete(GroupMember).where(GroupMember.student_id == student_id))
-    await db.execute(delete(LessonMark).where(LessonMark.student_id == student_id))
+    await ensure_not_used(db, "student", student_id)
     await db.delete(student)
     await db.commit()
     return {"ok": True}
