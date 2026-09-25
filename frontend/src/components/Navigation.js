@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   IconDashboard,
@@ -10,10 +10,8 @@ import {
   IconPerformance,
   IconHelp,
 } from './CyberIcons';
-import HelpPanel from './HelpPanel';
 
 function Navigation({ user, isOpen, onClose }) {
-  const [helpOpen, setHelpOpen] = useState(false);
   const linkClass = ({ isActive }) => `nav__link${isActive ? ' nav__link--active' : ''}`;
 
   const handleLinkClick = () => {
@@ -82,11 +80,15 @@ function Navigation({ user, isOpen, onClose }) {
           </li>
         )}
       </ul>
-      <button type="button" className="nav__help" onClick={() => setHelpOpen(true)}>
+      {/* «Помощь» — страница в правой части, как остальные разделы; кнопка прижата к низу */}
+      <NavLink
+        to="/dashboard/help"
+        className={({ isActive }) => `nav__link nav__help${isActive ? ' nav__link--active' : ''}`}
+        onClick={handleLinkClick}
+      >
         <IconHelp className="nav__icon" />
         <span>{'Помощь'}</span>
-      </button>
-      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+      </NavLink>
     </nav>
   );
 }

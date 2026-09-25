@@ -88,7 +88,7 @@
 /* ===== Каркас дашборда (Dashboard.js) ===== */
 .dashboard-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;        /* ровно экран: меню стоит, прокручивается только правая часть (.dashboard-page-content) */
   background: var(--color-bg-soft);
   overflow: hidden;
 }

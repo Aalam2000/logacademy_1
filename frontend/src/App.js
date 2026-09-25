@@ -18,6 +18,7 @@ import JoinGroupPage from './pages/JoinGroupPage';
 import QuizLiveHostPage from './pages/QuizLiveHostPage';
 import QuizLiveJoinPage from './pages/QuizLiveJoinPage';
 import NotFoundPage from './pages/NotFoundPage';
+import HelpPage from './pages/HelpPage';
 import RoleRoute from './components/RoleRoute';
 import TooltipLayer from './components/Tooltip';
 
@@ -63,6 +64,7 @@ function App() {
             <RoleRoute roles={['admin']}><TeachersDirectoryPage /></RoleRoute>
           } />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="help" element={<HelpPage />} />
           <Route path="admin" element={
             <RoleRoute roles={['admin']}><AdminPage /></RoleRoute>
           } />

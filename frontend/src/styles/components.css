@@ -554,6 +554,7 @@
 .nav {
   width: 240px;
   height: 100vh;
+  box-sizing: border-box;   /* padding внизу — внутри 100vh, иначе лишний вертикальный скролл */
   background: var(--color-white);
   border-right: 2px solid var(--color-primary-border);
   padding: 0 0 var(--space-5) 0;
@@ -613,41 +614,10 @@
   border-top: 1px solid var(--color-primary-border);
   cursor: pointer;
   text-align: left;
-  width: 100%;
+  text-decoration: none;
 }
 .nav__help:hover {
   color: var(--color-primary);
-}
-
-/* ===== Помощь — панель справа ===== */
-.help-panel-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay-backdrop);
-  z-index: 1000;
-}
-.help-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 100%;
-  max-width: 420px;
-  background: var(--color-white);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-6);
-  overflow-y: auto;
-  box-sizing: border-box;
-  z-index: 1001;
-}
-.help-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-.help-panel__header .modal-title {
-  margin: 0;
 }
 
 /* ===== Datetime picker ===== */
