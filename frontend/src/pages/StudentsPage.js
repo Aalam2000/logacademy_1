@@ -206,7 +206,8 @@ function StudentsPage() {
                         id={s.id}
                         name={s.full_name}
                         tip="Удалить студента"
-                        onDelete={() => api.delete(`/students/${s.id}`)}
+                        forceable={isAdmin}
+                        onDelete={(opts) => api.delete(`/students/${s.id}`, { params: opts?.force ? { force: true } : {} })}
                         onDeleted={() => setStudents(prev => prev.filter(x => x.id !== s.id))}
                         onError={setError}
                       />

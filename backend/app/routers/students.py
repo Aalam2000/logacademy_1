@@ -6,14 +6,17 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
 
 from ..usages import ensure_not_used
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
-from ..models import Course, Group, GroupMember, HomeworkAnswer, Lesson, LessonMark, User
+from ..models import (
+    Course, Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMark,
+    LessonMessage, User,
+)
 from .i18n import translator
 
 router = APIRouter(prefix="/students", tags=["students"])
@@ -335,18 +338,50 @@ async def get_student_card(
 # Удалить ученика — только admin. Общий контроль удаления (app/usages.py):
 # если ученик где-либо есть — группы (в т.ч. отчислен / архив), оценки,
 # решения ДЗ, персональные ДЗ — 409 со списком мест, ничего не удаляется.
+async def _purge_student_data(db: AsyncSession, student_id: int) -> None:
+    from .lessons import _safe_delete_object, delete_homework_tasks  # lessons.py тянет много — импорт по месту
+
+    answer_ids = [r[0] for r in (await db.execute(
+        select(HomeworkAnswer.id).where(HomeworkAnswer.student_id == student_id)
+    )).all()]
+    if answer_ids:
+        for (key,) in (await db.execute(
+            select(HomeworkAnswerFile.object_key).where(HomeworkAnswerFile.answer_id.in_(answer_ids))
+        )).all():
+            _safe_delete_object(key)
+        await db.execute(delete(HomeworkAnswerFile).where(HomeworkAnswerFile.answer_id.in_(answer_ids)))
+        await db.execute(delete(HomeworkAnswer).where(HomeworkAnswer.id.in_(answer_ids)))
+
+    task_ids = [r[0] for r in (await db.execute(
+        select(HomeworkTask.id).where(HomeworkTask.student_id == student_id)
+    )).all()]
+    await delete_homework_tasks(db, task_ids)
+
+    await db.execute(delete(LessonMessage).where(LessonMessage.student_id == student_id))
+    await db.execute(delete(LessonMark).where(LessonMark.student_id == student_id))
+    await db.execute(delete(GroupMember).where(GroupMember.student_id == student_id))
+
+
 @router.delete("/{student_id}")
 async def delete_student(
     student_id: int,
+    force: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
+    """Без force — только если студент нигде не используется (иначе 409 со списком).
+    force=true (админ видел список и подтвердил) — удаляем студента вместе со
+    всеми его данными: членство в группах, оценки/посещаемость, ответы на ДЗ
+    (+ файлы в MinIO), персональные ДЗ (+ файлы), диалоги в уроках."""
     result = await db.execute(select(User).where(User.id == student_id, User.role == "student"))
     student = result.scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="Ученик не найден")
 
-    await ensure_not_used(db, "student", student_id)
+    if not force:
+        await ensure_not_used(db, "student", student_id)
+    else:
+        await _purge_student_data(db, student_id)
     await db.delete(student)
     await db.commit()
     return {"ok": True}

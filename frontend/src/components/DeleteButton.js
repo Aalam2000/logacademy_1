@@ -9,6 +9,9 @@
 //  - где-то — окно «Нельзя удалить» со списком мест (сгруппировано, ссылки).
 // Если объект успели привязать, пока висело подтверждение, сервер ответит
 // 409 со списком — покажется то же окно.
+//
+// forceable — админу можно удалить и используемый объект: окно показывает,
+// ЧТО удалится вместе с ним, и кнопку «Удалить всё равно» → onDelete({ force: true }).
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
@@ -18,7 +21,7 @@ import { extractErrorMessage } from '../utils/errors';
 
 const SHOW_PER_KIND = 20;
 
-function DeleteButton({ entity, id, name, onDelete, onDeleted, onError, tip = 'Удалить' }) {
+function DeleteButton({ entity, id, name, onDelete, onDeleted, onError, tip = 'Удалить', forceable = false }) {
   const [usages, setUsages] = useState(null);
   const [blockMessage, setBlockMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -69,6 +72,17 @@ function DeleteButton({ entity, id, name, onDelete, onDeleted, onError, tip = '�
     }
   };
 
+  const forceDelete = async () => {
+    try {
+      await onDelete({ force: true });
+      setUsages(null);
+      if (onDeleted) await onDeleted();
+    } catch (err) {
+      setUsages(null);
+      reportError(err, 'Не удалось удалить');
+    }
+  };
+
   // Обёртка гасит всплытие кликов: кнопка и окно обычно стоят внутри
   // кликабельной строки таблицы, клик по ним не должен открывать её.
   return (
@@ -79,6 +93,7 @@ function DeleteButton({ entity, id, name, onDelete, onDeleted, onError, tip = '�
           name={name}
           usages={usages}
           message={blockMessage}
+          onForce={forceable && !blockMessage ? forceDelete : null}
           onClose={() => { setUsages(null); setBlockMessage(''); }}
         />
       )}
@@ -86,9 +101,10 @@ function DeleteButton({ entity, id, name, onDelete, onDeleted, onError, tip = '�
   );
 }
 
-function UsagesModal({ name, usages, message, onClose }) {
+function UsagesModal({ name, usages, message, onForce, onClose }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState({});
+  const [forcing, setForcing] = useState(false);
 
   const byKind = [];
   usages.forEach(u => {
@@ -100,11 +116,34 @@ function UsagesModal({ name, usages, message, onClose }) {
   const open = (url) => { onClose(); navigate(url); };
 
   return (
-    <Modal title={`Нельзя удалить «${name}»`} onClose={onClose} size="wide">
+    <Modal
+      title={onForce ? `Удалить «${name}» вместе с данными?` : `Нельзя удалить «${name}»`}
+      onClose={onClose}
+      size="wide"
+      footer={onForce ? (
+        <>
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={forcing}>{'Отмена'}</button>
+          <button
+            type="button"
+            className="btn btn--danger"
+            disabled={forcing}
+            onClick={async () => { setForcing(true); await onForce(); }}
+          >
+            {forcing ? 'Удаление...' : 'Удалить всё равно'}
+          </button>
+        </>
+      ) : undefined}
+    >
       <div>
-        <p className="text-muted">
-          {message || 'Объект используется в следующих местах. Сначала уберите его оттуда.'}
-        </p>
+        {onForce ? (
+          <p className="error-text">
+            {'Вместе с ним будет безвозвратно удалено всё перечисленное ниже (из групп — только его участие, сами группы и уроки останутся). Отменить нельзя.'}
+          </p>
+        ) : (
+          <p className="text-muted">
+            {message || 'Объект используется в следующих местах. Сначала уберите его оттуда.'}
+          </p>
+        )}
         <div className="usages">
           {byKind.map(g => {
             const all = !!expanded[g.kind];
