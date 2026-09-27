@@ -1021,6 +1021,8 @@ a.row-icon:hover {
 .quiz-helper__prompt { font-family: Consolas, monospace; font-size: 13px; background: var(--color-bg-soft); }
 .quiz-helper__row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
 .quiz-helper__row .form-label { display: flex; flex-direction: column; gap: 4px; }
+.quiz-helper__files { display: flex; flex-direction: column; gap: 4px; }
+.quiz-helper__file { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
 /* ===== ДЗ ===== */
 .homework-cell {

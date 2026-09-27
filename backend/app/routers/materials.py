@@ -288,6 +288,40 @@ async def download_material(
     )
 
 
+# Текст файла — для Помощника квиза (материалы урока прямо в промпт).
+# Только педагог/админ. Длинный текст обрезаем: бесплатные ИИ не примут
+# промпт на сотни тысяч символов.
+TEXT_LIMIT = 40000
+
+
+@router.get("/{material_id}/text")
+async def material_text(
+    material_id: int,
+    limit: int = TEXT_LIMIT,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    from ..text_extract import extract_text
+
+    material = (await db.execute(select(Material).where(Material.id == material_id))).scalar_one_or_none()
+    if not material:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    data = await asyncio.to_thread(lambda: b"".join(storage.stream_object(material.object_key)))
+    try:
+        text = await asyncio.to_thread(extract_text, material.original_filename, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=422, detail=f"Не удалось прочитать текст из «{material.original_filename}»")
+    limit = max(1000, min(limit, TEXT_LIMIT))
+    return {
+        "filename": material.original_filename,
+        "text": text[:limit],
+        "chars": len(text),
+        "truncated": len(text) > limit,
+    }
+
+
 # Предпросмотр — docx/xlsx/pptx конвертируются в PDF на лету и открываются
 # в браузере тем же путём, что уже работает для PDF/картинок (см.
 # handleOpen/handleOpenItem на фронте). Без кэша: конвертируем заново на

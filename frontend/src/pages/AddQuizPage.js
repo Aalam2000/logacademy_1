@@ -18,9 +18,11 @@ function AddQuizPage() {
   const [templateType, setTemplateType] = useState('flash');
   const [questions, setQuestions] = useState([blankFlashQuestion()]);
   const [loading, setLoading] = useState(false);
-  const [helperOpen, setHelperOpen] = useState(false);
+
   const navigate = useNavigate();
   const { id } = useParams();
+  // Новый квиз (особенно из урока) — Помощник открыт сразу; при правке — свёрнут
+  const [helperOpen, setHelperOpen] = useState(!id);
   const [searchParams] = useSearchParams();
   const lessonId = searchParams.get('lessonId');
   const { lang } = useLang();
@@ -177,6 +179,7 @@ function AddQuizPage() {
             key={templateType}
             templateType={templateType}
             lang={lang}
+            lessonId={lessonId}
             onFill={({ title: t, topic: tp, questions: qs }) => {
               // Всегда «Заменить»: квиз собирается заново из ответа ИИ
               if (t) setTitle(t);

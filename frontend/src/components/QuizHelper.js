@@ -1,9 +1,14 @@
 // «Помощник» редактора квиза — без трат на API: собирает готовый промпт,
 // педагог сам отдаёт его любому ИИ, вставляет ответ (JSON) обратно, и
 // квиз заполняется целиком (всегда «Заменить» — квиз делается заново).
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import api from '../api/auth';
 
 const LANG_NAMES = { ru: 'русский', az: 'азербайджанский', en: 'английский' };
+
+// Файлы урока, из которых сервер умеет достать текст (backend app/text_extract.py)
+const TEXT_EXT = /\.(docx|pptx|pdf|txt|md)$/i;
+const MATERIALS_LIMIT = 40000; // всего символов материалов в промпте
 
 const FORMATS = {
   flash: {
@@ -24,8 +29,9 @@ const FORMATS = {
   },
 };
 
-export function buildQuizPrompt({ type, wish, count, time, lang }) {
+export function buildQuizPrompt({ type, wish, count, time, lang, materials = [] }) {
   const f = FORMATS[type];
+  const withMaterials = materials.length > 0;
   return [
     `Ты — методист детской IT-академии (ученики 8–14 лет). Составь ${f.kind}.`,
     '',
@@ -39,7 +45,17 @@ export function buildQuizPrompt({ type, wish, count, time, lang }) {
     '- Вопросы короткие и понятные ребёнку, без двусмысленности, каждый проверяет одну мысль.',
     ...f.rules.map(r => `- ${r}`),
     '- Если в задании уже даны вопросы и ответы — используй их (можно слегка поправить формулировки), недостающие придумай сам.',
+    ...(withMaterials ? [
+      '- Вопросы строй ТОЛЬКО по материалам урока ниже: проверяй главное, что ученик должен понять на этом уроке, а не мелкие детали.',
+      '- Если в материалах есть готовый опросник с ответами — опирайся на него.',
+    ] : []),
     '',
+    ...(withMaterials ? [
+      'МАТЕРИАЛЫ УРОКА:',
+      ...materials.map(m => `=== ${m.filename}${m.truncated ? ' (текст сокращён)' : ''} ===\n${m.text}`),
+      '=== конец материалов ===',
+      '',
+    ] : []),
     'Ответь ТОЛЬКО одним JSON-объектом — без пояснений, без markdown и без ```. Строго в таком формате:',
     f.example(time),
   ].join('\n');
@@ -100,7 +116,7 @@ function copyText(text) {
   return Promise.resolve();
 }
 
-function QuizHelper({ templateType, lang, onFill }) {
+function QuizHelper({ templateType, lang, lessonId, onFill }) {
   const [wish, setWish] = useState('');
   const [count, setCount] = useState(10);
   const [time, setTime] = useState(templateType === 'live' ? 30 : 60);
@@ -110,10 +126,44 @@ function QuizHelper({ templateType, lang, onFill }) {
   const [aiText, setAiText] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState('');
+  // Файлы урока (квиз создаётся из урока): отмеченные попадут в промпт текстом
+  const [lessonFiles, setLessonFiles] = useState([]);
+  const [picked, setPicked] = useState({});
+  const [building, setBuilding] = useState(false);
 
-  const makePrompt = () => {
-    setPrompt(buildQuizPrompt({ type: templateType, wish, count, time, lang: qLang }));
+  useEffect(() => {
+    if (!lessonId) return;
+    api.get(`/lessons/${lessonId}/items`)
+      .then(res => {
+        const files = res.data.filter(i => i.resource_type === 'material' && TEXT_EXT.test(i.title || ''));
+        setLessonFiles(files);
+        setPicked(Object.fromEntries(files.map(f => [f.resource_id, true])));
+      })
+      .catch(() => setLessonFiles([]));
+  }, [lessonId]);
+
+  const makePrompt = async () => {
+    setError('');
     setCopied(false);
+    const chosen = lessonFiles.filter(f => picked[f.resource_id]);
+    const materials = [];
+    if (chosen.length) {
+      setBuilding(true);
+      const perFile = Math.floor(MATERIALS_LIMIT / chosen.length);
+      const problems = [];
+      for (const f of chosen) {
+        try {
+          const res = await api.get(`/materials/${f.resource_id}/text`, { params: { limit: perFile } });
+          if (res.data.text.trim()) materials.push(res.data);
+          else problems.push(`«${f.title}»: текста нет (картинки/скан)`);
+        } catch (err) {
+          problems.push(`«${f.title}»: ${err?.response?.data?.detail || 'не прочитан'}`);
+        }
+      }
+      setBuilding(false);
+      if (problems.length) setError(`Не попали в промпт — ${problems.join('; ')}. Такой файл приложите к ИИ вручную.`);
+    }
+    setPrompt(buildQuizPrompt({ type: templateType, wish, count, time, lang: qLang, materials }));
   };
 
   const copy = async () => {
@@ -145,6 +195,22 @@ function QuizHelper({ templateType, lang, onFill }) {
         {'1) Опишите, что нужно, и соберите промпт. 2) Вставьте его в любой ИИ. 3) Ответ ИИ (JSON) вставьте ниже — квиз заполнится заново.'}
       </p>
 
+      {lessonFiles.length > 0 && (
+        <div className="quiz-helper__files">
+          <span className="form-label">{'Материалы урока — текст отмеченных файлов войдёт в промпт'}</span>
+          {lessonFiles.map(f => (
+            <label key={f.resource_id} className="quiz-helper__file">
+              <input
+                type="checkbox"
+                checked={!!picked[f.resource_id]}
+                onChange={e => setPicked(prev => ({ ...prev, [f.resource_id]: e.target.checked }))}
+              />
+              {f.title}
+            </label>
+          ))}
+        </div>
+      )}
+
       <label className="form-label">{'Что нужно: тема, пожелания или готовые вопросы с ответами'}</label>
       <textarea className="input quiz-helper__area" rows={4} value={wish} onChange={e => setWish(e.target.value)} />
 
@@ -165,7 +231,9 @@ function QuizHelper({ templateType, lang, onFill }) {
             {Object.entries(LANG_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
-        <button type="button" className="btn" onClick={makePrompt}>{'Собрать промпт'}</button>
+        <button type="button" className="btn" onClick={makePrompt} disabled={building}>
+          {building ? 'Читаем файлы...' : 'Собрать промпт'}
+        </button>
       </div>
 
       {prompt && (
