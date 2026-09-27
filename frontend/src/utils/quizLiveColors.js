@@ -2,8 +2,8 @@
 // препода (QuizLiveHostPage) и у ученика (QuizLiveJoinPage), чтобы номер
 // и цвет варианта совпадали на обоих экранах.
 export const QUIZ_LIVE_OPTION_STYLES = [
-  { number: 1, color: '#e74c3c' }, // красный
-  { number: 2, color: '#f1c40f' }, // жёлтый
-  { number: 3, color: '#2ecc71' }, // зелёный
-  { number: 4, color: '#3498db' }, // синий
+  { number: 1, color: '#FF6B8B' }, // розовый (палитра слайдшоу)
+  { number: 2, color: '#FFC145' }, // жёлтый
+  { number: 3, color: '#43B36B' }, // зелёный
+  { number: 4, color: '#2F8FE0' }, // синий
 ];

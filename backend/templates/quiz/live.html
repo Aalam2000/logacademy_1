@@ -3,16 +3,21 @@
 <head>
 <meta charset="utf-8">
 <title>{{ title }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  body{font-family:'Segoe UI',Roboto,system-ui,sans-serif;background:#f7f5f3;color:#232323;
+  /* Стиль слайдшоу уроков Log Academy */
+  body{font-family:'Quicksand','Trebuchet MS',sans-serif;background:#FFF8EC;color:#2B2118;
        display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;}
-  .card{background:#fff;border:1px solid #ece7e2;border-radius:12px;padding:32px 40px;max-width:420px;}
-  h1{font-size:20px;margin:0 0 8px;}
-  p{color:#7a7570;font-size:14px;margin:0;}
+  .card{background:#FFFDF6;border:5px solid #2B2118;border-radius:36px;box-shadow:12px 12px 0 #2B2118;padding:40px 48px;max-width:560px;}
+  .kicker{display:inline-block;background:#FFC145;border:4px solid #2B2118;border-radius:50px;padding:8px 22px;
+       font:700 18px 'Baloo 2','Trebuchet MS',sans-serif;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+  h1{font:800 40px/1.15 'Baloo 2','Trebuchet MS',sans-serif;margin:0 0 8px;}
+  p{color:#6B5F52;font-size:20px;margin:8px 0 0;font-weight:500}
 </style>
 </head>
 <body>
   <div class="card">
+    <span class="kicker">Живой квиз</span>
     <h1>{{ title }}</h1>
     <p>{{ topic }}</p>
     <p>Живой квиз проводится с экрана урока — открывается отдельно у преподавателя.</p>

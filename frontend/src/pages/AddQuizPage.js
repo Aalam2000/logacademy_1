@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLang } from '../hooks/useLang';
 import Button from '../components/Button';
 import api from '../api/auth';
+import QuizHelper from '../components/QuizHelper';
 
 const blankFlashQuestion = () => ({ question: '', time: 60, answer: '' });
 const blankLiveQuestion = () => ({ question: '', time: 60, options: ['', '', '', ''], correct_index: 0 });
@@ -17,6 +18,7 @@ function AddQuizPage() {
   const [templateType, setTemplateType] = useState('flash');
   const [questions, setQuestions] = useState([blankFlashQuestion()]);
   const [loading, setLoading] = useState(false);
+  const [helperOpen, setHelperOpen] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -163,8 +165,26 @@ function AddQuizPage() {
         <select value={templateType} onChange={e => handleTemplateTypeChange(e.target.value)} className="input input--lg">
           <option value="flash">Flash (вопрос-ответ)</option>
           <option value="live">Live (голосование)</option>
-          <option value="sprint">Sprint (скоростной)</option>
         </select>
+
+        <div>
+          <Button type="button" onClick={() => setHelperOpen(v => !v)} variant="secondary" className="btn--pill">
+            {helperOpen ? 'Скрыть помощника' : '🪄 Помощник'}
+          </Button>
+        </div>
+        {helperOpen && (
+          <QuizHelper
+            key={templateType}
+            templateType={templateType}
+            lang={lang}
+            onFill={({ title: t, topic: tp, questions: qs }) => {
+              // Всегда «Заменить»: квиз собирается заново из ответа ИИ
+              if (t) setTitle(t);
+              if (tp) setTopic(tp);
+              setQuestions(qs);
+            }}
+          />
+        )}
 
         <div className="questions-header">
           <h3>{'Вопросы'}</h3>

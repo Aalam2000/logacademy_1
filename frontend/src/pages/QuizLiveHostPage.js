@@ -8,6 +8,12 @@ import { notifyLessonMarksUpdated } from '../utils/lessonMarksChannel';
 const POLL_MS = 1500;
 
 function QuizLiveHostPage() {
+  // Оформление в стиле слайдшоу уроков — см. .quiz-theme в components.css
+  useEffect(() => {
+    document.body.classList.add('quiz-theme');
+    return () => document.body.classList.remove('quiz-theme');
+  }, []);
+
   const { code } = useParams();
   const [state, setState] = useState(null);
   const [error, setError] = useState('');

@@ -10,6 +10,12 @@ function tokenKey(code) {
 }
 
 function QuizLiveJoinPage() {
+  // Оформление в стиле слайдшоу уроков — см. .quiz-theme в components.css
+  useEffect(() => {
+    document.body.classList.add('quiz-theme');
+    return () => document.body.classList.remove('quiz-theme');
+  }, []);
+
   const { code } = useParams();
   const [token, setToken] = useState(() => localStorage.getItem(tokenKey(code)));
   const [roster, setRoster] = useState(null);
