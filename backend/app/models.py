@@ -38,6 +38,7 @@ class Group(Base):
     name = Column(String, nullable=False)
     telegram_chat_id = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
+    video_url = Column(String, nullable=True)  # постоянная ссылка на видеоконференцию (Meet и т.п.)
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False, default="active")  # active | archived
     invite_code = Column(String, unique=True, nullable=False)  # для регистрации студентов по QR

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import Calendar from '../components/Calendar';
+import StudentGroupsBar from '../components/StudentGroupsBar';
+import { getStudentGroups } from '../api/groups';
 
 // Главная студента: «Мои уроки» — Таблица | Календарь (как в группе у педагога).
 // Урок, где что-то не закрыто, подсвечивается и там и там:
@@ -32,11 +34,13 @@ function readViewMode() {
 function StudentHome() {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [viewMode, setViewMode] = useState(readViewMode); // table | calendar
 
   useEffect(() => {
     // Все уроки (и закрытые) — для календаря; таблица показывает только открытые
     api.get('/lessons/student', { params: { include_closed: 1 } }).then(r => setLessons(r.data));
+    getStudentGroups().then(setGroups).catch(() => setGroups([]));
   }, []);
 
   useEffect(() => {
@@ -48,7 +52,11 @@ function StudentHome() {
 
   return (
     <div className="page">
-      <h2>{'Мои уроки'}</h2>
+      {/* Заголовок и узкие плашки групп (вход в видеоконференцию) — в одну строку */}
+      <div className="student-home__head">
+        <h2>{'Мои уроки'}</h2>
+        <StudentGroupsBar groups={groups} />
+      </div>
 
       <div className="toolbar__filters">
         <button type="button" className={`tab${viewMode === 'table' ? ' tab--active' : ''}`} onClick={() => setViewMode('table')}>

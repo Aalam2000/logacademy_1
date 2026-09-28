@@ -2,13 +2,13 @@ from typing import Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from ..database import get_db
 from ..models import Group, GroupMember, User, Course
-from ..schemas import GroupOut, CourseOut, GroupInviteOut
-from ..dependencies import require_teacher
+from ..schemas import GroupOut, CourseOut, GroupInviteOut, clean_video_url
+from ..dependencies import require_teacher, get_current_user
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -37,6 +37,82 @@ async def get_courses_for_teacher(
 ):
     result = await db.execute(select(Course))
     return result.scalars().all()
+
+
+# Группы ученика — для плашек «группа + вход в видеоконференцию» вверху
+# кабинета студента. Только активное членство в активных группах.
+# Путь из двух сегментов — не пересекается с /{group_id}.
+class StudentGroupOut(BaseModel):
+    id: int
+    name: str
+    video_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/student/my", response_model=list[StudentGroupOut])
+async def get_student_groups(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Group)
+        .join(GroupMember, GroupMember.group_id == Group.id)
+        .where(
+            GroupMember.student_id == current_user.id,
+            GroupMember.status == "active",
+            Group.status == "active",
+        )
+        .order_by(Group.name)
+    )
+    return result.scalars().unique().all()
+
+
+# Настройки группы, которые может менять сам педагог (своей группы; admin —
+# любой): название, контакты, ссылка на видеоконференцию. Курс, педагог и
+# сектор — только через /admin/groups.
+class GroupSettingsIn(BaseModel):
+    name: str
+    telegram_chat_id: Optional[str] = None
+    whatsapp: Optional[str] = None
+    video_url: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def _check_name(cls, v):
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Название группы не может быть пустым")
+        return v
+
+    @field_validator("telegram_chat_id", "whatsapp")
+    @classmethod
+    def _strip(cls, v):
+        v = (v or "").strip()
+        return v or None
+
+    @field_validator("video_url")
+    @classmethod
+    def _check_video_url(cls, v):
+        return clean_video_url(v)
+
+
+@router.patch("/{group_id}/settings", response_model=GroupOut)
+async def update_group_settings(
+    group_id: int,
+    data: GroupSettingsIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher)
+):
+    group = await _get_owned_group(db, group_id, current_user)
+    group.name = data.name
+    group.telegram_chat_id = data.telegram_chat_id
+    group.whatsapp = data.whatsapp
+    group.video_url = data.video_url
+    await db.commit()
+    await db.refresh(group)
+    return await get_group_detail(group.id, db, current_user)
 
 
 # Мои группы — с количеством учеников и именем преподавателя.

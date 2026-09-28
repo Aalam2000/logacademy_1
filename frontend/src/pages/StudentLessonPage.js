@@ -9,6 +9,7 @@ import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } fro
 import { extractErrorMessage } from '../utils/errors';
 import { useAuth } from '../context/AuthContext';
 import StudentHomework from '../components/HomeworkStudent';
+import StudentGroupsBar from '../components/StudentGroupsBar';
 import { DialogThread } from '../components/LessonDialog';
 import { getMyHomework, getMessages } from '../api/homework';
 
@@ -139,6 +140,9 @@ function StudentLessonPage() {
           <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
             {'Назад'}
           </button>
+          {lesson.group_name && (
+            <StudentGroupsBar groups={[{ id: lesson.group_id, name: lesson.group_name, video_url: lesson.group_video_url }]} />
+          )}
           <span className="lesson-toolbar__group">
             {lesson.title}
             {lesson.date ? ` — ${new Date(lesson.date).toLocaleString('ru-RU')}` : ''}

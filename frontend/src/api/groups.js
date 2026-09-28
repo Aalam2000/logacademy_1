@@ -34,3 +34,14 @@ export function expelGroupMember(groupId, studentId, reason) {
 export function restoreGroupMember(groupId, studentId) {
   return api.post(`/groups/${groupId}/members/${studentId}/restore`).then(res => res.data);
 }
+
+// Настройки группы, которые меняет сам педагог: name, telegram_chat_id,
+// whatsapp, video_url. Возвращает обновлённую группу (GroupOut).
+export function updateGroupSettings(groupId, data) {
+  return api.patch(`/groups/${groupId}/settings`, data).then(res => res.data);
+}
+
+// Группы студента (для плашек с видеоконференцией вверху кабинета).
+export function getStudentGroups() {
+  return api.get('/groups/student/my').then(res => res.data);
+}

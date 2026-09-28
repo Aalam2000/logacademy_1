@@ -1673,3 +1673,62 @@ a.row-icon:hover {
   align-items: center;
   gap: var(--space-3);
 }
+
+/* ===== Видеоконференция группы (VideoCallButton, StudentGroupsBar) ===== */
+.btn.video-call {
+  background: var(--color-role-student);
+  color: var(--color-white);
+  text-decoration: none;
+}
+.video-call--compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  flex-shrink: 0;
+  background: var(--color-role-student);
+  color: var(--color-white);
+  text-decoration: none;
+}
+.video-call--compact:hover,
+.btn.video-call:hover { opacity: 0.85; }
+
+/* Узкие плашки групп студента: в строку, перенос только при нехватке ширины */
+.group-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.group-bar__card {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px 2px 2px var(--space-2);
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-white);
+  font-size: var(--font-sm);
+  line-height: 1.2;
+  max-width: 100%;
+}
+.group-bar__name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Плашка группы без ссылки — справа такой же отступ, как слева */
+.group-bar__card:not(:has(.video-call--compact)) { padding-right: var(--space-2); }
+/* В тулбаре урока студента плашка стоит в строке, без нижнего отступа */
+.lesson-toolbar__info .group-bar { margin-bottom: 0; }
+/* Главная студента: «Мои уроки» и плашки групп в одной строке */
+.student-home__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.student-home__head h2 { margin: 0; }
+.student-home__head .group-bar { margin-bottom: 0; }

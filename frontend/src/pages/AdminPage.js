@@ -4,13 +4,14 @@ import Button from '../components/Button';
 import Modal from '../components/Modal';
 import api from '../api/auth';
 import { ContactIcon } from '../components/ContactIcons';
+import VideoCallButton from '../components/VideoCallButton';
 import IconButton from '../components/IconButton';
 import DeleteButton from '../components/DeleteButton';
 
 const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyAdmin   = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyCourse  = { title: '', description: '' };
-const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '', whatsapp: '', sector: '' };
+const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '', whatsapp: '', video_url: '', sector: '' };
 
 // 'ru' | 'az' — см. course-templates-plan.md
 const SECTOR_LABELS = { ru: 'Русский сектор', az: 'Azərbaycan sektoru' };
@@ -272,6 +273,7 @@ function AdminPage() {
       teacher_id: String(group.teacher_id || ''),
       telegram_chat_id: group.telegram_chat_id || '',
       whatsapp: group.whatsapp || '',
+      video_url: group.video_url || '',
       sector: group.sector || '',
     });
   };
@@ -293,6 +295,7 @@ function AdminPage() {
         teacher_id: parseInt(editingGroupDraft.teacher_id),
         telegram_chat_id: editingGroupDraft.telegram_chat_id.trim(),
         whatsapp: editingGroupDraft.whatsapp.trim(),
+        video_url: editingGroupDraft.video_url.trim() || null,
         sector: editingGroupDraft.sector || null,
       };
       const res = await api.patch(`/admin/groups/${editingGroupId}`, payload);
@@ -521,11 +524,12 @@ function AdminPage() {
                 <th>{'Педагог'}</th>
                 <th>{'Telegram'}</th>
                 <th>{'WhatsApp'}</th>
+                <th>{'Видео'}</th>
                 <th></th>
               </tr></thead>
               <tbody>
                 {groups.filter(g => (g.status === 'archived') === showArchivedGroups).length === 0 && (
-                  <tr><td colSpan="7" className="table__empty">{showArchivedGroups ? 'Архив пуст' : 'Групп пока нет'}</td></tr>
+                  <tr><td colSpan="8" className="table__empty">{showArchivedGroups ? 'Архив пуст' : 'Групп пока нет'}</td></tr>
                 )}
                 {groups.filter(g => (g.status === 'archived') === showArchivedGroups).map(g => (
                   <tr key={g.id} onClick={() => startEditGroup(g)} className="table__row--clickable">
@@ -592,6 +596,16 @@ function AdminPage() {
                           onChange={e => setEditingGroupDraft({ ...editingGroupDraft, whatsapp: e.target.value })}
                         />
                       ) : <ContactIcon type="whatsapp" value={g.whatsapp} />}
+                    </td>
+                    <td>
+                      {editingGroupId === g.id ? (
+                        <input
+                          className="input input--min160"
+                          placeholder="https://meet.google.com/…"
+                          value={editingGroupDraft.video_url}
+                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, video_url: e.target.value })}
+                        />
+                      ) : <VideoCallButton url={g.video_url} compact />}
                     </td>
                     <td>
                       <div className="icon-row">

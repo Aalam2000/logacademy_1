@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import DateTimePicker, { formatDateTime } from '../components/DateTimePicker';
+import VideoCallButton from '../components/VideoCallButton';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
@@ -532,6 +533,7 @@ function LessonPage() {
             {'Назад'}
           </button>
           <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
+          <VideoCallButton url={groups.find(g => g.id === lesson.group_id)?.video_url} />
           <span className="lesson-toolbar__date">
             {formatDateTime(dateValue) || '—'}
             <DateTimePicker

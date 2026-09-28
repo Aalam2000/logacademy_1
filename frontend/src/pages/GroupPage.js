@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Modal from '../components/Modal';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
+import GroupSettingsModal from '../components/GroupSettingsModal';
+import VideoCallButton from '../components/VideoCallButton';
 import Calendar from '../components/Calendar';
 import DateTimePicker from '../components/DateTimePicker';
 import { getMyGroups, getCourses } from '../api/groups';
@@ -30,6 +32,7 @@ function GroupPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isStudentsModalOpen, setIsStudentsModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [rangeFilter, setRangeFilter] = useState('upcoming'); // upcoming | week | month | all
 
   // Таблица/Календарь — выбор запоминается в localStorage, как и фильтры
@@ -354,6 +357,10 @@ function GroupPage() {
           </div>
         </div>
         <div className="button-row">
+          <VideoCallButton url={group.video_url} />
+          <button className="btn btn--outline btn--compact" onClick={() => setIsSettingsOpen(true)}>
+            {'Настройки группы'}
+          </button>
           <button className="btn btn--info btn--compact" onClick={() => setIsQRModalOpen(true)}>
             {'QR для регистрации'}
           </button>
@@ -362,6 +369,17 @@ function GroupPage() {
           </button>
         </div>
       </div>
+
+      {isSettingsOpen && (
+        <GroupSettingsModal
+          group={group}
+          onClose={() => setIsSettingsOpen(false)}
+          onSaved={(updated) => {
+            setGroups(gs => gs.map(g => (g.id === updated.id ? { ...g, ...updated } : g)));
+            setIsSettingsOpen(false);
+          }}
+        />
+      )}
 
       {/* Тулбар уроков: Таблица/Календарь — слева, действия с уроками — справа */}
       <div className="toolbar">

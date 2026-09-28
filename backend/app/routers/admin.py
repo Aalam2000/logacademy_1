@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from ..database import get_db
 from ..models import User, Course, Group, GroupMember, Lesson, LessonMark
 from ..usages import ensure_not_used
-from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut
+from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
 import secrets
@@ -20,7 +20,13 @@ class GroupUpdate(BaseModel):
     teacher_id: int
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
+    video_url: Optional[str] = None
     sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
+
+    @field_validator("video_url")
+    @classmethod
+    def _check_video_url(cls, v):
+        return clean_video_url(v)
 
 class UserAdminUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -335,6 +341,7 @@ async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), ad
         invite_code=invite_code,
         telegram_chat_id=data.telegram_chat_id,
         whatsapp=data.whatsapp,
+        video_url=data.video_url,
         sector=data.sector
     )
     db.add(group)
@@ -370,6 +377,7 @@ async def update_group(
     group.teacher_id = data.teacher_id
     group.telegram_chat_id = data.telegram_chat_id
     group.whatsapp = data.whatsapp
+    group.video_url = data.video_url
     group.sector = data.sector
     await db.commit()
     await db.refresh(group)

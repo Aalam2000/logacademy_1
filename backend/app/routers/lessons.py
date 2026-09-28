@@ -54,6 +54,9 @@ class LessonOut(BaseModel):
     # Только для /lessons/student: что у студента в уроке не закрыто
     hw_todo: Optional[str] = None  # pending — сдать ДЗ | returned — вернули на доработку
     new_messages: int = 0          # новые реплики педагога в диалоге
+    # Только для GET /lessons/{id}: группа урока и вход в видеоконференцию
+    group_name: Optional[str] = None
+    group_video_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -1226,6 +1229,11 @@ async def get_lesson(
         lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
     out = LessonOut.model_validate(lesson)
     out.is_locked = lesson_locked_for(lesson, current_user)
+    group_row = (await db.execute(
+        select(Group.name, Group.video_url).where(Group.id == lesson.group_id)
+    )).first()
+    if group_row:
+        out.group_name, out.group_video_url = group_row
     return out
 
 

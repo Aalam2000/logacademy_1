@@ -1,6 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List, Dict
+
+def clean_video_url(v: Optional[str]) -> Optional[str]:
+    """Ссылка на видеоконференцию группы: пусто -> None, иначе только https://.
+    Не ограничиваем meet.google.com — задел под свой сервер (Jitsi)."""
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return None
+    if not v.lower().startswith("https://") or " " in v or len(v) > 500:
+        raise ValueError("Ссылка на видеоконференцию должна начинаться с https://")
+    return v
+
 
 class UserLogin(BaseModel):
     username: str
@@ -58,7 +71,13 @@ class GroupCreate(BaseModel):
     teacher_id: int  # какому педагогу принадлежит
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
+    video_url: Optional[str] = None
     sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
+
+    @field_validator("video_url")
+    @classmethod
+    def _check_video_url(cls, v):
+        return clean_video_url(v)
 
 class GroupOut(BaseModel):
     id: int
@@ -67,6 +86,7 @@ class GroupOut(BaseModel):
     teacher_id: int
     telegram_chat_id: Optional[str]
     whatsapp: Optional[str] = None
+    video_url: Optional[str] = None
     sector: Optional[str] = None
     status: str
     invite_code: str
