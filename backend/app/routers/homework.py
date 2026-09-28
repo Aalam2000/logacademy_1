@@ -26,7 +26,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Form, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,8 +68,7 @@ class FileOut(BaseModel):
     size_bytes: int
     uploaded_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AnswerState(BaseModel):

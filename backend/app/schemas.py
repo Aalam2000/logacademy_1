@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime
 from typing import Optional, List, Dict
 
@@ -13,6 +13,10 @@ def clean_video_url(v: Optional[str]) -> Optional[str]:
     if not v.lower().startswith("https://") or " " in v or len(v) > 500:
         raise ValueError("Ссылка на видеоконференцию должна начинаться с https://")
     return v
+
+
+# Длительность урока в минутах: от 15 мин до 8 ч (обычно 60/120/240)
+DURATION_MIN, DURATION_MAX = 15, 480
 
 
 class UserLogin(BaseModel):
@@ -49,8 +53,7 @@ class UserOut(BaseModel):
     role: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseCreate(BaseModel):
     title: str
@@ -62,8 +65,7 @@ class CourseOut(BaseModel):
     description: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class GroupCreate(BaseModel):
     name: str
@@ -72,6 +74,7 @@ class GroupCreate(BaseModel):
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
     video_url: Optional[str] = None
+    lesson_duration_min: int = Field(default=120, ge=DURATION_MIN, le=DURATION_MAX)
     sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
 
     @field_validator("video_url")
@@ -87,6 +90,7 @@ class GroupOut(BaseModel):
     telegram_chat_id: Optional[str]
     whatsapp: Optional[str] = None
     video_url: Optional[str] = None
+    lesson_duration_min: int = 120
     sector: Optional[str] = None
     status: str
     invite_code: str
@@ -94,8 +98,7 @@ class GroupOut(BaseModel):
     student_count: int = 0
     teacher_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class GroupInviteOut(BaseModel):
     id: int
@@ -139,5 +142,4 @@ class QuizOut(BaseModel):
     created_by: int
     html_translations: Optional[Dict[str, str]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

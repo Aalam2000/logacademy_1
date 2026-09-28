@@ -1,9 +1,11 @@
-FROM node:18-slim
+# Dev-образ фронтенда: Vite dev-сервер на :3000 (настройки — vite.config.js).
+# С 2026-09-28 вместо Create React App, см. README.md.
+FROM node:22-slim
 WORKDIR /app
 COPY package*.json ./
-ENV NODE_ENV=development
-ENV NPM_CONFIG_PRODUCTION=false
-RUN npm install --no-audit --no-fund
-RUN test -f node_modules/.bin/react-scripts || (echo "!!! react-scripts NOT installed" && exit 1)
+RUN npm ci --no-audit --no-fund
+# index.html и vite.config.js меняются редко — в образе; src/ и public/
+# монтируются томами (docker-compose.dev.yml) для горячей перезагрузки.
+COPY index.html vite.config.js ./
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

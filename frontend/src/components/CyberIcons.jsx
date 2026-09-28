@@ -1,4 +1,4 @@
-// CyberIcons.js — кибер-панк SVG-иконки для сайдбара (Navigation).
+// CyberIcons.jsx — кибер-панк SVG-иконки для сайдбара (Navigation).
 // Монохром: stroke="currentColor", поэтому цвет наследуется от текста
 // ссылки — чёрный в обычном состоянии, красный у активного пункта.
 // Все иконки: viewBox 24x24, strokeWidth 1.8, острые углы (linecap/linejoin

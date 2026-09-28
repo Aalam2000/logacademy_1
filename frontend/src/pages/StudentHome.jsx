@@ -68,7 +68,7 @@ function StudentHome() {
       </div>
 
       {viewMode === 'calendar' ? (
-        <Calendar lessons={lessons} onSelectLesson={open} highlight={studentHighlight} isDisabled={l => !l.is_open} />
+        <Calendar lessons={lessons} onSelectLesson={open} highlight={studentHighlight} isDisabled={l => !l.is_open} isLight={null} />
       ) : (
         <div className="table-scroll">
           <table className="table">

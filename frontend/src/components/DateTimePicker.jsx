@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import DurationSelect from './DurationSelect';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const MONTHS = [
@@ -53,8 +54,10 @@ function roundMinutesDown(minutes) {
 // hourOnly — выбор только часа (минуты всегда :00), напр. дедлайн ДЗ;
 // placeholder — текст кнопки, пока значение не выбрано;
 // floating — попап position:fixed (внутри таблицы со скроллом, чтобы не обрезался);
-// iconOnly — вместо поля с датой маленькая кнопка 📅 с подсказкой tip.
-function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeholder, floating, iconOnly, tip }) {
+// iconOnly — вместо поля с датой маленькая кнопка 📅 с подсказкой tip;
+// duration + onDurationChange — длительность урока (мин) рядом со временем
+// начала, в той же строке попапа; сохраняется вместе с датой через onCommit.
+function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeholder, floating, iconOnly, tip, duration, onDurationChange }) {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => value || new Date());
   const containerRef = useRef(null);
@@ -211,6 +214,12 @@ function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeho
                   <option key={m} value={m}>{pad(m)}</option>
                 ))}
               </select>
+            )}
+            {onDurationChange && (
+              <>
+                <span className="datetime-picker__sep">{'·'}</span>
+                <DurationSelect value={duration} onChange={onDurationChange} title={'Длительность урока'} />
+              </>
             )}
           </div>
         </div>

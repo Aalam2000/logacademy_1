@@ -2,12 +2,12 @@ from typing import Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from ..database import get_db
 from ..models import Group, GroupMember, User, Course
-from ..schemas import GroupOut, CourseOut, GroupInviteOut, clean_video_url
+from ..schemas import GroupOut, CourseOut, GroupInviteOut, clean_video_url, DURATION_MIN, DURATION_MAX
 from ..dependencies import require_teacher, get_current_user
 
 router = APIRouter(prefix="/groups", tags=["groups"])
@@ -47,8 +47,7 @@ class StudentGroupOut(BaseModel):
     name: str
     video_url: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("/student/my", response_model=list[StudentGroupOut])
@@ -70,13 +69,15 @@ async def get_student_groups(
 
 
 # Настройки группы, которые может менять сам педагог (своей группы; admin —
-# любой): название, контакты, ссылка на видеоконференцию. Курс, педагог и
+# любой): название, контакты, ссылка на видеоконференцию, длительность
+# урока по умолчанию (на уже созданные уроки не влияет). Курс, педагог и
 # сектор — только через /admin/groups.
 class GroupSettingsIn(BaseModel):
     name: str
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
     video_url: Optional[str] = None
+    lesson_duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # None — не менять
 
     @field_validator("name")
     @classmethod
@@ -110,6 +111,8 @@ async def update_group_settings(
     group.telegram_chat_id = data.telegram_chat_id
     group.whatsapp = data.whatsapp
     group.video_url = data.video_url
+    if data.lesson_duration_min is not None:
+        group.lesson_duration_min = data.lesson_duration_min
     await db.commit()
     await db.refresh(group)
     return await get_group_detail(group.id, db, current_user)
@@ -208,8 +211,7 @@ class GroupMemberOut(BaseModel):
     expel_reason: Optional[str] = None
     expelled_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AddMemberIn(BaseModel):
@@ -317,7 +319,12 @@ async def add_group_member(
         raise HTTPException(status_code=400, detail="Ученик уже в этой группе")
 
     if member:
+        # Повторное добавление отчисленного: новая дата вступления — уроки
+        # между отчислением и возвращением не считаются пропусками
+        # (attendance.py). «Восстановить» (restore) дату не трогает — это
+        # отмена ошибочного отчисления.
         member.status = "active"
+        member.joined_at = datetime.now(timezone.utc)
         member.expel_reason = None
         member.expelled_at = None
         member.expelled_by = None

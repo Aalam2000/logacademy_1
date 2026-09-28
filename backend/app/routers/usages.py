@@ -1,5 +1,5 @@
 """GET /usages/{entity}/{id} — где используется объект (см. app/usages.py).
-Нужен общей кнопке удаления на фронте (components/DeleteButton.js)."""
+Нужен общей кнопке удаления на фронте (components/DeleteButton.jsx)."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 

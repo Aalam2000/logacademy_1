@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import DateTimePicker, { formatDateTime } from '../components/DateTimePicker';
 import VideoCallButton from '../components/VideoCallButton';
+import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
@@ -39,6 +40,7 @@ function LessonPage() {
   const [lesson, setLesson] = useState(null);
   const [groups, setGroups] = useState([]);
   const [dateValue, setDateValue] = useState(null);
+  const [durationValue, setDurationValue] = useState(DEFAULT_DURATION_MIN); // мин, правится в том же попапе, что и дата
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSavingDate, setIsSavingDate] = useState(false);
@@ -103,6 +105,7 @@ function LessonPage() {
         setLesson(lessonRes.data);
         setGroups(groupsRes.data);
         setDateValue(lessonRes.data?.date ? new Date(lessonRes.data.date) : null);
+        setDurationValue(lessonRes.data?.duration_min || DEFAULT_DURATION_MIN);
         setLessonComment(lessonRes.data?.comment || '');
       } catch (err) {
         setError(extractErrorMessage(err, 'Не удалось загрузить урок'));
@@ -447,15 +450,20 @@ function LessonPage() {
 
     const originalTime = lesson.date ? new Date(lesson.date).getTime() : null;
     const newTime = dateValue ? dateValue.getTime() : null;
-    if (originalTime === newTime) return;
+    const dateChanged = originalTime !== newTime;
+    const durationChanged = durationValue !== lesson.duration_min;
+    if (!dateChanged && !durationChanged) return;
 
     setIsSavingDate(true);
     setError('');
     try {
-      const payload = { date: dateValue ? dateValue.toISOString() : null };
+      const payload = {};
+      if (dateChanged) payload.date = dateValue ? dateValue.toISOString() : null;
+      if (durationChanged) payload.duration_min = durationValue;
       const res = await api.patch(`/lessons/${lesson.id}`, payload);
       setLesson(res.data);
       setDateValue(res.data?.date ? new Date(res.data.date) : null);
+      setDurationValue(res.data?.duration_min || DEFAULT_DURATION_MIN);
     } catch (err) {
       setError(extractErrorMessage(err, 'Не удалось сохранить изменения'));
     } finally {
@@ -536,6 +544,7 @@ function LessonPage() {
           <VideoCallButton url={groups.find(g => g.id === lesson.group_id)?.video_url} />
           <span className="lesson-toolbar__date">
             {formatDateTime(dateValue) || '—'}
+            {dateValue && ` · ${formatDuration(durationValue)}`}
             <DateTimePicker
               value={dateValue}
               onChange={setDateValue}
@@ -543,7 +552,9 @@ function LessonPage() {
               disabled={isSavingDate || lesson.is_locked}
               iconOnly
               floating
-              tip={lesson.is_locked ? 'Прошла полночь — перенести урок нельзя' : 'Смена даты и времени урока'}
+              tip={lesson.is_locked ? 'Прошла полночь — перенести урок нельзя' : 'Смена даты, времени и длительности урока'}
+              duration={durationValue}
+              onDurationChange={setDurationValue}
             />
           </span>
           <button

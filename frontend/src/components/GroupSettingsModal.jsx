@@ -1,9 +1,12 @@
 // Настройки группы, доступные педагогу: название, Telegram, WhatsApp,
-// ссылка на видеоконференцию (PATCH /groups/{id}/settings).
+// ссылка на видеоконференцию, длительность урока по умолчанию
+// (PATCH /groups/{id}/settings).
 import React, { useState } from 'react';
 import Modal from './Modal';
 import FormField from './FormField';
+import DurationSelect from './DurationSelect';
 import { updateGroupSettings } from '../api/groups';
+import { DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 
 function GroupSettingsModal({ group, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -11,6 +14,7 @@ function GroupSettingsModal({ group, onClose, onSaved }) {
     telegram_chat_id: group.telegram_chat_id || '',
     whatsapp: group.whatsapp || '',
     video_url: group.video_url || '',
+    lesson_duration_min: group.lesson_duration_min || DEFAULT_DURATION_MIN,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -60,6 +64,12 @@ function GroupSettingsModal({ group, onClose, onSaved }) {
         onChange={set('video_url')}
         error={videoError}
       />
+      <FormField label={'Длительность урока по умолчанию (для новых уроков)'}>
+        <DurationSelect
+          value={form.lesson_duration_min}
+          onChange={min => setForm(f => ({ ...f, lesson_duration_min: min }))}
+        />
+      </FormField>
       {error && <div className="error-text">{error}</div>}
     </Modal>
   );

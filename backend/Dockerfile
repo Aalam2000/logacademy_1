@@ -6,12 +6,12 @@ WORKDIR /app
 # настоящий AST-парсер (Babel), не через регулярки (см. README autoi18n).
 # libreoffice-writer/calc/impress (тянут libreoffice-core с бинарём soffice) —
 # для headless-конвертации docx/xlsx/pptx в PDF при предпросмотре файла
-# (см. /materials/{id}/preview в routers/materials.py). Конвертация всегда
-# заново, без кэша — решение Андрея, 2026-09-18.
+# (см. /materials/{id}/preview в routers/materials.py). Готовый PDF
+# кэшируется в MinIO, конвертации идут по одной (решение Андрея, 2026-09-28).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl fonts-dejavu-core \
        libreoffice-writer libreoffice-calc libreoffice-impress \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 

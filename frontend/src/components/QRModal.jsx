@@ -15,7 +15,7 @@ function QRModal({ group, onClose, onAdded }) {
   const [error, setError] = useState('');
   const [lastAdded, setLastAdded] = useState('');
 
-  const baseUrl = process.env.REACT_APP_PUBLIC_URL || window.location.origin;
+  const baseUrl = import.meta.env.REACT_APP_PUBLIC_URL || window.location.origin;
   const inviteLink = `${baseUrl}/join/${group.invite_code}`;
 
   const handleCopy = async () => {

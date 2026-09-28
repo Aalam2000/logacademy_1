@@ -1,6 +1,6 @@
 // Общая обёртка модалки: подложка + окно + заголовок + подвал с кнопкой
-// закрытия. Раньше этот код был скопирован 1-в-1 в QRModal.js и
-// StudentsModal.js.
+// закрытия. Раньше этот код был скопирован 1-в-1 в QRModal.jsx и
+// StudentsModal.jsx.
 import React from 'react';
 
 function Modal({ title, onClose, children, footer, size, centered }) {

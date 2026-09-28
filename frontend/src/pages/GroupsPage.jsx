@@ -27,7 +27,7 @@ function GroupsPage() {
   const [error, setError] = useState('');
 
   // Таблица/Календарь — по умолчанию таблица, выбор запоминается отдельно
-  // от того же переключателя на странице группы (GroupPage.js).
+  // от того же переключателя на странице группы (GroupPage.jsx).
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('la_groups_viewmode') || 'table'); // table | calendar
   useEffect(() => {
     localStorage.setItem('la_groups_viewmode', viewMode);
@@ -196,6 +196,10 @@ function GroupsPage() {
                 {g.name}
               </button>
             ))}
+            <span className="la-calendar__legend-item">
+              <span className="la-calendar__legend-dot la-calendar__legend-dot--light" />
+              {'светлый — открыт ученикам'}
+            </span>
           </div>
         </>
       ) : (

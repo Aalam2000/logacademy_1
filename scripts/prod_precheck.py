@@ -1,28 +1,33 @@
-"""Проверка прод-БД перед выкаткой 0011+0012 (ничего не меняет).
+"""Проверка прод-БД перед выкаткой миграций (ничего не меняет).
+
+Текущая выкатка (2026-09-28, ветка vite): 0014_lesson_duration + 0015_perf_indexes.
+Перед следующей выкаткой с миграциями — поправить EXPECTED_* ниже.
+
 Запуск на сервере (работает и на СТАРОМ образе бэкенда):
-  docker compose -f docker-compose.prod.yml exec -T backend python - < scripts/prod_precheck.py
+  git fetch origin && git show origin/master:scripts/prod_precheck.py | \
+    docker compose -f docker-compose.prod.yml exec -T backend python -
 """
 import asyncio
 from sqlalchemy import text
 from app.database import engine
 
-NEW_TABLES = ["homework_tasks", "homework_answers", "homework_answer_files", "lesson_messages"]
-NEW_COLUMNS = [("group_members", "expel_reason"), ("group_members", "expelled_at"), ("group_members", "expelled_by"),
-               ("materials", "is_personal"), ("materials", "content_hash")]
+EXPECTED_REVISION = "0013_group_video_url"   # последняя уже выкаченная
+NEW_COLUMNS = [("lessons", "duration_min"), ("groups", "lesson_duration_min")]
+NEW_INDEXES = ["ix_lessons_group_id_date", "ix_group_members_group_id",
+               "ix_group_members_student_id", "ix_lesson_marks_student_id"]
 
 
 async def main():
     async with engine.connect() as c:
         ver = (await c.execute(text("select version_num from alembic_version"))).scalar()
-        print(f"alembic: {ver}   (ожидаем 0010_course_templates_fields)")
-        tables = [r[0] for r in await c.execute(text(
-            "select table_name from information_schema.tables where table_schema='public' order by 1"))]
-        print("таблицы:", ", ".join(tables))
-        bad = [t for t in NEW_TABLES if t in tables]
+        print(f"alembic: {ver}   (ожидаем {EXPECTED_REVISION})")
         cols = {(r[0], r[1]) for r in await c.execute(text(
             "select table_name, column_name from information_schema.columns where table_schema='public'"))}
-        bad += [f"{t}.{col}" for t, col in NEW_COLUMNS if (t, col) in cols]
-        print("lesson_marks.comment есть:", ("lesson_marks", "comment") in cols)
+        idx = {r[0] for r in await c.execute(text(
+            "select indexname from pg_indexes where schemaname='public'"))}
+        bad = [f"{t}.{col}" for t, col in NEW_COLUMNS if (t, col) in cols] + [i for i in NEW_INDEXES if i in idx]
+        print("уроков:", (await c.execute(text("select count(*) from lessons"))).scalar(),
+              "| групп:", (await c.execute(text("select count(*) from groups"))).scalar())
         print("УЖЕ ЕСТЬ (мешает миграции):", ", ".join(bad) if bad else "нет — ОК")
 
 asyncio.run(main())

@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from datetime import datetime, date as date_type, timedelta, timezone as dt_timezone
-from zoneinfo import ZoneInfo
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from ..schemas import DURATION_MIN, DURATION_MAX
+from ..lesson_lock import BAKU_TZ, is_date_locked
+from ..attendance import attendance_slots
 from ..database import get_db
 from .. import storage
 from ..models import (
@@ -18,7 +20,6 @@ from ..resources import RESOURCE_MODELS, RESOURCE_NOT_FOUND, fetch_resource_deta
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
 
-BAKU_TZ = ZoneInfo("Asia/Baku")
 ALLOWED_ATTENDANCE_STATUSES = {"in_person", "online", "excused", "absent"}
 
 
@@ -28,12 +29,14 @@ class LessonCreate(BaseModel):
     title: Optional[str] = None  # не задано — «Урок» (переводится при показе, см. LessonTitle.js)
     order: int = 0
     date: Optional[datetime] = None
+    duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # не задано — из группы
     source: Optional[str] = "teacher"  # academy | teacher
 
 class LessonUpdate(BaseModel):
     title: Optional[str] = None
     order: Optional[int] = None
     date: Optional[datetime] = None
+    duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)
     comment: Optional[str] = None
 
 class LessonOut(BaseModel):
@@ -42,6 +45,7 @@ class LessonOut(BaseModel):
     title: str
     order: int
     date: Optional[datetime]
+    duration_min: int = 120  # конец урока = date + duration_min (считает фронт)
     is_open: bool
     source: Optional[str]
     comment: Optional[str] = None
@@ -58,8 +62,7 @@ class LessonOut(BaseModel):
     group_name: Optional[str] = None
     group_video_url: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LessonMarkIn(BaseModel):
@@ -141,6 +144,7 @@ class ScheduleGenerate(BaseModel):
     start_time: str  # "HH:MM", одно и то же время для всех уроков серии
     weekdays: list[int] = Field(min_length=1)  # 0=Пн .. 6=Вс (date.weekday())
     lesson_count: int = Field(ge=1, le=200)
+    duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # не задано — из группы
     fill_source: Optional[str] = None  # "template" | "group"
     fill_group_id: Optional[int] = None  # обязателен при fill_source == "group"
 
@@ -157,13 +161,8 @@ class FillScheduleRequest(BaseModel):
 
 
 def is_lesson_locked(lesson: Lesson) -> bool:
-    # Блокировка — в полночь дня урока по Баку. Если дата урока не задана —
-    # блокировать нечего.
-    if lesson.date is None:
-        return False
-    now_baku = datetime.now(BAKU_TZ)
-    lesson_day_baku = lesson.date.astimezone(BAKU_TZ).date()
-    return now_baku.date() > lesson_day_baku
+    # Правило блокировки — в lesson_lock.py (им же пользуется посещаемость)
+    return is_date_locked(lesson.date)
 
 
 # После полуночи (по Баку) урок частично блокируется (решение Андрея, 2026-09-25):
@@ -254,7 +253,7 @@ async def get_accessible_group(group_id: int, db: AsyncSession, current_user: Us
 
 
 # Номер урока в шаблоне ("5.2", "5", "Урок 5") -> (модуль, день) для
-# сортировки — та же схема, что parseLessonNo на фронте (KnowledgeBasePage.js).
+# сортировки — та же схема, что parseLessonNo на фронте (KnowledgeBasePage.jsx).
 # Нераспознанное отправляем в конец, чтобы не портило сортировку остальных.
 def _parse_lesson_no(value: Optional[str]) -> tuple:
     if not value:
@@ -472,8 +471,8 @@ async def create_lesson(
     if current_user.role != "admin":
         group_query = group_query.where(Group.teacher_id == current_user.id)
 
-    group = await db.execute(group_query)
-    if not group.scalar_one_or_none():
+    group = (await db.execute(group_query)).scalar_one_or_none()
+    if not group:
         raise HTTPException(status_code=403, detail="Нет доступа к этой группе")
 
     lesson = Lesson(
@@ -481,6 +480,7 @@ async def create_lesson(
         title=(data.title or "").strip() or "Урок",
         order=data.order,
         date=data.date,
+        duration_min=data.duration_min or group.lesson_duration_min,
         source=data.source,
         is_open=False
     )
@@ -552,6 +552,7 @@ async def generate_schedule(
             title=f"Урок {i}",
             order=i,
             date=lesson_date,
+            duration_min=data.duration_min or group.lesson_duration_min,
             source="academy",
             is_open=False,
         )
@@ -766,6 +767,11 @@ async def get_student_marks(
     )
 
     rows = rows.all()
+    # Пропуск на заблокированном уроке без отметки — по общему правилу (attendance.py)
+    slot_status = {
+        s.lesson_id: s.status
+        for s in await attendance_slots(db, group_ids, [current_user.id], [lesson.id for lesson, _ in rows])
+    }
     hw_by_lesson: dict[int, list[int]] = {}
     lesson_ids = [lesson.id for lesson, _ in rows]
     if lesson_ids:
@@ -779,18 +785,21 @@ async def get_student_marks(
         )).all():
             hw_by_lesson.setdefault(lesson_id, []).append(grade)
 
+    def status_of(lesson, mark):
+        return slot_status.get(lesson.id, mark.attendance_status if mark else None)
+
     return [
         MyPerformanceRowOut(
             lesson_id=lesson.id,
             lesson_title=lesson.title,
             date=lesson.date,
-            attendance_status=mark.attendance_status if mark else None,
+            attendance_status=status_of(lesson, mark),
             is_late=mark.is_late if mark else False,
             score=mark.score if mark else None,
             exam_score=mark.exam_score if mark else None,
             comment=mark.comment if mark else None,
             hw_grades=hw_by_lesson.get(lesson.id, []),
-            status_label=_STATUS_LABELS.get(mark.attendance_status, "—") if mark else "—",
+            status_label=_STATUS_LABELS.get(status_of(lesson, mark), "—"),
         )
         for lesson, mark in rows
     ]
@@ -1025,7 +1034,7 @@ async def get_my_lesson_mark(
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="Только для студента")
 
-    await get_lesson_for_student(lesson_id, db, current_user)
+    lesson = await get_lesson_for_student(lesson_id, db, current_user)
 
     result = await db.execute(
         select(LessonMark).where(
@@ -1035,7 +1044,9 @@ async def get_my_lesson_mark(
     )
     mark = result.scalar_one_or_none()
 
-    attendance_status = mark.attendance_status if mark else None
+    # После блокировки урока «ничего не отмечено» = пропуск (attendance.py)
+    slots = await attendance_slots(db, [lesson.group_id], [current_user.id], [lesson_id])
+    attendance_status = slots[0].status if slots else (mark.attendance_status if mark else None)
     is_late = mark.is_late if mark else False
 
     return MyLessonMarkOut(
@@ -1246,7 +1257,9 @@ async def update_lesson(
 ):
     lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
 
-    update_data = data.dict(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True)
+    if update_data.get("duration_min", 0) is None:
+        del update_data["duration_min"]  # колонка NOT NULL — null не пишем
     if "date" in update_data and update_data["date"] != lesson.date and lesson_locked_for(lesson, current_user):
         raise HTTPException(status_code=403, detail=LOCK_DETAIL.format(what="дату урока"))
     for field, value in update_data.items():
@@ -1312,6 +1325,7 @@ async def copy_lesson(
         title=lesson.title,
         order=lesson.order,
         date=None,  # дату копируем пустой — педагог назначит
+        duration_min=lesson.duration_min,
         source=lesson.source,
         is_open=False
     )

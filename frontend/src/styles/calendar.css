@@ -80,7 +80,12 @@
   outline: 2px solid var(--color-primary-border);
 }
 .la-calendar .rbc-event-label {
-  display: none; /* время урока и так видно в заголовке события через title */
+  display: none; /* в «Месяце» время не показываем — там только тема */
+}
+/* «Неделя»/«День»: урок растянут на реальное время — подпись «10:00 – 12:00» */
+.la-calendar .rbc-time-view .rbc-event-label {
+  display: block;
+  font-size: var(--font-xs);
 }
 .la-calendar .rbc-show-more {
   background: transparent;
@@ -132,4 +137,16 @@
 .la-calendar .rbc-event.la-calendar__event--disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* Урок открыт ученикам (у педагога) — светлый вариант цвета группы:
+   группа узнаётся по рамке, «открыт» — по светлому фону */
+.la-calendar .rbc-event.la-calendar__event--light {
+  background: color-mix(in srgb, var(--la-event-color, var(--color-primary)) 30%, var(--color-white));
+  color: var(--color-text);
+  box-shadow: inset 3px 0 0 var(--la-event-color, var(--color-primary));
+}
+.la-calendar__legend-dot--light {
+  background: color-mix(in srgb, var(--color-muted) 30%, var(--color-white));
+  box-shadow: inset 0 0 0 1px var(--color-muted);
 }

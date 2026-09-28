@@ -16,7 +16,7 @@ root.render(
 // он сам проходит по уже отрисованному React-ом DOM и следит за его
 // изменениями через MutationObserver.
 (function loadAutoI18nRuntime() {
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://localhost:8000';
   const lang = localStorage.getItem('autoI18nLang') || 'ru';
   const script = document.createElement('script');
   // Кэш-бастинг параметром: /i18n/runtime.js отдаётся с Cache-Control:

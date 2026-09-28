@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from ..database import get_db
 from ..models import User, Course, Group, GroupMember, Lesson, LessonMark
 from ..usages import ensure_not_used
-from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url
+from ..attendance import attendance_slots, summarize
+from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url, DURATION_MIN, DURATION_MAX
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
 import secrets
@@ -21,6 +22,7 @@ class GroupUpdate(BaseModel):
     telegram_chat_id: Optional[str] = None
     whatsapp: Optional[str] = None
     video_url: Optional[str] = None
+    lesson_duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # None — не менять
     sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
 
     @field_validator("video_url")
@@ -143,39 +145,36 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
         students_by_group.setdefault(gid, set()).add(sid)
 
     marks_result = await db.execute(
-        select(Lesson.group_id, LessonMark.score, LessonMark.attendance_status)
+        select(Lesson.group_id, LessonMark.score)
         .join(Lesson, Lesson.id == LessonMark.lesson_id)
-        .where(Lesson.group_id.in_(all_group_ids))
+        .where(Lesson.group_id.in_(all_group_ids), LessonMark.score.isnot(None))
     )
-    marks_by_group: dict[int, list] = {}
-    for gid, score, attendance_status in marks_result.all():
-        marks_by_group.setdefault(gid, []).append((score, attendance_status))
+    scores_by_group: dict[int, list[int]] = {}
+    for gid, score in marks_result.all():
+        scores_by_group.setdefault(gid, []).append(score)
+
+    # Посещаемость — по общему правилу (attendance.py): пропуск = урок
+    # заблокирован, ученик был в группе, а «был/онлайн/уважительная» нет.
+    slots_by_group: dict[int, list] = {}
+    for slot in await attendance_slots(db, all_group_ids):
+        slots_by_group.setdefault(slot.group_id, []).append(slot)
 
     out = []
     for tid, gids in groups_by_teacher.items():
         student_ids: set[int] = set()
         scores: list[int] = []
-        present = 0
-        counted = 0
+        teacher_slots = []
         for gid in gids:
             student_ids |= students_by_group.get(gid, set())
-            for score, attendance_status in marks_by_group.get(gid, []):
-                if score is not None:
-                    scores.append(score)
-                # excused и NULL (нет отметки) не портят статистику — не
-                # считаются вообще, ни в числитель, ни в знаменатель.
-                if attendance_status in ("in_person", "online"):
-                    present += 1
-                    counted += 1
-                elif attendance_status == "absent":
-                    counted += 1
+            scores += scores_by_group.get(gid, [])
+            teacher_slots += slots_by_group.get(gid, [])
 
         out.append(TeacherStatsOut(
             id=tid,
             full_name=names.get(tid, f"#{tid}"),
             group_count=len(gids),
             student_count=len(student_ids),
-            attendance_pct=round(present / counted * 100, 1) if counted else None,
+            attendance_pct=summarize(teacher_slots).pct,
             avg_score=round(sum(scores) / len(scores), 1) if scores else None,
         ))
 
@@ -342,6 +341,7 @@ async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), ad
         telegram_chat_id=data.telegram_chat_id,
         whatsapp=data.whatsapp,
         video_url=data.video_url,
+        lesson_duration_min=data.lesson_duration_min,
         sector=data.sector
     )
     db.add(group)
@@ -378,6 +378,8 @@ async def update_group(
     group.telegram_chat_id = data.telegram_chat_id
     group.whatsapp = data.whatsapp
     group.video_url = data.video_url
+    if data.lesson_duration_min is not None:
+        group.lesson_duration_min = data.lesson_duration_min
     group.sector = data.sector
     await db.commit()
     await db.refresh(group)

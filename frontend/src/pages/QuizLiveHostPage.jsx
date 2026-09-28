@@ -59,7 +59,7 @@ function QuizLiveHostPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // navigator.clipboard недоступен без HTTPS (прод сейчас на http://) —
-      // тот же fallback, что и в QRModal.js: скрытый textarea + execCommand.
+      // тот же fallback, что и в QRModal.jsx: скрытый textarea + execCommand.
       const el = document.createElement('textarea');
       el.value = joinUrl;
       document.body.appendChild(el);

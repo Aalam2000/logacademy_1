@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
 
 from ..usages import ensure_not_used
+from ..attendance import attendance_slots, summarize_by_student
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
 from ..models import (
@@ -21,9 +22,6 @@ from .i18n import translator
 
 router = APIRouter(prefix="/students", tags=["students"])
 
-# Эти статусы не считаются пропуском по неуважительной причине.
-# Всё остальное (NULL — ничего не отмечено, или "absent") — пропуск.
-EXCUSED_OR_PRESENT = {"in_person", "online", "excused"}
 
 
 class StudentGroupOut(BaseModel):
@@ -102,8 +100,8 @@ async def _scope_group_ids(
 
 
 async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: list[int]) -> dict[int, dict]:
-    """Средний/макс балл + пропуски/опоздания по фактическим отметкам
-    (LessonMark) в пределах заданных групп."""
+    """Средний/макс балл и опоздания — по отметкам (LessonMark), пропуски —
+    по общему правилу посещаемости (attendance.py) в пределах заданных групп."""
     stats = {sid: {"scores": [], "exam_scores": [], "hw_scores": [], "unexcused": 0, "late": 0} for sid in student_ids}
     if not student_ids or not group_ids:
         return stats
@@ -111,21 +109,23 @@ async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: li
     marks_result = await db.execute(
         select(
             LessonMark.student_id, LessonMark.score, LessonMark.exam_score,
-            LessonMark.attendance_status, LessonMark.is_late,
+            LessonMark.is_late,
         )
         .join(Lesson, Lesson.id == LessonMark.lesson_id)
         .where(Lesson.group_id.in_(group_ids), LessonMark.student_id.in_(student_ids))
     )
-    for student_id, score, exam_score, attendance_status, is_late in marks_result.all():
+    for student_id, score, exam_score, is_late in marks_result.all():
         row = stats[student_id]
         if score is not None:
             row["scores"].append(score)
         if exam_score is not None:
             row["exam_scores"].append(exam_score)
-        if attendance_status not in EXCUSED_OR_PRESENT:
-            row["unexcused"] += 1
         if is_late:
             row["late"] += 1
+
+    for sid, summary in summarize_by_student(await attendance_slots(db, group_ids, student_ids)).items():
+        if sid in stats:
+            stats[sid]["unexcused"] = summary.absent
 
     # Оценки за ДЗ — по заданиям уроков этих групп
     hw_result = await db.execute(

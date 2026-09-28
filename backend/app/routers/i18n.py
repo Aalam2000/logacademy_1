@@ -64,7 +64,7 @@ async def get_translations(lang: str = "ru", response: Response = None):
 async def get_runtime_js(request: Request, lang: str = "ru"):
     """
     Клиентский JS-рантайм для React-фронтенда — подключается один раз
-    в точке входа (frontend/src/index.js), без правок кода компонентов.
+    в точке входа (frontend/src/index.jsx), без правок кода компонентов.
 
     URL для смены языка внутри рантайма делаем host-абсолютным (но БЕЗ
     схемы, protocol-relative — "//host/...") — сам скрипт выполняется в

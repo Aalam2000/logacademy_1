@@ -1,5 +1,5 @@
 // Read-only страница урока для студента — открытые уроки его группы.
-// Не переиспользует LessonPage.js (та завязана на редактирование
+// Не переиспользует LessonPage.jsx (та завязана на редактирование
 // урока/выставление оценок учителем) — отдельный лёгкий компонент на
 // том же API-слое. См. claude/student-lesson-view-plan.md.
 import React, { useEffect, useState } from 'react';
@@ -78,7 +78,7 @@ function StudentLessonPage() {
 
   const pendingHw = ['pending', 'returned'].includes(homework.answer.status) ? 1 : 0;
 
-  // Та же логика открытия файла/ссылки, что в LessonPage.js (blob + JWT
+  // Та же логика открытия файла/ссылки, что в LessonPage.jsx (blob + JWT
   // для файлов, синхронный window.open по клику, чтобы браузер не считал
   // это всплывающим окном не по действию пользователя) — квизы студенту
   // не приходят, бэкенд их уже отфильтровал.

@@ -1,5 +1,9 @@
 # Deployment Guide
 
+> **2026-09-28: frontend moved from Create React App to Vite 8 (Node 22).**
+> Build output is still `frontend/build/`, build arg is still `REACT_APP_API_URL` —
+> `docker-compose.prod.yml` and nginx are unchanged. Details: README.md → «Сборка фронтенда: Vite».
+
 ## 1) Server-side Postgres and MinIO (outside app compose)
 
 ### 1.1 Postgres service

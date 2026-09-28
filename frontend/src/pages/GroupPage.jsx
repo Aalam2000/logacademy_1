@@ -5,6 +5,8 @@ import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import VideoCallButton from '../components/VideoCallButton';
+import DurationSelect from '../components/DurationSelect';
+import { DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import Calendar from '../components/Calendar';
 import DateTimePicker from '../components/DateTimePicker';
 import { getMyGroups, getCourses } from '../api/groups';
@@ -28,6 +30,7 @@ function GroupPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newLessonDate, setNewLessonDate] = useState(null); // Date | null
+  const [newLessonDuration, setNewLessonDuration] = useState(DEFAULT_DURATION_MIN); // мин
   const [createError, setCreateError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -36,7 +39,7 @@ function GroupPage() {
   const [rangeFilter, setRangeFilter] = useState('upcoming'); // upcoming | week | month | all
 
   // Таблица/Календарь — выбор запоминается в localStorage, как и фильтры
-  // на /dashboard/groups (см. GroupsPage.js).
+  // на /dashboard/groups (см. GroupsPage.jsx).
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('la_group_viewmode') || 'table'); // table | calendar
   useEffect(() => {
     localStorage.setItem('la_group_viewmode', viewMode);
@@ -48,6 +51,7 @@ function GroupPage() {
   const [genStartTime, setGenStartTime] = useState('14:00');
   const [genWeekdays, setGenWeekdays] = useState([]); // 0..6
   const [genLessonCount, setGenLessonCount] = useState('');
+  const [genDuration, setGenDuration] = useState(DEFAULT_DURATION_MIN); // мин, одна на всю серию
   const [genFillSource, setGenFillSource] = useState(''); // '' | template | group
   const [genFillGroupId, setGenFillGroupId] = useState('');
   const [genError, setGenError] = useState('');
@@ -143,6 +147,7 @@ function GroupPage() {
   const openCreateModal = () => {
     setCreateError('');
     setNewLessonDate(null);
+    setNewLessonDuration(group?.lesson_duration_min || DEFAULT_DURATION_MIN);
     setIsModalOpen(true);
   };
 
@@ -166,6 +171,7 @@ function GroupPage() {
         group_id: gid,
         title: 'Урок',
         date: newLessonDate.toISOString(),
+        duration_min: newLessonDuration,
       };
       const created = await createLesson(payload);
       setLessons(prev => [...prev, created]);
@@ -194,6 +200,7 @@ function GroupPage() {
     setGenStartTime('14:00');
     setGenWeekdays([]);
     setGenLessonCount('');
+    setGenDuration(group?.lesson_duration_min || DEFAULT_DURATION_MIN);
     setGenFillSource('');
     setGenFillGroupId('');
     setGenError('');
@@ -244,6 +251,7 @@ function GroupPage() {
         start_time: genStartTime,
         weekdays: genWeekdays,
         lesson_count: parseInt(genLessonCount, 10),
+        duration_min: genDuration,
       };
       if (genFillSource) {
         payload.fill_source = genFillSource;
@@ -522,9 +530,15 @@ function GroupPage() {
           <form id="new-lesson-form" onSubmit={handleCreateLesson} className="form-stack">
             {/* Тот же выбор даты, что в уроке: минуты шагом 10, по умолчанию :00 */}
             <div className="field-label">
-              {'Дата и время начала'}
+              {'Дата, время начала и длительность'}
               <div>
-                <DateTimePicker value={newLessonDate} onChange={setNewLessonDate} floating />
+                <DateTimePicker
+                  value={newLessonDate}
+                  onChange={setNewLessonDate}
+                  duration={newLessonDuration}
+                  onDurationChange={setNewLessonDuration}
+                  floating
+                />
               </div>
             </div>
 
@@ -592,6 +606,10 @@ function GroupPage() {
                 onChange={e => setGenStartTime(e.target.value)}
                 required
               />
+            </label>
+            <label className="field-label">
+              {'Длительность (одна на все уроки)'}
+              <DurationSelect value={genDuration} onChange={setGenDuration} />
             </label>
             <div className="field-label">
               {'Дни недели'}

@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students, quiz_live, help, usages, homework
@@ -7,7 +8,15 @@ from .i18n_auto import start_translation_worker
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# Фоновый воркер автоперевода — при старте приложения (lifespan вместо
+# устаревшего @app.on_event("startup"), удалённого в новых Starlette).
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_translation_worker(interval=1800)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Явный список origin вместо "*" — раньше CORS был открыт полностью, а в
 # связке с allow_credentials=True это означало доверие ЛЮБОМУ сайту в
@@ -49,7 +58,3 @@ app.include_router(help.router)
 app.include_router(usages.router)
 app.include_router(homework.router)
 
-
-@app.on_event("startup")
-async def startup():
-    start_translation_worker(interval=1800)

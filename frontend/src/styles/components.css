@@ -2,8 +2,8 @@
  * components.css — классы UI-kit компонентов платформы (Log Academy).
  *
  * Сюда идёт всё, что раньше жило как `const styles = {...}` внутри
- * Button.js/Input.js/FormField.js/Modal.js/Table.js/Navigation.js и
- * копипастой в QRModal.js/StudentsModal.js/AdminPage.js и т.д.
+ * Button.jsx/Input.jsx/FormField.jsx/Modal.jsx/Table.jsx/Navigation.jsx и
+ * копипастой в QRModal.jsx/StudentsModal.jsx/AdminPage.jsx и т.д.
  * Значения (отступы/радиусы/цвета) — из tokens.css.
  *
  * Разделы: Buttons · Tabs · Inputs & Form field · Modal · Table · Badge ·
@@ -728,6 +728,9 @@
 .datetime-picker__time .input {
   padding: var(--space-1) var(--space-2);
 }
+.datetime-picker__sep {
+  color: var(--color-muted);
+}
 
 /* ===== Language switcher ===== */
 .lang-switcher {
@@ -1014,7 +1017,7 @@ a.row-icon:hover {
   .quiz-live-options-grid, .quiz-live-answer-grid { grid-template-columns: 1fr; }
 }
 
-/* ===== Помощник квиза (QuizHelper.js) ===== */
+/* ===== Помощник квиза (QuizHelper.jsx) ===== */
 .quiz-helper { display: flex; flex-direction: column; gap: var(--space-2); }
 .quiz-helper__title { margin: 0; }
 .quiz-helper__area { width: 100%; box-sizing: border-box; font-family: inherit; resize: vertical; }
@@ -1070,7 +1073,7 @@ a.row-icon:hover {
   background: var(--color-warning);
 }
 
-/* ===== Кнопка-значок «HUD-контур» (IconButton.js) ===== */
+/* ===== Кнопка-значок «HUD-контур» (IconButton.jsx) ===== */
 .icon-btn {
   width: 34px;
   height: 34px;
@@ -1111,7 +1114,7 @@ a.row-icon:hover {
   align-items: center;
 }
 
-/* ===== Всплывающая подсказка «Комикс» (Tooltip.js) =====
+/* ===== Всплывающая подсказка «Комикс» (Tooltip.jsx) =====
    Появление мгновенное — никаких transition/animation. */
 .la-tip {
   position: fixed;
@@ -1141,7 +1144,7 @@ a.row-icon:hover {
   text-transform: none;
   font-size: 17px;
 }
-/* Неактивную кнопку с подсказкой ищет по координатам Tooltip.js */
+/* Неактивную кнопку с подсказкой ищет по координатам Tooltip.jsx */
 [data-tip]:disabled {
   pointer-events: none;
 }
@@ -1173,7 +1176,7 @@ a.row-icon:hover {
   bottom: calc(100% + 12px);
 }
 
-/* ===== Окно «Нельзя удалить — используется здесь» (DeleteButton.js) ===== */
+/* ===== Окно «Нельзя удалить — используется здесь» (DeleteButton.jsx) ===== */
 .usages {
   max-height: 60vh;
   overflow-y: auto;
@@ -1203,7 +1206,7 @@ a.row-icon:hover {
   vertical-align: middle;
 }
 
-/* ===== ДЗ во вкладке «Студенты» урока (HomeworkTeacher.js) ===== */
+/* ===== ДЗ во вкладке «Студенты» урока (HomeworkTeacher.jsx) ===== */
 .table__col--hw {
   width: 260px;
 }
@@ -1306,7 +1309,7 @@ a.row-icon:hover {
   align-items: center;
 }
 
-/* ===== Диалог педагог ↔ студент (LessonDialog.js) ===== */
+/* ===== Диалог педагог ↔ студент (LessonDialog.jsx) ===== */
 .dialog__messages {
   max-height: 45vh;
   overflow-y: auto;
@@ -1501,7 +1504,7 @@ a.row-icon:hover {
   line-height: 1;
 }
 
-/* ===== ДЗ: флажки, режим проверки, панель справа (HomeworkTeacher.js) ===== */
+/* ===== ДЗ: флажки, режим проверки, панель справа (HomeworkTeacher.jsx) ===== */
 .table__col--flag {
   width: 58px;
   text-align: center;

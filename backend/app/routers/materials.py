@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Form
 from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,9 +25,11 @@ router = APIRouter(prefix="/materials", tags=["materials"])
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 МБ — рабочий дефолт, см. claude/minio-plan.md
 
 # Форматы, для которых делаем предпросмотр через конвертацию в PDF
-# (см. /materials/{id}/preview ниже). Конвертация всегда заново, без
-# кэша — решение Андрея, 2026-09-18; следующий шаг (редактирование
-# этих файлов) — отдельная, ещё не спроектированная задача.
+# (см. /materials/{id}/preview ниже). Готовый PDF кэшируется в MinIO
+# (storage.preview_key) — решение Андрея, 2026-09-28, вместо «всегда заново»
+# (2026-09-18): иначе класс, разом открывший презентацию, запускал десятки
+# soffice и вешал сервер. Если появится редактирование этих файлов —
+# сохранять правку под новым object_key (или удалять preview_key).
 PREVIEW_CONVERTIBLE_EXTENSIONS = {".docx", ".xlsx", ".pptx"}
 
 
@@ -44,6 +46,26 @@ def _fetch_and_convert_to_pdf(object_key: str, ext: str) -> bytes:
             check=True, timeout=60, capture_output=True,
         )
         return src.with_suffix(".pdf").read_bytes()
+
+
+# Одна конвертация за раз: параллельные soffice грузят CPU/память и ещё
+# конфликтуют за общий профиль LibreOffice. Остальные ждут в очереди.
+_CONVERT_LOCK = asyncio.Semaphore(1)
+
+
+async def _get_preview_pdf(object_key: str, ext: str) -> bytes:
+    key = storage.preview_key(object_key)
+    cached = await asyncio.to_thread(storage.read_object_or_none, key)
+    if cached is not None:
+        return cached
+    async with _CONVERT_LOCK:
+        # Пока ждали очереди, этот же файл мог сконвертировать другой запрос
+        cached = await asyncio.to_thread(storage.read_object_or_none, key)
+        if cached is not None:
+            return cached
+        pdf_bytes = await asyncio.to_thread(_fetch_and_convert_to_pdf, object_key, ext)
+        await asyncio.to_thread(storage.upload_bytes, key, pdf_bytes, "application/pdf")
+        return pdf_bytes
 
 
 async def _verify_student_material_access(
@@ -97,8 +119,7 @@ class MaterialOut(BaseModel):
     template_lesson_no: Optional[str] = None
     template_status: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Библиотека материалов — доступна teacher и admin (require_teacher пускает обоих)
@@ -347,7 +368,7 @@ async def preview_material(
         raise HTTPException(status_code=400, detail="Предпросмотр для этого формата не поддерживается")
 
     try:
-        pdf_bytes = await asyncio.to_thread(_fetch_and_convert_to_pdf, material.object_key, ext)
+        pdf_bytes = await _get_preview_pdf(material.object_key, ext)
     except subprocess.CalledProcessError:
         raise HTTPException(status_code=500, detail="Не удалось сконвертировать файл в PDF")
     except subprocess.TimeoutExpired:

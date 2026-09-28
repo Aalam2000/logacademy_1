@@ -9,12 +9,16 @@
 // это не забота календаря.
 import React, { useMemo, useEffect } from 'react';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'moment/locale/ru';
-import 'moment/locale/az';
+// moment — из ESM-сборки (moment/dist): локали из moment/locale/* (UMD)
+// под Vite регистрируются не в тот экземпляр moment, и календарь молча
+// остаётся английским. Локали и сам moment должны браться из dist/.
+import moment from 'moment/dist/moment';
+import 'moment/dist/locale/ru';
+import 'moment/dist/locale/az';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '../styles/calendar.css';
 import { useLang } from '../hooks/useLang';
+import { lessonEnd } from '../utils/lessonTime';
 
 // Локаль moment завязана на текущий язык интерфейса (useLang) — иначе
 // названия месяцев/дней в сетке календаря (их рисует сам moment, а не
@@ -60,18 +64,43 @@ const MESSAGES_BY_LANG = {
 };
 
 // Общая палитра для раскраски «по группе» — используется здесь через
-// getEventColor и отдельно на GroupsPage.js для списка групп рядом с
+// getEventColor и отдельно на GroupsPage.jsx для списка групп рядом с
 // календарём, чтобы цвета совпадали.
 export const GROUP_COLORS = ['#EC3013', '#2E5FA3', '#3B6D11', '#C026D3', '#0891B2', '#f59e0b', '#605D5D', '#059669'];
 
 // lessons: [{id, group_id, group_name?, title, date}]
 // getEventColor(lesson) => css-цвет; не задан — все события фирменным красным.
 // highlight(lesson) => значок-префикс ('' — не подсвечивать). По умолчанию —
-// урок педагога с непроверенными ДЗ; у студента своё (StudentHome.js).
+// урок педагога с непроверенными ДЗ; у студента своё (StudentHome.jsx).
 const TEACHER_HIGHLIGHT = (l) => (l.has_unreviewed_homework ? '📥 ' : '');
 
+// isLight(lesson) — урок рисуется светлым вариантом цвета группы. По
+// умолчанию (педагог) — урок открыт ученикам. У студента передаётся null:
+// там открытые = кликабельные, а закрытые и так бледные через isDisabled.
+const TEACHER_LIGHT = (l) => !!l.is_open;
+
+// Видимые часы в режимах «Неделя»/«День»: по умолчанию 08:00–22:00, но
+// раздвигаются, если есть уроки раньше/позже — урок не должен обрезаться.
+const DAY_START_HOUR = 8;
+const DAY_END_HOUR = 22;
+
+function visibleHours(events) {
+  let from = DAY_START_HOUR;
+  let to = DAY_END_HOUR;
+  events.forEach(e => {
+    from = Math.min(from, e.start.getHours());
+    const endHour = e.end.getHours() + (e.end.getMinutes() ? 1 : 0);
+    // Урок через полночь (end на следующий день) — сетку до 24:00
+    to = Math.max(to, e.end.getDate() !== e.start.getDate() ? 24 : endHour);
+  });
+  return {
+    min: new Date(1970, 0, 1, from, 0),
+    max: to >= 24 ? new Date(1970, 0, 1, 23, 59) : new Date(1970, 0, 1, to, 0),
+  };
+}
+
 // isDisabled(lesson) — урок показан, но не открывается (у студента: закрыт педагогом)
-function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month', highlight = TEACHER_HIGHLIGHT, isDisabled }) {
+function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month', highlight = TEACHER_HIGHLIGHT, isDisabled, isLight = TEACHER_LIGHT }) {
   const { lang } = useLang();
   const momentLocale = MOMENT_LOCALE_BY_LANG[lang] || 'ru';
 
@@ -82,15 +111,23 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
   const events = useMemo(() => lessons
     .filter(l => l.date)
     .map(l => {
-      const start = new Date(l.date);
       return {
         id: l.id,
         title: `${highlight(l)}${l.group_name ? `${l.group_name}: ${l.title}` : l.title}`,
-        start,
-        end: start,
+        start: new Date(l.date),
+        end: lessonEnd(l), // реальная длительность — растягивается в «Неделе»/«Дне»
         resource: l,
       };
     }), [lessons, highlight]);
+
+  const { min, max } = useMemo(() => visibleHours(events), [events]);
+
+  const eventClassName = (lesson) => [
+    'la-calendar__event',
+    highlight(lesson) && 'la-calendar__event--homework',
+    isLight && isLight(lesson) && 'la-calendar__event--light',
+    isDisabled && isDisabled(lesson) && 'la-calendar__event--disabled',
+  ].filter(Boolean).join(' ');
 
   return (
     <div className="la-calendar">
@@ -102,9 +139,13 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
         messages={MESSAGES_BY_LANG[momentLocale] || MESSAGES_BY_LANG.ru}
         culture={momentLocale}
         popup
+        min={min}
+        max={max}
+        scrollToTime={min}
+        step={30}
+        timeslots={2}
         eventPropGetter={(event) => ({
-          // Урок с непроверенными решениями ДЗ — подсвечиваем
-          className: `la-calendar__event${highlight(event.resource) ? ' la-calendar__event--homework' : ''}${isDisabled && isDisabled(event.resource) ? ' la-calendar__event--disabled' : ''}`,
+          className: eventClassName(event.resource),
           style: { '--la-event-color': getEventColor ? getEventColor(event.resource) : 'var(--color-primary)' },
         })}
         onSelectEvent={(event) => {

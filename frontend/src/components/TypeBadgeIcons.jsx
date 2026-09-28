@@ -1,4 +1,4 @@
-// TypeBadgeIcons.js — маленькие SVG-иконки для бейджей типов в «Базе знаний».
+// TypeBadgeIcons.jsx — маленькие SVG-иконки для бейджей типов в «Базе знаний».
 // Размер задаётся CSS-классом .type-badge__icon в components.css (12x12).
 // stroke="currentColor" — наследует белый цвет бейджа.
 

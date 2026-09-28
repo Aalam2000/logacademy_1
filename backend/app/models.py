@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean, UniqueConstraint, Index
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -39,6 +39,8 @@ class Group(Base):
     telegram_chat_id = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
     video_url = Column(String, nullable=True)  # постоянная ссылка на видеоконференцию (Meet и т.п.)
+    # Длительность урока по умолчанию (мин) — подставляется в новые уроки, урок хранит копию
+    lesson_duration_min = Column(Integer, nullable=False, default=120, server_default="120")
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False, default="active")  # active | archived
     invite_code = Column(String, unique=True, nullable=False)  # для регистрации студентов по QR
@@ -49,6 +51,10 @@ class Group(Base):
 # Состав группы
 class GroupMember(Base):
     __tablename__ = "group_members"
+    __table_args__ = (
+        Index("ix_group_members_group_id", "group_id"),
+        Index("ix_group_members_student_id", "student_id"),
+    )
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -66,11 +72,13 @@ class GroupMember(Base):
 # Урок — одна запись на группу, копируется для новых групп
 class Lesson(Base):
     __tablename__ = "lessons"
+    __table_args__ = (Index("ix_lessons_group_id_date", "group_id", "date"),)
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     title = Column(String, nullable=False)
     order = Column(Integer, nullable=False, default=0)  # порядок урока в группе
     date = Column(DateTime(timezone=True), nullable=True)  # дата проведения
+    duration_min = Column(Integer, nullable=False, default=120, server_default="120")  # длительность, мин; конец = date + duration
     is_open = Column(Boolean, nullable=False, default=False)  # педагог открывает доступ
     source = Column(String, nullable=True)  # academy | teacher
     comment = Column(Text, nullable=True)  # заметки педагога по уроку в целом (не по студенту)
@@ -80,6 +88,7 @@ class Lesson(Base):
 # Посещаемость + оценка + звёзды за урок. Одна строка на пару (урок, студент).
 class LessonMark(Base):
     __tablename__ = "lesson_marks"
+    __table_args__ = (Index("ix_lesson_marks_student_id", "student_id"),)
     id = Column(Integer, primary_key=True, index=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False, index=True)
     student_id = Column(Integer, ForeignKey("users.id"), nullable=False)

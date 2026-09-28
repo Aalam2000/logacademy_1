@@ -9,6 +9,7 @@ import io
 import os
 
 from minio import Minio
+from minio.error import S3Error
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -50,5 +51,26 @@ def stream_object(object_key: str, chunk_size: int = 32 * 1024):
         resp.release_conn()
 
 
+def read_object_or_none(object_key: str) -> bytes | None:
+    """Файл целиком или None, если такого ключа нет (для кэша предпросмотра)."""
+    try:
+        return b"".join(stream_object(object_key))
+    except S3Error as e:
+        if e.code in ("NoSuchKey", "NoSuchBucket"):
+            return None
+        raise
+
+
+# Кэш PDF-предпросмотра docx/xlsx/pptx (materials.py). object_key файла
+# уникален и никогда не перезаписывается (новая загрузка = новый ключ),
+# поэтому PDF, привязанный к ключу, не устаревает.
+def preview_key(object_key: str) -> str:
+    return f"previews/{object_key}.pdf"
+
+
 def delete_object(object_key: str) -> None:
     _client.remove_object(MINIO_BUCKET, object_key)
+    # Вместе с файлом — его PDF-предпросмотр, если был (remove_object
+    # несуществующего ключа в MinIO/S3 не ошибка)
+    if not object_key.startswith("previews/"):
+        _client.remove_object(MINIO_BUCKET, preview_key(object_key))
