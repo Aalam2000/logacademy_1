@@ -114,3 +114,12 @@ export function IconAdmin(props) {
     </svg>
   );
 }
+// Посещения — пульс в рамке (кто в системе и сколько)
+export function IconActivity(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="3" y="4" width="18" height="16" />
+      <polyline points="5,13 9,13 11,8 13,17 15,11 19,11" />
+    </svg>
+  );
+}

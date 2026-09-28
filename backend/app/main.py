@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students, quiz_live, help, usages, homework
+from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students, quiz_live, help, usages, homework, presence
 import logging
 from .i18n_auto import start_translation_worker
 
@@ -57,4 +57,5 @@ app.include_router(quiz_live.router)
 app.include_router(help.router)
 app.include_router(usages.router)
 app.include_router(homework.router)
+app.include_router(presence.router)
 

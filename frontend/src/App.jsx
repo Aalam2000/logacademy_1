@@ -14,6 +14,7 @@ import StudentPerformancePage from './pages/StudentPerformancePage';
 import GroupPage from './pages/GroupPage';
 import StudentsPage from './pages/StudentsPage';
 import TeachersDirectoryPage from './pages/TeachersDirectoryPage';
+import ActivityPage from './pages/ActivityPage';
 import JoinGroupPage from './pages/JoinGroupPage';
 import QuizLiveHostPage from './pages/QuizLiveHostPage';
 import QuizLiveJoinPage from './pages/QuizLiveJoinPage';
@@ -62,6 +63,9 @@ function App() {
           } />
           <Route path="teachers" element={
             <RoleRoute roles={['admin']}><TeachersDirectoryPage /></RoleRoute>
+          } />
+          <Route path="activity" element={
+            <RoleRoute roles={['admin']}><ActivityPage /></RoleRoute>
           } />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="help" element={<HelpPage />} />

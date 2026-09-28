@@ -9,6 +9,7 @@ import {
   IconAdmin,
   IconPerformance,
   IconHelp,
+  IconActivity,
 } from './CyberIcons';
 
 function Navigation({ user, isOpen, onClose }) {
@@ -62,6 +63,14 @@ function Navigation({ user, isOpen, onClose }) {
             <NavLink to="/dashboard/teachers" className={linkClass} onClick={handleLinkClick}>
               <IconTeachers className="nav__icon" />
               <span>{'Учителя'}</span>
+            </NavLink>
+          </li>
+        )}
+        {user?.role === 'admin' && (
+          <li className="nav__item">
+            <NavLink to="/dashboard/activity" className={linkClass} onClick={handleLinkClick}>
+              <IconActivity className="nav__icon" />
+              <span>{'Посещения'}</span>
             </NavLink>
           </li>
         )}

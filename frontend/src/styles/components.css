@@ -1735,3 +1735,51 @@ a.row-icon:hover {
 }
 .student-home__head h2 { margin: 0; }
 .student-home__head .group-bar { margin-bottom: 0; }
+
+/* ===== Посещения (ActivityPage, только админ) ===== */
+.activity-online {
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-white);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.activity-online__title {
+  font-size: var(--font-sm);
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+.activity-online__empty {
+  font-size: var(--font-sm);
+  color: var(--color-muted);
+}
+.activity-online__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+.activity-online__user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+}
+.activity-online__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-muted);           /* серый — сегодня был, сейчас нет */
+  flex-shrink: 0;
+}
+.activity-online__dot--online {
+  background: var(--color-role-student);    /* зелёный — активен за последние 10 мин */
+}
+.activity-online__user--away {
+  color: var(--color-muted);
+}
+.activity-online__since {
+  color: var(--color-muted);
+}
+/* В «Итого» — кто за период не заходил ни разу */
+.activity-row--idle td {
+  color: var(--color-muted);
+}

@@ -244,3 +244,22 @@ class LessonMessage(Base):
     text = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     edited_at = Column(DateTime(timezone=True), nullable=True)
+
+
+# Сессии присутствия в системе (claude/presence-plan.md): одна строка на
+# непрерывный отрезок работы пользователя. Открытая вкладка раз в минуту
+# шлёт «пульс» (POST /presence/ping) — продлевает last_seen_at; перерыв
+# больше SESSION_GAP (app/presence.py) начинает новую сессию. Храним только
+# время — без IP, браузера и открытых страниц. Удаление пользователя удаляет
+# и его сессии (ON DELETE CASCADE), срок хранения — RETENTION_DAYS.
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    __table_args__ = (
+        Index("ix_user_sessions_user_last_seen", "user_id", "last_seen_at"),
+        Index("ix_user_sessions_last_seen", "last_seen_at"),
+        Index("ix_user_sessions_started", "started_at"),
+    )
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=False)
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)

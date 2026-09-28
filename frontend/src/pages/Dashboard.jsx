@@ -3,11 +3,13 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navigation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { usePresencePing } from '../hooks/usePresencePing';
 
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  usePresencePing(user); // учёт времени в системе (отчёт «Посещения» у админа)
 
   const roleBadgeClass = user?.role
     ? `badge badge--role badge--inline badge--${user.role}`
