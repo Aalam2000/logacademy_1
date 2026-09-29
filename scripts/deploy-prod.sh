@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Всё тело — в функции, вызываемой последней строкой: bash читает функцию
+# целиком до запуска, поэтому git reset, который подменяет этот же файл
+# посреди выполнения, не сбивает работу скрипта.
+main() {
 BRANCH="${1:-master}"
 PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 
@@ -12,21 +16,13 @@ echo "[deploy] project dir: $PROJECT_DIR"
 git fetch origin
 git reset --hard "origin/$BRANCH"
 
-# frontend/src читает backend-контейнер (autoi18n-сканер, appuser uid=1000) через
-# ro bind-mount. git reset пересоздаёт файлы с правами по umask (обычно 640,
-# без чтения для "остальных") — appuser не входит в группу владельца (quizadm),
-# поэтому не может прочитать исходники и сканер молча ничего не находит.
-# frontend/src не секрет — это исходники клиентского JS-бандла, и так уходят
-# в браузер, поэтому даём "остальным" чтение без риска.
-echo "[deploy] fixing read permissions on frontend/src (needed by autoi18n scanner in backend container)"
-chmod -R o+rX frontend/src
-
-# backend/templates/help подключена в backend томом: autoi18n читает
-# инструкции (.md) и кладёт рядом их переводы (teacher.en.md и т.п.) —
-# appuser нужно чтение исходников и запись в саму папку.
-echo "[deploy] fixing permissions on backend/templates/help (autoi18n writes translated copies there)"
-chmod -R o+rX backend/templates/help
-chmod o+w backend/templates/help
+# Backend-контейнер работает под uid/gid того, кто деплоит (quizadm):
+# файлы из git и файлы, которые пишет контейнер (translations, переводы
+# инструкций в backend/templates/help), принадлежат одному пользователю —
+# chmod/chown после git reset не нужны.
+export APP_UID="$(id -u)"
+export APP_GID="$(id -g)"
+echo "[deploy] backend runs as uid=$APP_UID gid=$APP_GID ($(id -un))"
 
 docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
@@ -48,3 +44,6 @@ docker volume prune -f
 docker builder prune -f --filter "until=168h"
 
 echo "[deploy] done"
+}
+
+main "$@"; exit $?

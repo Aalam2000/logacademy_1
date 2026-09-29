@@ -10,7 +10,13 @@ x-logging: &default-logging
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      # контейнер работает под uid/gid того, кто деплоит (quizadm) —
+      # см. scripts/deploy-prod.sh и backend/Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
     restart: unless-stopped
     logging: *default-logging
     env_file:
