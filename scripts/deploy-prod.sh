@@ -21,6 +21,13 @@ git reset --hard "origin/$BRANCH"
 echo "[deploy] fixing read permissions on frontend/src (needed by autoi18n scanner in backend container)"
 chmod -R o+rX frontend/src
 
+# backend/templates/help подключена в backend томом: autoi18n читает
+# инструкции (.md) и кладёт рядом их переводы (teacher.en.md и т.п.) —
+# appuser нужно чтение исходников и запись в саму папку.
+echo "[deploy] fixing permissions on backend/templates/help (autoi18n writes translated copies there)"
+chmod -R o+rX backend/templates/help
+chmod o+w backend/templates/help
+
 docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
 # nginx запоминает IP frontend/backend при старте. После пересоздания

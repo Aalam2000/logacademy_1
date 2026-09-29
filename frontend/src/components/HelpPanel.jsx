@@ -4,8 +4,8 @@ import { useLang } from '../hooks/useLang';
 
 // Панель справа с инструкцией для текущей роли пользователя (см.
 // backend/app/routers/help.py — файл выбирается по current_user.role,
-// текст лежит в backend/templates/help/*.html и переводится тем же
-// приёмом, что и карточка студента).
+// текст лежит в backend/templates/help/*.md; перевод — готовый файл
+// рядом с исходником (teacher.en.md), бэкенд отдаёт его как HTML).
 function HelpPanel({ onClose }) {
   const { lang } = useLang();
   const [html, setHtml] = useState('');

@@ -1,0 +1,62 @@
+{
+  "context": "LogAcademy (logacademy.az) — образовательная платформа для педагогов, студентов и администраторов: группы, уроки, домашние задания, квизы, экзамены, посещаемость, база знаний. Интерфейс веб-приложения; короткие надписи кнопок, заголовков и сообщений.",
+  "scan_paths": [
+    {
+      "path": "frontend/src",
+      "type": "js"
+    },
+    {
+      "path": "templates",
+      "type": "html"
+    }
+  ],
+  "attributes": [
+    "data-tip",
+    "tip"
+  ],
+  "doc_paths": [
+    "templates/help"
+  ],
+  "terms": {
+    "ДЗ": {
+      "en": "Homework",
+      "az": "Ev tapşırığı"
+    },
+    "Педагог*": {
+      "en": "Teacher",
+      "az": "Müəllim"
+    },
+    "Преподавател*": {
+      "en": "Teacher",
+      "az": "Müəllim"
+    },
+    "Студент*": {
+      "en": "Student",
+      "az": "Tələbə"
+    },
+    "Экзамен*": {
+      "en": "Exam",
+      "az": "İmtahan"
+    },
+    "Уважительн* причин*": {
+      "en": "Valid reason",
+      "az": "Üzrlü səbəb"
+    },
+    "баз* знани*": {
+      "en": "Knowledge base",
+      "az": "Bilik bazası"
+    },
+    "Посещаемост*": {
+      "en": "Attendance",
+      "az": "Davamiyyət"
+    },
+    "Квиз*": {
+      "en": "Quiz",
+      "az": "quiz"
+    },
+    "Ср. ДЗ": {
+      "en": "Avg. homework",
+      "az": "Orta ev tapşırığı"
+    }
+  }
+}

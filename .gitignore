@@ -17,3 +17,6 @@ frontend/certs/*.crt
 frontend/certs/*.key
 Claude outputs/
 lesson_materials/
+
+# переводы инструкций, создаёт autoi18n (teacher.md -> teacher.en.md)
+backend/templates/help/*.*.md

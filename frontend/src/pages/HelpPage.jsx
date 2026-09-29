@@ -4,7 +4,7 @@ import { useLang } from '../hooks/useLang';
 
 // «Помощь» — обычная страница в правой части, как остальные разделы.
 // Инструкция по роли пользователя: backend/app/routers/help.py выбирает
-// файл по current_user.role, текст в backend/templates/help/*.html,
+// файл по current_user.role, текст в backend/templates/help/*.md,
 // переводится на бэкенде (lang).
 function HelpPage() {
   const { lang } = useLang();
