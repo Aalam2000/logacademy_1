@@ -1783,3 +1783,96 @@ a.row-icon:hover {
 .activity-row--idle td {
   color: var(--color-muted);
 }
+
+/* Текст инструкции («Помощь») — Markdown, отрисованный бэкендом в HTML:
+ * читаемая ширина строки и отступы между разделами. */
+.help-content {
+  max-width: 820px;
+  line-height: 1.6;
+}
+.help-content h1 { margin: 0 0 var(--space-4); }
+.help-content h2 { margin: var(--space-7) 0 var(--space-3); }
+.help-content h3 { margin: var(--space-5) 0 var(--space-2); }
+.help-content ul,
+.help-content ol { padding-left: var(--space-6); }
+.help-content li { margin: var(--space-1) 0; }
+.help-content a { color: var(--color-primary); }
+
+/* ===== Методика: пункт меню ===== */
+/* Прижат к низу над «Помощью»; сама «Помощь» идёт сразу под ним. */
+.nav__method {
+  margin-top: auto;
+  border-top: 1px solid var(--color-primary-border);
+}
+.nav__method + .nav__help {
+  margin-top: 0;
+  border-top: none;
+}
+.nav__method-mark {
+  margin-left: auto;
+  color: var(--color-warning);
+  font-weight: var(--weight-bold);
+  letter-spacing: 1px;
+}
+
+/* ===== Методика: страница ===== */
+.methodology {
+  display: flex;
+  gap: var(--space-7);
+  align-items: flex-start;
+}
+.methodology__nav {
+  flex: 0 0 280px;
+  position: sticky;
+  top: var(--space-4);
+}
+.methodology__heading {
+  margin-top: 0;
+}
+.methodology__section {
+  margin-bottom: var(--space-5);
+}
+.methodology__section-title {
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-2);
+}
+.methodology__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.methodology__link {
+  display: block;
+  padding: var(--space-1) var(--space-3);
+  border-left: 3px solid transparent;
+  color: var(--color-text);
+  text-decoration: none;
+}
+.methodology__link:hover {
+  color: var(--color-primary);
+}
+.methodology__link--active {
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  font-weight: var(--weight-bold);
+}
+.methodology__empty {
+  padding-left: var(--space-3);
+}
+.methodology__content {
+  flex: 1;
+  min-width: 0;
+}
+.methodology__content table {
+  border-collapse: collapse;
+  margin: var(--space-4) 0;
+}
+.methodology__content th,
+.methodology__content td {
+  border: 1px solid var(--color-primary-border);
+  padding: var(--space-2) var(--space-3);
+}
+@media (max-width: 768px) {
+  .methodology { flex-direction: column; gap: var(--space-5); }
+  .methodology__nav { position: static; flex-basis: auto; width: 100%; }
+}

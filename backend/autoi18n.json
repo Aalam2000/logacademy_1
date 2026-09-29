@@ -15,7 +15,8 @@
     "tip"
   ],
   "doc_paths": [
-    "templates/help"
+    "templates/help",
+    "templates/methodology"
   ],
   "terms": {
     "ДЗ": {

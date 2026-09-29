@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/auth';
 import { useLang } from '../hooks/useLang';
+import { useInternalLinks } from '../hooks/useInternalLinks';
 
 // «Помощь» — обычная страница в правой части, как остальные разделы.
 // Инструкция по роли пользователя: backend/app/routers/help.py выбирает
@@ -8,6 +9,7 @@ import { useLang } from '../hooks/useLang';
 // переводится на бэкенде (lang).
 function HelpPage() {
   const { lang } = useLang();
+  const handleLinkClick = useInternalLinks();
   const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,10 +25,9 @@ function HelpPage() {
 
   return (
     <div className="page help-page">
-      <h2>{'Помощь'}</h2>
       {loading && <div className="table__empty">{'Загрузка...'}</div>}
       {error && <div className="error-text error-text--muted">{error}</div>}
-      {!loading && !error && <div dangerouslySetInnerHTML={{ __html: html }} />}
+      {!loading && !error && <div className="help-content" onClick={handleLinkClick} dangerouslySetInnerHTML={{ __html: html }} />}
     </div>
   );
 }

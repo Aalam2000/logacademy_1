@@ -28,6 +28,8 @@ services:
       # инструкции (.md): переводы autoi18n кладёт рядом с исходником —
       # том, чтобы они не пропадали при пересборке образа
       - ./backend/templates/help:/app/templates/help
+      # методические материалы (.md) — так же, переводы рядом с исходником
+      - ./backend/templates/methodology:/app/templates/methodology
       - ./frontend/src:/app/frontend/src:ro
       - ./.env.prod:/app/.env
 

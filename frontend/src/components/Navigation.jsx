@@ -10,6 +10,7 @@ import {
   IconPerformance,
   IconHelp,
   IconActivity,
+  IconBook,
 } from './CyberIcons';
 
 function Navigation({ user, isOpen, onClose }) {
@@ -89,6 +90,19 @@ function Navigation({ user, isOpen, onClose }) {
           </li>
         )}
       </ul>
+      {/* «Методика» — методические материалы (педагоги и админы), прижата к низу
+          над «Помощью»; оранжевый значок «?!» горит всегда, чтобы пункт выделялся */}
+      {user && user.role !== 'student' && (
+        <NavLink
+          to="/dashboard/methodology"
+          className={({ isActive }) => `nav__link nav__method${isActive ? ' nav__link--active' : ''}`}
+          onClick={handleLinkClick}
+        >
+          <IconBook className="nav__icon" />
+          <span>{'Методика'}</span>
+          <span className="nav__method-mark" aria-hidden="true">?!</span>
+        </NavLink>
+      )}
       {/* «Помощь» — страница в правой части, как остальные разделы; кнопка прижата к низу */}
       <NavLink
         to="/dashboard/help"

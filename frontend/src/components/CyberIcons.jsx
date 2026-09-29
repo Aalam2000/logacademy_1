@@ -66,6 +66,20 @@ export function IconHelp(props) {
   );
 }
 
+// 3a. Методика — раскрытая книга
+export function IconBook(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M12 6 L12 20" />
+      <path d="M12 6 L4 4 L4 18 L12 20 L20 18 L20 4 Z" />
+      <line x1="6.5" y1="8" x2="9.5" y2="8.8" />
+      <line x1="6.5" y1="11" x2="9.5" y2="11.8" />
+      <line x1="14.5" y1="8.8" x2="17.5" y2="8" />
+      <line x1="14.5" y1="11.8" x2="17.5" y2="11" />
+    </svg>
+  );
+}
+
 // 4a. Успеваемость (студент) — столбики по возрастанию
 export function IconPerformance(props) {
   return (
