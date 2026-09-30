@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -21,6 +21,8 @@ import QuizLiveJoinPage from './pages/QuizLiveJoinPage';
 import NotFoundPage from './pages/NotFoundPage';
 import HelpPage from './pages/HelpPage';
 import MethodologyPage from './pages/MethodologyPage';
+// Просмотр слайдов тянет pdf.js (~1 МБ) — грузим отдельным чанком, только когда он открыт
+const SlideViewerPage = lazy(() => import('./pages/SlideViewerPage'));
 import RoleRoute from './components/RoleRoute';
 import TooltipLayer from './components/Tooltip';
 
@@ -43,6 +45,9 @@ function App() {
           <PrivateRoute>
             <RoleRoute roles={['teacher', 'admin']}><QuizLiveHostPage /></RoleRoute>
           </PrivateRoute>
+        } />
+        <Route path="/slides/:materialId" element={
+          <PrivateRoute><Suspense fallback={null}><SlideViewerPage /></Suspense></PrivateRoute>
         } />
         <Route path="/dashboard" element={
           <PrivateRoute>

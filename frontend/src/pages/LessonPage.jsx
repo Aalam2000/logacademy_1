@@ -6,7 +6,7 @@ import VideoCallButton from '../components/VideoCallButton';
 import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
-import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
 import { StudentContactIcons } from '../components/ContactIcons';
 import { subscribeLessonMarksUpdated } from '../utils/lessonMarksChannel';
@@ -199,6 +199,11 @@ function LessonPage() {
 
     if (item.resource_type === 'link') {
       window.open(item.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (item.resource_type === 'material' && isPresentation(item.content_type)) {
+      openSlides(item.resource_id, item.title);
       return;
     }
 

@@ -40,6 +40,17 @@ export function subtypeLabel(item) {
 // docx/xlsx/pptx браузер нативно не открывает — для них бэкенд конвертирует
 // в PDF на лету (/materials/{id}/preview), дальше открывается тем же
 // способом, что уже работает для PDF/картинок (/download).
+// Презентация (.pptx) открывается не лентой PDF, а просмотрщиком по слайдам
+// (pages/SlideViewerPage.jsx) в новой вкладке.
+export function isPresentation(contentType) {
+  return materialTypeLabel(contentType) === 'PPTX';
+}
+
+export function openSlides(materialId, title) {
+  const q = title ? `?title=${encodeURIComponent(title)}` : '';
+  window.open(`/slides/${materialId}${q}`, '_blank', 'noopener');
+}
+
 export function needsPdfPreview(contentType) {
   return ['DOCX', 'XLSX', 'PPTX'].includes(materialTypeLabel(contentType));
 }

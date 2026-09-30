@@ -6,7 +6,7 @@ import IconButton from '../components/IconButton';
 import { getCourses } from '../api/admin';
 import { uploadMaterial, updateMaterialTemplate, bulkUpdateMaterialTemplate } from '../api/materials';
 import { useAuth } from '../context/AuthContext';
-import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { IconBadgeFile, IconBadgeQuiz, IconBadgeLink } from '../components/TypeBadgeIcons';
 function itemKey(item) {
   return resourceKey(item.resource_type, item.id);
@@ -227,6 +227,11 @@ function KnowledgeBasePage() {
 
     if (item.resource_type === 'link') {
       window.open(item.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (item.resource_type === 'material' && isPresentation(item.content_type)) {
+      openSlides(item.id, item.title);
       return;
     }
 

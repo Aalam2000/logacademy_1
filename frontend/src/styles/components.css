@@ -1876,3 +1876,82 @@ a.row-icon:hover {
   .methodology { flex-direction: column; gap: var(--space-5); }
   .methodology__nav { position: static; flex-basis: auto; width: 100%; }
 }
+
+/* ===== Просмотр презентации по слайдам (pages/SlideViewerPage.jsx) ===== */
+.slides {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-soft);
+}
+.slides__stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  cursor: pointer;
+}
+.slides__canvas {
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+.slides__msg {
+  color: var(--color-text);
+  font-size: var(--font-base);
+}
+.slides__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  background: #fff;
+  border-top: 3px solid var(--color-primary);
+}
+.slides__title {
+  flex: 1;
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slides__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.slides__nav button {
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  line-height: 1;
+  border: 1px solid var(--color-primary-border);
+  background: #fff;
+  cursor: pointer;
+}
+.slides__nav button:hover:not(:disabled) {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.slides__nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.slides__count {
+  min-width: 64px;
+  text-align: center;
+  font-weight: var(--weight-bold);
+}
+.slides__full {
+  flex: 1;
+  text-align: right;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: var(--font-base);
+  cursor: pointer;
+}

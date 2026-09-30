@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
-import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview } from '../utils/libraryItems';
+import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
 import { useAuth } from '../context/AuthContext';
 import StudentHomework from '../components/HomeworkStudent';
@@ -87,6 +87,11 @@ function StudentLessonPage() {
 
     if (item.resource_type === 'link') {
       window.open(item.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (item.resource_type === 'material' && isPresentation(item.content_type)) {
+      openSlides(item.resource_id, item.title);
       return;
     }
 
