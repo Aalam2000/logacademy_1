@@ -4,7 +4,7 @@ from sqlalchemy import select
 from ..database import get_db
 from ..models import Quiz, User
 from ..schemas import QuizCreate, QuizOut
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, require_teacher
 from ..usages import ensure_not_used
 from .i18n import translator
 import json
@@ -13,6 +13,15 @@ import re
 from pathlib import Path
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
+
+
+def _editable_quiz_query(quiz_id: int, current_user: User):
+    """Квиз, который пользователь может менять: свой или любой — для admin
+    (так же, как удаление ниже)."""
+    query = select(Quiz).where(Quiz.id == quiz_id)
+    if current_user.role != "admin":
+        query = query.where(Quiz.created_by == current_user.id)
+    return query
 
 SOURCE_LANG = os.getenv("SOURCE_LANG", "ru")
 TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates" / "quiz"
@@ -80,7 +89,7 @@ async def create_quiz(quiz_data: QuizCreate, db: AsyncSession = Depends(get_db),
 
 @router.put("/{quiz_id}", response_model=QuizOut)
 async def update_quiz(quiz_id: int, quiz_data: QuizCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id, Quiz.created_by == current_user.id))
+    result = await db.execute(_editable_quiz_query(quiz_id, current_user))
     quiz = result.scalar_one_or_none()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
@@ -126,8 +135,11 @@ async def delete_quiz(quiz_id: int, db: AsyncSession = Depends(get_db), current_
     return {"detail": "Deleted"}
 
 @router.get("/{quiz_id}/html")
-async def get_quiz_html(quiz_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id, Quiz.created_by == current_user.id))
+async def get_quiz_html(quiz_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_teacher)):
+    # Открыть квиз может любой педагог или admin: квизы в Базе знаний общие,
+    # их добавляют в свои уроки разные педагоги. Раньше открыть мог только
+    # автор — остальные получали 404 «Quiz not found».
+    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id))
     quiz = result.scalar_one_or_none()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
@@ -135,7 +147,7 @@ async def get_quiz_html(quiz_id: int, db: AsyncSession = Depends(get_db), curren
 
 @router.get("/{quiz_id}/edit")
 async def get_quiz_edit_data(quiz_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id, Quiz.created_by == current_user.id))
+    result = await db.execute(_editable_quiz_query(quiz_id, current_user))
     quiz = result.scalar_one_or_none()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
