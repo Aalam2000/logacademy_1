@@ -102,7 +102,9 @@
 - One line per run in `/var/backups/logacademy/backup.log` (`OK` / `FAIL` / `SKIP`).
 - Setup:
   - `sudo mkdir -p /var/backups/logacademy && sudo chown quizadm:quizadm /var/backups/logacademy && sudo chmod 700 /var/backups/logacademy`
-  - cron (`crontab -e` as quizadm): `15 3 * * * /var/www/quiz/scripts/backup.sh`
+  - systemd timer (runs as quizadm, daily 03:15 Asia/Baku; cron is closed for quizadm by `/etc/cron.allow`):
+    `sudo cp deploy/systemd/logacademy-backup.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now logacademy-backup.timer`
+  - check: `systemctl list-timers logacademy-backup.timer`
 - Restore DB: `pg_restore --clean --if-exists -d "$URL" db.dump`; files: unpack `minio.tar.gz` and upload with `mc mirror` (or the MinIO console).
 - TODO: copy backups off this server (separate server / S3).
 

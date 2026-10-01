@@ -54,6 +54,7 @@ backend/            API и бизнес-логика
   app/usages.py       проверка использования перед удалением
   app/presence.py     правила учёта присутствия в системе
   app/storage.py      работа с файловым хранилищем
+  app/backup_minio.py выгрузка файлов хранилища в архив (для бэкапа)
   alembic/            миграции базы данных
   templates/          HTML-шаблоны квизов и карточки студента
     help/               инструкции по ролям (.md) и их переводы
@@ -67,3 +68,23 @@ frontend/           веб-интерфейс
 deploy/             конфигурация Nginx и системных сервисов
 scripts/            служебные скрипты
 ```
+
+## Логи и бэкапы
+
+**Логи.** Ни один лог не растёт без ограничений:
+
+| Что | Где | Ограничение |
+|---|---|---|
+| Контейнеры (backend, frontend, nginx) | `docker compose logs` | до 30 МБ на сервис (3 файла по 10 МБ), `docker-compose.prod.yml` |
+| Попытки входа (для fail2ban) | `logs/nginx-fail2ban/login.log` | logrotate: раз в неделю или при 20 МБ, 4 архива — `deploy/logrotate/logacademy` |
+| Системный журнал | journald | `SystemMaxUse=100M` |
+| auditd | `/var/log/audit` | 5 файлов по 10 МБ, режим `ROTATE` |
+| Кэш сборки Docker | — | `deploy-prod.sh` после выкатки урезает до 2 ГБ |
+
+Backend пишет в stdout через `logging` (уровень INFO), без `print`.
+
+**Бэкапы.** `scripts/backup.sh` (systemd-таймер `logacademy-backup.timer`, каждый день в 03:15 по Баку, от имени `quizadm`) кладёт в `/var/backups/logacademy/<дата>_<время>/`:
+- `db.dump` — база (`pg_dump -Fc`);
+- `minio.tar.gz` — все файлы хранилища, кроме кэша предпросмотров `previews/`.
+
+Каждый архив проверяется сразу после записи, хранятся 14 дней. Итог каждого запуска — одна строка `OK` / `FAIL` / `SKIP` в `/var/backups/logacademy/backup.log`. Пока бэкапы лежат на том же сервере — перенос на отдельный сервер / S3 запланирован. Установка и восстановление — `DEPLOYMENT.md`.

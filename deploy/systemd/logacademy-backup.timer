@@ -1,0 +1,12 @@
+# Каждый день в 03:15 по Баку (сервер живёт в UTC).
+# Persistent=true: если сервер был выключен в это время — бэкап сделается
+# сразу после включения.
+[Unit]
+Description=LogAcademy nightly backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Asia/Baku
+Persistent=true
+
+[Install]
+WantedBy=timers.target

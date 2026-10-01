@@ -1,0 +1,18 @@
+# Ночной бэкап БД и MinIO (scripts/backup.sh) от имени quizadm.
+# Запускается таймером logacademy-backup.timer.
+# Установка:
+#   sudo cp deploy/systemd/logacademy-backup.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now logacademy-backup.timer
+[Unit]
+Description=LogAcademy backup (DB + MinIO)
+Wants=network-online.target
+After=network-online.target docker.service postgresql.service minio.service
+
+[Service]
+Type=oneshot
+User=quizadm
+Group=quizadm
+Environment=PROJECT_DIR=/var/www/quiz
+# имена папок и время в backup.log — по Баку
+Environment=TZ=Asia/Baku
+ExecStart=/var/www/quiz/scripts/backup.sh

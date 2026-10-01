@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Ночной бэкап: база (pg_dump) + файлы MinIO -> BACKUP_DIR/<дата>/.
 # Хранит KEEP_DAYS дней, каждый архив проверяется после записи.
-# Запуск (cron, пользователь quizadm):
-#   15 3 * * * /var/www/quiz/scripts/backup.sh
+# Запуск: systemd-таймер deploy/systemd/logacademy-backup.timer
+# (каждый день 03:15 по Баку, от имени quizadm). Вручную — просто запустить.
 # Итог каждого запуска — одна строка в BACKUP_DIR/backup.log.
 set -euo pipefail
 
