@@ -6,11 +6,14 @@
 """
 import asyncio
 import sys
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select
 
 from .database import AsyncSessionLocal
 from .models import CspReport
+
+TZ = ZoneInfo("Asia/Baku")   # в БД время в UTC, показываем по Баку
 
 
 async def main() -> None:
@@ -30,7 +33,7 @@ async def main() -> None:
         for r in rows:
             print(f"{r.count:>6}  {r.directive:<18} {r.blocked}")
             print(f"        страница: {r.page}   код: {r.source or '-'}   [{r.disposition}]")
-            print(f"        первый: {r.first_seen:%Y-%m-%d %H:%M}  последний: {r.last_seen:%Y-%m-%d %H:%M}")
+            print(f"        первый: {r.first_seen.astimezone(TZ):%Y-%m-%d %H:%M}  последний: {r.last_seen.astimezone(TZ):%Y-%m-%d %H:%M} (Баку)")
             if r.sample:
                 print(f"        фрагмент: {r.sample}")
             print()
