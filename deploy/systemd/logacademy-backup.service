@@ -15,4 +15,4 @@ Group=quizadm
 Environment=PROJECT_DIR=/var/www/quiz
 # имена папок и время в backup.log — по Баку
 Environment=TZ=Asia/Baku
-ExecStart=/var/www/quiz/scripts/backup.sh
+ExecStart=/bin/bash /var/www/quiz/scripts/backup.sh
