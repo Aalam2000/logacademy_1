@@ -95,6 +95,17 @@
 - systemd journal: `SystemMaxUse=100M` in `/etc/systemd/journald.conf`, then `sudo systemctl restart systemd-journald`
 - auditd: `max_log_file_action = ROTATE` in `/etc/audit/auditd.conf` (with `keep_logs` it never deletes old files), then `sudo service auditd restart`
 
+### Backups (DB + MinIO files)
+
+- Script: `scripts/backup.sh` (runs as `quizadm`): `pg_dump` + all MinIO objects except `previews/` (via `python -m app.backup_minio` in the backend container).
+- Output: `/var/backups/logacademy/<date>_<time>/` (`db.dump`, `minio.tar.gz`); both are verified after writing; kept 14 days (`KEEP_DAYS`).
+- One line per run in `/var/backups/logacademy/backup.log` (`OK` / `FAIL` / `SKIP`).
+- Setup:
+  - `sudo mkdir -p /var/backups/logacademy && sudo chown quizadm:quizadm /var/backups/logacademy && sudo chmod 700 /var/backups/logacademy`
+  - cron (`crontab -e` as quizadm): `15 3 * * * /var/www/quiz/scripts/backup.sh`
+- Restore DB: `pg_restore --clean --if-exists -d "$URL" db.dump`; files: unpack `minio.tar.gz` and upload with `mc mirror` (or the MinIO console).
+- TODO: copy backups off this server (separate server / S3).
+
 ## 5) Important warnings
 
 - `git reset --hard` deletes all local uncommitted changes on server.
