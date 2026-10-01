@@ -1,12 +1,21 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students, quiz_live, help, usages, homework, presence, methodology
+from .routers import auth, quizzes, i18n, admin, groups, lessons, materials, links, library, students, quiz_live, help, usages, homework, presence, methodology, csp
 import logging
 from .i18n_auto import start_translation_worker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Отчёты CSP приходят пачками (десятки на одну загрузку страницы) и уже
+# дедуплицируются в таблице csp_reports — в access-лог uvicorn их не пишем.
+class _SkipCspReportAccess(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/csp-report" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_SkipCspReportAccess())
 
 # Фоновый воркер автоперевода — при старте приложения (lifespan вместо
 # устаревшего @app.on_event("startup"), удалённого в новых Starlette).
@@ -59,4 +68,5 @@ app.include_router(methodology.router)
 app.include_router(usages.router)
 app.include_router(homework.router)
 app.include_router(presence.router)
+app.include_router(csp.router)
 

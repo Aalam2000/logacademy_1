@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
+from xhtml2pdf.config.resources import ResourceAccessPolicy
 
 from ..usages import ensure_not_used
 from ..attendance import attendance_slots, summarize_by_student
@@ -231,6 +232,11 @@ async def list_students(
 
 
 TEMPLATE_PATH = Path(__file__).parent.parent.parent / "templates" / "student_card.html"
+# Шрифты PDF лежат в проекте (backend/fonts, Noto Sans: кириллица + азербайджанские
+# ə ı ğ ş). xhtml2pdf с 0.2.17+ читает локальные файлы только из разрешённой папки —
+# без resource_policy шрифт молча не грузился, и вместо букв шли квадраты.
+FONTS_DIR = (Path(__file__).parent.parent.parent / "fonts").resolve()
+PDF_POLICY = ResourceAccessPolicy(base_dir=FONTS_DIR, allow_remote=False)
 
 
 def render_student_card_html(lang: str, student: User, groups: list[dict], summary: dict) -> str:
@@ -264,6 +270,7 @@ def render_student_card_html(lang: str, student: User, groups: list[dict], summa
     )
 
     data = {
+        "fonts_dir": FONTS_DIR.as_posix(),
         "generated_date": datetime.now().strftime("%d.%m.%Y"),
         "student_name": student.full_name or student.username,
         "phone_display": phone_display,
@@ -328,7 +335,7 @@ async def get_student_card(
     html = render_student_card_html(lang, student, groups, summary)
 
     buffer = io.BytesIO()
-    pisa_status = pisa.CreatePDF(src=html, dest=buffer)
+    pisa_status = pisa.CreatePDF(src=html, dest=buffer, resource_policy=PDF_POLICY)
     if pisa_status.err:
         raise HTTPException(status_code=500, detail="Не удалось сформировать PDF")
 

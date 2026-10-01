@@ -1,6 +1,6 @@
 """Проверка прод-БД перед выкаткой миграций (ничего не меняет).
 
-Текущая выкатка: 0016_user_sessions (присутствие в системе).
+Текущая выкатка: 0017_csp_reports (отчёты о нарушениях CSP).
 Перед следующей выкаткой с миграциями — поправить EXPECTED_* ниже.
 
 Запуск на сервере (работает и на СТАРОМ образе бэкенда):
@@ -11,10 +11,10 @@ import asyncio
 from sqlalchemy import text
 from app.database import engine
 
-EXPECTED_REVISION = "0015_perf_indexes"   # последняя уже выкаченная
-NEW_TABLES = ["user_sessions"]
+EXPECTED_REVISION = "0016_user_sessions"   # последняя уже выкаченная
+NEW_TABLES = ["csp_reports"]
 NEW_COLUMNS = []
-NEW_INDEXES = ["ix_user_sessions_user_last_seen", "ix_user_sessions_last_seen", "ix_user_sessions_started"]
+NEW_INDEXES = []
 
 
 async def main():

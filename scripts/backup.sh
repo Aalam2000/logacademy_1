@@ -6,6 +6,10 @@
 # Итог каждого запуска — одна строка в BACKUP_DIR/backup.log.
 set -euo pipefail
 
+# Время в именах папок и в backup.log — по Баку (сервер в UTC),
+# одинаково и для ручного запуска, и для таймера.
+export TZ="${TZ:-Asia/Baku}"
+
 PROJECT_DIR="${PROJECT_DIR:-/var/www/quiz}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/logacademy}"
 KEEP_DAYS="${KEEP_DAYS:-14}"

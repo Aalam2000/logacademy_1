@@ -263,3 +263,23 @@ class UserSession(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     started_at = Column(DateTime(timezone=True), nullable=False)
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
+
+# Нарушения Content-Security-Policy, присланные браузерами (POST /csp-report).
+# Дедупликация: одна строка на «вид» нарушения — fingerprint из директивы,
+# источника (только домен), страницы (путь, id заменены на :id) и места в
+# коде (файл:строка). Повтор не создаёт строку, а делает count += 1 и
+# обновляет last_seen. Нормализация — app/csp.py.
+class CspReport(Base):
+    __tablename__ = "csp_reports"
+    id = Column(Integer, primary_key=True)
+    fingerprint = Column(String(64), nullable=False, unique=True)
+    directive = Column(String, nullable=False)      # script-src-elem, font-src…
+    blocked = Column(String, nullable=False)        # inline | eval | https://fonts.gstatic.com …
+    page = Column(String, nullable=False)           # /login, /groups/:id …
+    source = Column(String, nullable=False)         # /assets/index-*.js:12 | "" (если нет)
+    disposition = Column(String, nullable=False)    # report | enforce
+    sample = Column(Text, nullable=True)            # первые символы кода (если браузер прислал)
+    user_agent = Column(String, nullable=True)      # пример браузера (последний)
+    count = Column(Integer, nullable=False, default=1)
+    first_seen = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_seen = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
