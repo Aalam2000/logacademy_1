@@ -12,6 +12,10 @@ import os
 import re
 from pathlib import Path
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 
 
@@ -41,7 +45,7 @@ def render_translated_template(template_type: str, lang: str, data: dict) -> str
         try:
             template_content = translator.apply_to_html(template_content, lang)
         except Exception as e:
-            print(f"❌ Ошибка перевода шаблона: {e}")
+            logger.warning("Ошибка перевода шаблона: %s", e)
 
     # Потом подставляем данные
     for key, value in data.items():

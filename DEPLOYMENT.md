@@ -83,8 +83,17 @@
   - `git fetch origin`
   - `git reset --hard origin/<branch>`
   - `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
-  - `docker image prune -af`
-  - `docker builder prune -af`
+  - `docker image prune -f`, `docker volume prune -f`
+  - `docker builder prune -af --reserved-space 2gb` — build cache is capped by size (2 GB), not by age
+  - `df -h /` — prints disk usage at the end
+
+### Server log limits (one-time setup on a new server)
+
+- Nginx login log (read by fail2ban) rotation:
+  - `sudo cp deploy/logrotate/logacademy /etc/logrotate.d/logacademy`
+  - check: `sudo logrotate -d /etc/logrotate.d/logacademy`
+- systemd journal: `SystemMaxUse=100M` in `/etc/systemd/journald.conf`, then `sudo systemctl restart systemd-journald`
+- auditd: `max_log_file_action = ROTATE` in `/etc/audit/auditd.conf` (with `keep_logs` it never deletes old files), then `sudo service auditd restart`
 
 ## 5) Important warnings
 

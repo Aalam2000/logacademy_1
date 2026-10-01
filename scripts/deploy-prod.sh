@@ -38,10 +38,18 @@ docker compose -f docker-compose.prod.yml ps
 echo "[deploy] current revision"
 git rev-parse --short HEAD
 
-echo "[deploy] cleanup: dangling-образы, осиротевшие volume, build cache старше недели"
+# Кэш сборки ограничиваем по РАЗМЕРУ, а не по возрасту: при частых выкатках
+# фильтр "старше недели" ничего не удалял, и кэш дорос до 4+ ГБ.
+# 2 ГБ хватает на слои одной полной сборки (быстрая следующая выкатка).
+# --reserved-space — новое имя опции (Docker 28+), --keep-storage — старое.
+echo "[deploy] cleanup: dangling-образы, осиротевшие volume, build cache сверх 2 ГБ"
 docker image prune -f
 docker volume prune -f
-docker builder prune -f --filter "until=168h"
+docker builder prune -af --reserved-space 2gb 2>/dev/null \
+  || docker builder prune -af --keep-storage 2gb
+
+echo "[deploy] disk usage"
+df -h /
 
 echo "[deploy] done"
 }

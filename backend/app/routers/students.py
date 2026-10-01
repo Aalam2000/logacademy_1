@@ -20,6 +20,10 @@ from ..models import (
 )
 from .i18n import translator
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/students", tags=["students"])
 
 
@@ -244,7 +248,7 @@ def render_student_card_html(lang: str, student: User, groups: list[dict], summa
         try:
             template = translator.apply_to_html(template, lang)
         except Exception as e:
-            print(f"❌ Ошибка перевода карточки студента: {e}")
+            logger.warning("Ошибка перевода карточки студента: %s", e)
 
     def contact_row(value: Optional[str]):
         return ("", value) if value else ("display:none", "")
