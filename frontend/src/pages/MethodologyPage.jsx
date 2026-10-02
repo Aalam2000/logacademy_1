@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { useLang } from '../hooks/useLang';
 import { useInternalLinks } from '../hooks/useInternalLinks';
@@ -7,10 +7,12 @@ import { useInternalLinks } from '../hooks/useInternalLinks';
 // «Методика» — методические материалы для педагогов и администраторов.
 // Разделы и материалы — папки и .md в backend/templates/methodology
 // (см. backend/app/routers/methodology.py); переводы делает autoi18n,
-// бэкенд отдаёт нужную языковую версию. Слева — дерево разделов,
-// справа — выбранный материал. Адрес материала:
-// /dashboard/methodology/<раздел>/<материал> — на него можно ссылаться
-// из других материалов и из помощи.
+// бэкенд отдаёт нужную языковую версию.
+// /dashboard/methodology — список: заголовок и названия материалов
+// (синие ссылки во всю ширину страницы, по разделам; пустые разделы не
+// показываются). /dashboard/methodology/<раздел>/<материал> — сам материал
+// на всю страницу с кнопкой «Назад», которая остаётся наверху при прокрутке.
+// На адрес материала можно ссылаться из других материалов и из помощи.
 function MethodologyPage() {
   const { section, slug } = useParams();
   const { lang } = useLang();
@@ -41,42 +43,48 @@ function MethodologyPage() {
       .finally(() => setLoading(false));
   }, [section, slug, lang]);
 
-  return (
-    <div className="page methodology">
-      <aside className="methodology__nav">
-        <h2 className="methodology__heading">{'Методика преподавания IT детям'}</h2>
-        {treeError && <div className="error-text error-text--muted">{treeError}</div>}
-        {tree.map(s => (
-          <div key={s.slug} className="methodology__section">
-            <div className="methodology__section-title">{s.title}</div>
-            {s.materials.length === 0 ? (
-              <div className="text-muted methodology__empty">{'Материалов пока нет'}</div>
-            ) : (
-              <ul className="methodology__list">
-                {s.materials.map(m => (
-                  <li key={m.slug}>
-                    <NavLink
-                      to={`/dashboard/methodology/${s.slug}/${m.slug}`}
-                      className={({ isActive }) => `methodology__link${isActive ? ' methodology__link--active' : ''}`}
-                    >
-                      {m.title}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
-      </aside>
+  const filledSections = tree.filter(s => s.materials.length > 0);
 
-      <article className="methodology__content">
-        {!section && <p className="text-muted">{'Выберите материал в списке разделов.'}</p>}
+  // Материал — на всю страницу; «Назад» прилипает к верху области прокрутки
+  if (section && slug) {
+    return (
+      <div className="page methodology">
+        <div className="methodology__back">
+          <Link to="/dashboard/methodology" className="btn btn--outline">{'Назад'}</Link>
+        </div>
         {loading && <div className="table__empty">{'Загрузка...'}</div>}
         {error && <div className="error-text error-text--muted">{error}</div>}
         {!loading && !error && doc && (
-          <div className="help-content" onClick={handleLinkClick} dangerouslySetInnerHTML={{ __html: doc.html }} />
+          <article
+            className="help-content methodology__content"
+            onClick={handleLinkClick}
+            dangerouslySetInnerHTML={{ __html: doc.html }}
+          />
         )}
-      </article>
+      </div>
+    );
+  }
+
+  // Список материалов
+  return (
+    <div className="page methodology">
+      <h2 className="methodology__heading">{'Методические материалы'}</h2>
+      {treeError && <div className="error-text error-text--muted">{treeError}</div>}
+      {!treeError && filledSections.length === 0 && (
+        <p className="text-muted">{'Материалов пока нет'}</p>
+      )}
+      {filledSections.map(s => (
+        <div key={s.slug} className="methodology__section">
+          <div className="methodology__section-title">{s.title}</div>
+          <div className="methodology__list">
+            {s.materials.map(m => (
+              <Link key={m.slug} to={`/dashboard/methodology/${s.slug}/${m.slug}`} className="methodology__link">
+                {m.title}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1816,52 +1816,47 @@ a.row-icon:hover {
 }
 
 /* ===== Методика: страница ===== */
-.methodology {
-  display: flex;
-  gap: var(--space-7);
-  align-items: flex-start;
-}
-.methodology__nav {
-  flex: 0 0 280px;
-  position: sticky;
-  top: var(--space-4);
-}
+/* Список: заголовок и названия материалов синими ссылками во всю ширину. */
 .methodology__heading {
   margin-top: 0;
 }
 .methodology__section {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 .methodology__section-title {
-  font-weight: var(--weight-bold);
+  font-size: var(--font-sm);
+  color: var(--color-muted);
   margin-bottom: var(--space-2);
 }
 .methodology__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-7);
 }
 .methodology__link {
-  display: block;
-  padding: var(--space-1) var(--space-3);
-  border-left: 3px solid transparent;
-  color: var(--color-text);
+  color: var(--color-info);
+  font-weight: var(--weight-medium);
   text-decoration: none;
 }
 .methodology__link:hover {
-  color: var(--color-primary);
+  text-decoration: underline;
 }
-.methodology__link--active {
-  color: var(--color-primary);
-  border-left-color: var(--color-primary);
-  font-weight: var(--weight-bold);
+/* Материал: «Назад» остаётся наверху при прокрутке (прокручивается
+   .dashboard-page-content); фон полосы закрывает текст, уходящий под неё. */
+.methodology__back {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: calc(-1 * var(--space-7)) calc(-1 * var(--space-7)) var(--space-5);
+  padding: var(--space-3) var(--space-7);
+  background: var(--color-bg-soft);
+  border-bottom: 1px solid var(--color-border-light);
 }
-.methodology__empty {
-  padding-left: var(--space-3);
+.methodology__back .btn {
+  text-decoration: none; /* это ссылка в виде кнопки */
 }
 .methodology__content {
-  flex: 1;
-  min-width: 0;
+  max-width: 1100px; /* шире, чем «Помощь» (820px): материал занимает всю страницу */
 }
 .methodology__content table {
   border-collapse: collapse;
@@ -1871,10 +1866,6 @@ a.row-icon:hover {
 .methodology__content td {
   border: 1px solid var(--color-primary-border);
   padding: var(--space-2) var(--space-3);
-}
-@media (max-width: 768px) {
-  .methodology { flex-direction: column; gap: var(--space-5); }
-  .methodology__nav { position: static; flex-basis: auto; width: 100%; }
 }
 
 /* ===== Просмотр презентации по слайдам (pages/SlideViewerPage.jsx) ===== */
