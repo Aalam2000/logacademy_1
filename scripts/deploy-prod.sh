@@ -40,13 +40,16 @@ git rev-parse --short HEAD
 
 # Кэш сборки ограничиваем по РАЗМЕРУ, а не по возрасту: при частых выкатках
 # фильтр "старше недели" ничего не удалял, и кэш дорос до 4+ ГБ.
-# 2 ГБ хватает на слои одной полной сборки (быстрая следующая выкатка).
+# Лимит 6 ГБ: одна полная сборка занимает ~2,1 ГБ, и при лимите 2 ГБ очистка
+# срабатывала на каждой выкатке и ломала кэш backend — следующая сборка шла
+# с нуля (~275 с вместо секунд; проверено 2026-10-02). С запасом очистка
+# срабатывает редко, обычная выкатка собирается из кэша.
 # --reserved-space — новое имя опции (Docker 28+), --keep-storage — старое.
-echo "[deploy] cleanup: dangling-образы, осиротевшие volume, build cache сверх 2 ГБ"
+echo "[deploy] cleanup: dangling-образы, осиротевшие volume, build cache сверх 6 ГБ"
 docker image prune -f
 docker volume prune -f
-docker builder prune -af --reserved-space 2gb 2>/dev/null \
-  || docker builder prune -af --keep-storage 2gb
+docker builder prune -af --reserved-space 6gb 2>/dev/null \
+  || docker builder prune -af --keep-storage 6gb
 
 echo "[deploy] disk usage"
 df -h /
