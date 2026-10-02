@@ -36,6 +36,12 @@ export function fillGroupSchedule(groupId, payload) {
   return api.post(`/lessons/group/${groupId}/fill-schedule`, payload).then(res => res.data);
 }
 
+// Открыть / закрыть сразу несколько уроков группы по номерам с..по.
+// payload: {range_from, range_to, is_open}
+export function openGroupLessonsRange(groupId, payload) {
+  return api.post(`/lessons/group/${groupId}/open-range`, payload).then(res => res.data);
+}
+
 // Удалить все уроки группы разом — шаг «удалить и пересоздать» в диалоге
 // генератора, когда в группе уже есть уроки.
 export function deleteGroupLessons(groupId) {

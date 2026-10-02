@@ -27,6 +27,22 @@ const ICONS = {
       <rect x="14" y="13" width="3" height="3" />
     </svg>
   ),
+  // Открыть уроки — раскрытый замок
+  unlock: (
+    <svg {...svgProps}>
+      <rect x="4" y="11" width="16" height="10" />
+      <path d="M8 11V7a4 4 0 0 1 7.5-2" />
+      <line x1="12" y1="15" x2="12" y2="17" />
+    </svg>
+  ),
+  // Обновить материалы — папка со стрелкой внутрь
+  materials: (
+    <svg {...svgProps}>
+      <path d="M3 5h6l2 3h10v12H3z" />
+      <line x1="12" y1="11" x2="12" y2="17" />
+      <polyline points="9.5,14.5 12,17 14.5,14.5" />
+    </svg>
+  ),
   // В архив — ящик
   archive: (
     <svg {...svgProps}>

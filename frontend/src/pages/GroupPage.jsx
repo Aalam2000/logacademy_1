@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from '../components/Modal';
+import IconButton from '../components/IconButton';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
@@ -12,7 +13,7 @@ import DateTimePicker from '../components/DateTimePicker';
 import { getMyGroups, getCourses } from '../api/groups';
 import {
   getGroupLessons, createLesson, generateSchedule,
-  fillGroupSchedule, deleteGroupLessons, markLessonHoliday,
+  fillGroupSchedule, deleteGroupLessons, markLessonHoliday, openGroupLessonsRange,
 } from '../api/lessons';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']; // 0..6, как в date.weekday() на бэке
@@ -64,6 +65,13 @@ function GroupPage() {
   // Дозаполнение/обновление материалов уже существующих уроков — и как
   // шаг после решения "уроки уже есть", и как отдельная кнопка
   const [isFillModalOpen, setIsFillModalOpen] = useState(false);
+  // «Открыть уроки» — открыть/закрыть доступ к урокам с № по №
+  const [isOpenRangeModalOpen, setIsOpenRangeModalOpen] = useState(false);
+  const [openRangeFrom, setOpenRangeFrom] = useState('');
+  const [openRangeTo, setOpenRangeTo] = useState('');
+  const [openRangeAction, setOpenRangeAction] = useState('open'); // open | close
+  const [isOpeningRange, setIsOpeningRange] = useState(false);
+  const [openRangeError, setOpenRangeError] = useState('');
   const [fillSource, setFillSource] = useState('template'); // template | group
   const [fillGroupId, setFillGroupId] = useState('');
   const [fillRangeFrom, setFillRangeFrom] = useState('');
@@ -310,6 +318,45 @@ function GroupPage() {
     }
   };
 
+  // «Открыть уроки» — по умолчанию с первого урока по последний, чья дата
+  // уже наступила (сегодня включительно).
+  const openOpenRangeModal = () => {
+    const groupLessons = lessons.filter(l => l.group_id === gid);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const started = groupLessons.filter(l => l.date && new Date(l.date) <= endOfToday).map(l => l.order);
+    const orders = groupLessons.map(l => l.order);
+    setOpenRangeFrom(String(orders.length ? Math.min(...orders) : 1));
+    setOpenRangeTo(String(started.length ? Math.max(...started) : (orders.length ? Math.min(...orders) : 1)));
+    setOpenRangeAction('open');
+    setOpenRangeError('');
+    setIsOpenRangeModalOpen(true);
+  };
+
+  const handleOpenRange = async (e) => {
+    e.preventDefault();
+    if (!openRangeFrom || !openRangeTo) {
+      setOpenRangeError('Укажите диапазон уроков');
+      return;
+    }
+    setIsOpeningRange(true);
+    setOpenRangeError('');
+    try {
+      const res = await openGroupLessonsRange(gid, {
+        range_from: parseInt(openRangeFrom, 10),
+        range_to: parseInt(openRangeTo, 10),
+        is_open: openRangeAction === 'open',
+      });
+      const ids = new Set(res.lesson_ids);
+      setLessons(prev => prev.map(l => (ids.has(l.id) ? { ...l, is_open: res.is_open } : l)));
+      setIsOpenRangeModalOpen(false);
+    } catch (err) {
+      setOpenRangeError(err?.response?.data?.detail || 'Не удалось изменить доступ к урокам');
+    } finally {
+      setIsOpeningRange(false);
+    }
+  };
+
   // «Праздник» — сдвигает этот и все последующие уроки серии на одну
   // позицию вперёд (материалы/оценки не трогает), см. lessons.py.
   const handleMarkHoliday = async (lesson) => {
@@ -411,12 +458,9 @@ function GroupPage() {
           <button className="btn" onClick={openCreateModal}>
             {'+ Урок'}
           </button>
-          <button className="btn btn--outline" onClick={handleOpenScheduleFlow}>
-            {'Заполнить расписание'}
-          </button>
-          <button className="btn btn--outline" onClick={openFillModal}>
-            {'Обновить материалы'}
-          </button>
+          <IconButton icon="unlock" tip={'Открыть уроки'} onClick={openOpenRangeModal} />
+          <IconButton icon="schedule" tip={'Заполнить расписание'} onClick={handleOpenScheduleFlow} />
+          <IconButton icon="materials" tip={'Обновить материалы'} onClick={openFillModal} />
         </div>
       </div>
 
@@ -659,6 +703,60 @@ function GroupPage() {
             )}
 
             {genError && <div className="form-field__error">{genError}</div>}
+          </form>
+        </Modal>
+      )}
+
+      {/* Открыть / закрыть доступ к урокам с № по № */}
+      {isOpenRangeModalOpen && (
+        <Modal
+          title={'Открыть уроки'}
+          onClose={() => setIsOpenRangeModalOpen(false)}
+          footer={(
+            <>
+              <button type="button" className="btn btn--secondary" onClick={() => setIsOpenRangeModalOpen(false)}>
+                {'Отмена'}
+              </button>
+              <button type="submit" form="open-range-form" className="btn" disabled={isOpeningRange}>
+                {isOpeningRange ? 'Сохранение...' : 'Применить'}
+              </button>
+            </>
+          )}
+        >
+          <form id="open-range-form" onSubmit={handleOpenRange} className="form-stack">
+            <div className="button-row">
+              <label className="field-label">
+                {'Урок с №'}
+                <input
+                  type="number"
+                  min="1"
+                  className="input input--sm-num"
+                  value={openRangeFrom}
+                  onChange={e => setOpenRangeFrom(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="field-label">
+                {'по №'}
+                <input
+                  type="number"
+                  min="1"
+                  className="input input--sm-num"
+                  value={openRangeTo}
+                  onChange={e => setOpenRangeTo(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <label className="field-label">
+              {'Действие'}
+              <select className="input" value={openRangeAction} onChange={e => setOpenRangeAction(e.target.value)}>
+                <option value="open">{'Открыть доступ'}</option>
+                <option value="close">{'Закрыть доступ'}</option>
+              </select>
+            </label>
+
+            {openRangeError && <div className="form-field__error">{openRangeError}</div>}
           </form>
         </Modal>
       )}

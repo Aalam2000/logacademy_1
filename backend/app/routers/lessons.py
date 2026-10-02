@@ -160,6 +160,13 @@ class FillScheduleRequest(BaseModel):
     mode: str = "add"  # "add" (Дополнить) | "replace" (Заменить)
 
 
+# Открыть / закрыть сразу несколько уроков группы — по номерам с..по
+class OpenRangeRequest(BaseModel):
+    range_from: int = Field(ge=1)
+    range_to: int = Field(ge=1)
+    is_open: bool = True
+
+
 def is_lesson_locked(lesson: Lesson) -> bool:
     # Правило блокировки — в lesson_lock.py (им же пользуется посещаемость)
     return is_date_locked(lesson.date)
@@ -642,6 +649,37 @@ async def fill_group_schedule(
     attached = await _apply_positions_to_lessons(db, lessons_by_order, positions, data.mode, current_user)
     await db.commit()
     return {"ok": True, "attached": attached}
+
+
+# Открыть / закрыть доступ сразу к нескольким урокам группы (по номерам
+# с..по). Полуночная блокировка на доступ не действует — как и у
+# открытия одного урока (PATCH /{lesson_id}/open).
+@router.post("/group/{group_id}/open-range")
+async def open_group_lessons_range(
+    group_id: int,
+    data: OpenRangeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    await get_accessible_group(group_id, db, current_user)
+    if data.range_from > data.range_to:
+        raise HTTPException(status_code=422, detail="Некорректный диапазон уроков")
+    group_lessons = (await db.execute(
+        select(Lesson).where(
+            Lesson.group_id == group_id,
+            Lesson.order >= data.range_from,
+            Lesson.order <= data.range_to,
+        )
+    )).scalars().all()
+    if not group_lessons:
+        raise HTTPException(status_code=404, detail="В указанном диапазоне нет уроков")
+    changed = 0
+    for lesson in group_lessons:
+        if lesson.is_open != data.is_open:
+            lesson.is_open = data.is_open
+            changed += 1
+    await db.commit()
+    return {"ok": True, "changed": changed, "lesson_ids": [l.id for l in group_lessons], "is_open": data.is_open}
 
 
 # Массовое удаление всех уроков группы — шаг "удалить и пересоздать
