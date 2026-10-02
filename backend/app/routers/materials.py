@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import storage
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher, get_current_user
-from ..models import Material, User, Lesson, LessonResource, GroupMember, HomeworkTask
-from ..resources import content_hash, find_duplicate_material, material_name_exists, conflict
+from ..models import Material, User, Lesson, LessonResource, GroupMember, HomeworkTask, Course
+from ..resources import content_hash, find_duplicate_material, find_materials_by_name, conflict
 from ..usages import ensure_not_used
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -122,6 +122,33 @@ class MaterialOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Ответ загрузки: тот же MaterialOut + что именно произошло с файлом
+# (created — новый, replaced — заменено содержимое существующего,
+# unchanged — такой файл уже есть, ничего не меняли).
+class MaterialUploadOut(MaterialOut):
+    upload_result: str = "created"
+
+
+async def _upload_out(db: AsyncSession, material: Material, upload_result: str) -> MaterialUploadOut:
+    row = (await db.execute(
+        select(User.full_name, User.username).where(User.id == material.uploaded_by)
+    )).first()
+    item = MaterialUploadOut.model_validate(material)
+    item.uploaded_by_name = (row[0] or row[1]) if row else None
+    item.upload_result = upload_result
+    return item
+
+
+async def _stored_hash(material: Material) -> Optional[str]:
+    """sha256 файла, загруженного до появления контроля дублей (content_hash
+    ещё пуст). Объекта нет в хранилище — None: считаем содержимое другим."""
+    try:
+        data = await asyncio.to_thread(lambda: b"".join(storage.stream_object(material.object_key)))
+    except Exception:
+        return None
+    return content_hash(data)
+
+
 # Библиотека материалов — доступна teacher и admin (require_teacher пускает обоих)
 @router.get("/", response_model=list[MaterialOut])
 async def list_materials(
@@ -148,13 +175,24 @@ async def list_materials(
 # просто не передаёт (форма "+ Файл" их не показывает); если их всё же
 # передал не-admin — 403, а не молчаливое игнорирование, чтобы не
 # маскировать ошибку на фронте/в прямом вызове API.
-@router.post("/upload", response_model=MaterialOut)
+#
+# Правило загрузки (решение Андрея, 2026-10-02) — имя файла уникально по
+# всей Базе знаний:
+#   имя новое, содержимое новое        -> новый файл (created);
+#   имя новое, такое же содержимое уже
+#     лежит под другим именем          -> 409 duplicate, копию не кладём;
+#   имя то же, содержимое то же        -> ничего не делаем (unchanged);
+#   имя то же, содержимое другое       -> заменяем содержимое ТОЙ ЖЕ записи
+#     (replaced): id, привязки к урокам и теги шаблона остаются. Заменить
+#     может admin или тот, кто файл загрузил; иначе 409 name_taken. При
+#     загрузке пакета курса файл другого курса/сектора не заменяем — тоже
+#     409 name_taken (чтобы один курс молча не перезаписал материалы другого).
+@router.post("/upload", response_model=MaterialUploadOut)
 async def upload_material(
     file: UploadFile = FastAPIFile(...),
     course_id: Optional[int] = Form(None),
     sector: Optional[str] = Form(None),
     template_lesson_no: Optional[str] = Form(None),
-    confirm_same_name: bool = Form(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
@@ -169,19 +207,84 @@ async def upload_material(
     if size_bytes > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Файл слишком большой (максимум 50 МБ)")
 
-    # Контроль дублей: тот же файл (по содержимому) второй раз не кладём;
-    # одноимённый с другим содержимым — только после подтверждения
-    # (для пакета шаблонов курса имя не проверяем — там одинаковые имена
-    # в разных курсах/секторах нормальны).
     digest = content_hash(contents)
+    is_template_upload = course_id is not None or sector is not None or template_lesson_no is not None
+
+    # 1. То же имя и то же содержимое — ничего не делаем.
+    same_name = await find_materials_by_name(db, file.filename)
+    for m in same_name:
+        if m.content_hash is None:
+            m.content_hash = await _stored_hash(m)
+    identical = next((m for m in same_name if m.content_hash == digest), None)
+    if identical:
+        await db.commit()  # сохранить досчитанные хэши старых файлов
+        await db.refresh(identical)
+        return await _upload_out(db, identical, "unchanged")
+
+    # 2. Такое же содержимое уже лежит под другим именем — копию не кладём.
     duplicate = await find_duplicate_material(db, digest)
     if duplicate:
         existing, who = duplicate
         return conflict("duplicate", f"Такой файл уже есть в Базе знаний: «{existing.original_filename}» ({who})", existing.id)
-    is_template_upload = course_id is not None or sector is not None or template_lesson_no is not None
-    if not is_template_upload and not confirm_same_name and await material_name_exists(db, file.filename):
-        return conflict("same_name", f"В Базе знаний уже есть файл с именем «{file.filename}» (с другим содержимым). Загрузить всё равно?")
 
+    # 3. То же имя, другое содержимое — заменяем содержимое существующей
+    #    записи (при старых дублях имени — самой новой из них).
+    if same_name:
+        target = same_name[0]
+        if current_user.role != "admin" and target.uploaded_by != current_user.id:
+            owner = (await db.execute(
+                select(User.full_name, User.username).where(User.id == target.uploaded_by)
+            )).first()
+            who = (owner[0] or owner[1]) if owner else "—"
+            return conflict(
+                "name_taken",
+                f"В Базе знаний уже есть файл с именем «{file.filename}» (загрузил(а) {who}). "
+                "Заменить его может только автор или администратор — переименуйте свой файл.",
+                target.id,
+            )
+        if is_template_upload and (target.course_id is not None or target.sector is not None) \
+                and (target.course_id != course_id or target.sector != sector):
+            course_title = None
+            if target.course_id is not None:
+                course_title = (await db.execute(
+                    select(Course.title).where(Course.id == target.course_id)
+                )).scalar_one_or_none()
+            owner_label = ", ".join(x for x in (course_title, target.sector) if x) or "без курса"
+            return conflict(
+                "name_taken",
+                f"Файл с именем «{file.filename}» уже есть в Базе знаний и относится к другому "
+                f"курсу или сектору ({owner_label}). Переименуйте файл.",
+                target.id,
+            )
+
+        # Новый object_key, а не перезапись старого: ключ в MinIO никогда не
+        # перезаписывается (на нём держится кэш PDF-предпросмотра, см.
+        # storage.preview_key). Старый объект удаляем после коммита.
+        old_key = target.object_key
+        new_key = f"materials/{uuid4()}/{file.filename}"
+        storage.upload_bytes(new_key, contents, file.content_type)
+        target.object_key = new_key
+        target.content_type = file.content_type
+        target.size_bytes = size_bytes
+        target.content_hash = digest
+        if is_template_upload:
+            # Файл без тегов, пришедший в пакете курса, становится материалом
+            # этого курса; у файла того же курса/сектора теги не меняются.
+            target.course_id = course_id
+            target.sector = sector
+            if template_lesson_no:
+                target.template_lesson_no = template_lesson_no
+            if target.template_lesson_no and target.template_status is None:
+                target.template_status = "draft"
+        await db.commit()
+        await db.refresh(target)
+        try:
+            storage.delete_object(old_key)
+        except Exception:
+            pass  # осиротевший объект в хранилище не мешает работе
+        return await _upload_out(db, target, "replaced")
+
+    # 4. Имя новое — обычная загрузка нового файла.
     object_key = f"materials/{uuid4()}/{file.filename}"
     storage.upload_bytes(object_key, contents, file.content_type)
 
@@ -206,9 +309,7 @@ async def upload_material(
     await db.commit()
     await db.refresh(material)
 
-    item = MaterialOut.model_validate(material)
-    item.uploaded_by_name = current_user.full_name or current_user.username
-    return item
+    return await _upload_out(db, material, "created")
 
 
 class MaterialTemplateUpdate(BaseModel):

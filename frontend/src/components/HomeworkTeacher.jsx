@@ -31,18 +31,10 @@ export function HomeworkAddModal({ lessonId, student, deadline, onChanged, onClo
   const [deadlineValue, setDeadlineValue] = useState(deadline ? new Date(deadline) : null);
   const studentId = student ? student.student_id : null;
 
-  // Одноимённый файл с другим содержимым — без вопросов загружаем как новый
+  // Имя и содержимое файла в Базе знаний уникальны — правило на бэкенде;
+  // отказ (имя занято чужим файлом) показывается как ошибка.
   const create = async (payload) => {
-    const full = { studentId, deadline: deadlineValue, ...payload };
-    try {
-      await createHomeworkTask(lessonId, full);
-    } catch (err) {
-      if (err?.response?.status === 409 && err?.response?.data?.code === 'same_name') {
-        await createHomeworkTask(lessonId, { ...full, confirmSameName: true });
-      } else {
-        throw err;
-      }
-    }
+    await createHomeworkTask(lessonId, { studentId, deadline: deadlineValue, ...payload });
     await onChanged();
   };
 

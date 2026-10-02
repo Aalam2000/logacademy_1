@@ -7,13 +7,16 @@ export function getMaterials() {
 
 // templateFields — необязательный {course_id, sector, template_lesson_no},
 // проставить их может только admin (см. backend/app/routers/materials.py).
-// confirmSameName — пользователь подтвердил загрузку одноимённого файла
-// (бэкенд отвечает 409 code=same_name, пока не подтвердят; 409
-// code=duplicate — такой же файл уже есть, existing_id — его id).
-export function uploadMaterial(file, templateFields, confirmSameName = false) {
+// Имя файла уникально по всей Базе знаний. В ответе upload_result:
+//   created   — загружен новый файл;
+//   replaced  — файл с таким именем уже был, содержимое заменено (id тот же);
+//   unchanged — такой же файл с таким же именем уже есть, ничего не менялось.
+// Отказы — 409: code=duplicate (то же содержимое лежит под другим именем,
+// existing_id — его id), code=name_taken (одноимённый файл чужой или из
+// другого курса/сектора — заменить нельзя, нужно переименовать).
+export function uploadMaterial(file, templateFields) {
   const formData = new FormData();
   formData.append('file', file);
-  if (confirmSameName) formData.append('confirm_same_name', 'true');
   if (templateFields) {
     const { course_id, sector, template_lesson_no } = templateFields;
     if (course_id != null) formData.append('course_id', course_id);

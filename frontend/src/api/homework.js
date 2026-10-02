@@ -12,14 +12,13 @@ export function getHomeworkBoard(lessonId) {
 }
 
 // Выдать задание. studentId = null — всем. Источник: materialId (из Базы знаний) ИЛИ file.
-// deadline — Date | null. 409 code=same_name — повторить с confirmSameName.
-export function createHomeworkTask(lessonId, { studentId, deadline, materialId, file, confirmSameName }) {
+// deadline — Date | null. 409 code=name_taken — имя занято чужим файлом Базы знаний.
+export function createHomeworkTask(lessonId, { studentId, deadline, materialId, file }) {
   const fd = new FormData();
   if (studentId) fd.append('student_id', studentId);
   if (deadline) fd.append('deadline', deadline.toISOString());
   if (materialId) fd.append('material_id', materialId);
   if (file) fd.append('file', file);
-  if (confirmSameName) fd.append('confirm_same_name', 'true');
   return api.post(hw(lessonId), fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => res.data);
 }
 

@@ -36,11 +36,11 @@ from ..dependencies import require_teacher, get_current_user
 from ..models import (
     GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMessage, Material, User,
 )
-from ..resources import content_hash, find_duplicate_material, material_name_exists, conflict
+from ..resources import content_hash, find_duplicate_material, find_materials_by_name, conflict
 from .lessons import (
     _safe_delete_object, delete_homework_tasks, get_lesson_for_student, get_lesson_for_teacher_or_admin,
 )
-from .materials import MAX_FILE_SIZE, _content_disposition
+from .materials import MAX_FILE_SIZE, _content_disposition, _stored_hash
 
 router = APIRouter(prefix="/lessons", tags=["homework"])
 
@@ -350,7 +350,6 @@ async def create_task(
     deadline: Optional[datetime] = Form(None),
     material_id: Optional[int] = Form(None),
     file: Optional[UploadFile] = FastAPIFile(None),
-    confirm_same_name: bool = Form(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
@@ -361,6 +360,7 @@ async def create_task(
         raise HTTPException(status_code=422, detail="Выберите файл из Базы знаний или загрузите новый")
     await _ensure_task_limit(db, lesson, student_id)
 
+    old_key = None  # объект, заменённый новым содержимым, — удалить после коммита
     if material_id is not None:
         material = await db.get(Material, material_id)
         if not material or material.is_personal:
@@ -369,13 +369,40 @@ async def create_task(
         data = await _read_upload(file)
         digest = content_hash(data)
         if student_id is None:
-            # Общее ДЗ — файл в «Базу знаний», с контролем дублей
-            duplicate = await find_duplicate_material(db, digest)
-            if duplicate:
+            # Общее ДЗ — файл в «Базу знаний» по тому же правилу, что и
+            # обычная загрузка (routers/materials.py): имя и содержимое
+            # уникальны. То же содержимое — берём существующий файл; то же
+            # имя с новым содержимым — заменяем содержимое (админ или автор).
+            same_name = await find_materials_by_name(db, file.filename)
+            for m in same_name:
+                if m.content_hash is None:
+                    m.content_hash = await _stored_hash(m)
+            identical = next((m for m in same_name if m.content_hash == digest), None)
+            duplicate = None if identical else await find_duplicate_material(db, digest)
+            if identical:
+                material = identical
+            elif duplicate:
                 material = duplicate[0]
+            elif same_name:
+                material = same_name[0]
+                if current_user.role != "admin" and material.uploaded_by != current_user.id:
+                    owner = (await db.execute(
+                        select(User.full_name, User.username).where(User.id == material.uploaded_by)
+                    )).first()
+                    who = (owner[0] or owner[1]) if owner else "—"
+                    return conflict(
+                        "name_taken",
+                        f"В Базе знаний уже есть файл с именем «{file.filename}» (загрузил(а) {who}). "
+                        "Заменить его может только автор или администратор — переименуйте свой файл.",
+                        material.id,
+                    )
+                old_key = material.object_key
+                material.object_key = f"materials/{uuid4()}/{file.filename}"
+                storage.upload_bytes(material.object_key, data, file.content_type)
+                material.content_type = file.content_type
+                material.size_bytes = len(data)
+                material.content_hash = digest
             else:
-                if not confirm_same_name and await material_name_exists(db, file.filename):
-                    return conflict("same_name", f"В Базе знаний уже есть файл с именем «{file.filename}» (с другим содержимым). Загрузить всё равно?")
                 object_key = f"materials/{uuid4()}/{file.filename}"
                 storage.upload_bytes(object_key, data, file.content_type)
                 material = Material(
@@ -410,6 +437,11 @@ async def create_task(
     )
     db.add(task)
     await db.commit()
+    if old_key:
+        try:
+            storage.delete_object(old_key)
+        except Exception:
+            pass  # осиротевший объект в хранилище не мешает работе
     return (await _task_out(db, [task]))[task.id]
 
 

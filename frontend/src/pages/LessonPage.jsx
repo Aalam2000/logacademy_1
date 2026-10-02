@@ -15,8 +15,8 @@ import { DialogCell } from '../components/LessonDialog';
 import { getHomeworkBoard } from '../api/homework';
 import { uploadMaterial } from '../api/materials';
 
-// 409 от бэкенда при контроле дублей: code=same_name — спросить и
-// повторить с подтверждением; code=duplicate — вернуть existing_id.
+// 409 от бэкенда при контроле дублей: code=duplicate — вернуть existing_id;
+// code=name_taken — имя занято чужим файлом, показать как ошибку.
 const conflictOf = (err) => (err?.response?.status === 409 ? err.response.data : null);
 
 // Кружки посещаемости вместо select'а. Пришёл/Онлайн/Уважительная —
@@ -273,16 +273,25 @@ function LessonPage() {
     try {
       let materialId;
       try {
-        materialId = (await uploadMaterial(file)).id;
+        // Имя файла уникально по всей БЗ: то же имя с другим содержимым —
+        // замена своей версии, то же имя и содержимое — берём существующий
+        // (см. api/materials.js). В любом случае файл привязывается к уроку.
+        const res = await uploadMaterial(file);
+        materialId = res.id;
+        if (res.upload_result === 'replaced') {
+          setItemsNotice(`Файл «${file.name}» заменён новой версией`);
+        } else if (res.upload_result === 'unchanged') {
+          setItemsNotice(`Файл «${file.name}» уже есть в Базе знаний — привязан существующий`);
+        }
       } catch (err) {
         const c = conflictOf(err);
         if (c?.code === 'duplicate') {
-          // Такой файл уже есть в БЗ — привязываем существующий, копию не создаём
+          // Такое же содержимое лежит в БЗ под другим именем — привязываем
+          // существующий файл, копию не создаём
           materialId = c.existing_id;
           setItemsNotice(`${c.detail} — привязан существующий`);
-        } else if (c?.code === 'same_name' && window.confirm(c.detail)) {
-          materialId = (await uploadMaterial(file, undefined, true)).id;
         } else {
+          // в т.ч. name_taken: одноимённый чужой файл — нужно переименовать
           throw err;
         }
       }

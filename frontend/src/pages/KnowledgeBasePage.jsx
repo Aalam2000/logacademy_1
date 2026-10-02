@@ -50,6 +50,9 @@ function KnowledgeBasePage() {
   const [isUploadingCourse, setIsUploadingCourse] = useState(false);
   const [courseUploadProgress, setCourseUploadProgress] = useState(null); // {done, total, failed}
   const [courseUploadError, setCourseUploadError] = useState('');
+  const [courseUploadFailures, setCourseUploadFailures] = useState([]); // [{name, reason}]
+  // Что произошло при загрузке: загружен / заменён / без изменений
+  const [uploadNotice, setUploadNotice] = useState('');
   const courseFolderInputRef = useRef(null);
 
   // Фильтры по курсу/сектору в базе знаний — только admin, для проверки/
@@ -104,14 +107,15 @@ function KnowledgeBasePage() {
 
     setIsUploading(true);
     setError('');
+    setUploadNotice('');
     try {
-      try {
-        await uploadMaterial(file);
-      } catch (err) {
-        // Одноимённый файл с другим содержимым — только после подтверждения
-        const data = err?.response?.data;
-        if (err?.response?.status !== 409 || data?.code !== 'same_name' || !window.confirm(data.detail)) throw err;
-        await uploadMaterial(file, undefined, true);
+      // Имя новое — новый файл; то же имя и другое содержимое — замена;
+      // то же имя и то же содержимое — ничего не меняется (см. api/materials.js)
+      const res = await uploadMaterial(file);
+      if (res.upload_result === 'replaced') {
+        setUploadNotice(`Файл «${file.name}» заменён новой версией`);
+      } else if (res.upload_result === 'unchanged') {
+        setUploadNotice(`Файл «${file.name}» уже есть в Базе знаний, изменений нет`);
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
       loadItems();
@@ -142,11 +146,11 @@ function KnowledgeBasePage() {
   };
 
   // Номер урока из имени файла: "Урок 5.2 — ....html" -> "5.2",
-  // "Урок 5.docx" -> "5". Папка вокруг файла (её название) не участвует —
+  // "Урок 5.docx" -> "5", азербайджанский сектор: "Dərs 5.2 — ....html" -> "5.2". Папка вокруг файла (её название) не участвует —
   // источник номера всегда само имя файла. Не распознано — пусто,
   // admin вводит вручную в предпросмотре (загрузка ничего не блокирует).
   const parseLessonNo = (filename) => {
-    const m = filename.match(/урок\s*№?\s*(\d+)(?:[.\-_](\d+))?/i);
+    const m = filename.match(/(?:урок|d[əƏe]rs)\s*№?\s*(\d+)(?:[.\-_](\d+))?/i);
     if (!m) return '';
     return m[2] ? `${m[1]}.${m[2]}` : m[1];
   };
@@ -179,6 +183,7 @@ function KnowledgeBasePage() {
     setCourseRows(rows);
     setCourseUploadProgress(null);
     setCourseUploadError('');
+    setCourseUploadFailures([]);
   };
 
   const updateCourseRowLessonNo = (index, value) => {
@@ -189,32 +194,47 @@ function KnowledgeBasePage() {
     if (!courseId || !courseSector || courseRows.length === 0) return;
     setIsUploadingCourse(true);
     setCourseUploadError('');
+    setCourseUploadFailures([]);
+    setUploadNotice('');
     const total = courseRows.length;
     let done = 0;
     let failed = 0;
+    const counts = { created: 0, replaced: 0, unchanged: 0 };
+    const failures = [];
     setCourseUploadProgress({ done, total, failed });
     for (const row of courseRows) {
       try {
-        await uploadMaterial(row.file, {
+        const res = await uploadMaterial(row.file, {
           course_id: courseId,
           sector: courseSector,
           template_lesson_no: row.lessonNo.trim() || null,
         });
+        const kind = counts[res.upload_result] !== undefined ? res.upload_result : 'created';
+        counts[kind] += 1;
       } catch (err) {
         failed += 1;
+        failures.push({
+          name: row.relPath,
+          reason: err?.response?.data?.detail || 'Не удалось загрузить файл',
+        });
       }
       done += 1;
       setCourseUploadProgress({ done, total, failed });
     }
     setIsUploadingCourse(false);
+    // Итог пакета: новые / заменённые / без изменений / не загруженные
+    const summary = `Загружено новых: ${counts.created}, заменено: ${counts.replaced}, `
+      + `без изменений: ${counts.unchanged}, не загружено: ${failed}`;
     if (failed === 0) {
       setCourseRows([]);
       setCourseId('');
       setCourseSector('');
       setShowCourseUpload(false);
       if (courseFolderInputRef.current) courseFolderInputRef.current.value = '';
+      setUploadNotice(summary);
     } else {
-      setCourseUploadError(`Загружено ${total - failed} из ${total}, ${failed} файл(ов) — с ошибкой (см. список выше)`);
+      setCourseUploadError(summary);
+      setCourseUploadFailures(failures);
     }
     loadItems();
   };
@@ -491,10 +511,18 @@ function KnowledgeBasePage() {
           )}
 
           {courseUploadError && <div className="error-text error-text--muted">{courseUploadError}</div>}
+          {courseUploadFailures.length > 0 && (
+            <ul className="text-muted">
+              {courseUploadFailures.map((f, i) => (
+                <li key={f.name + i}>{f.name}{' — '}{f.reason}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
       {error && <div className="error-text error-text--muted">{error}</div>}
+      {uploadNotice && <p className="text-muted">{uploadNotice}</p>}
 
       <div className="table-scroll">
         <table className="table">

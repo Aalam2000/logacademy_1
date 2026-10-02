@@ -169,6 +169,19 @@ async def find_duplicate_material(db: AsyncSession, digest: str) -> Optional[tup
     return material, _who_when(full_name, username, material.created_at)
 
 
+async def find_materials_by_name(db: AsyncSession, filename: str) -> list[Material]:
+    """Все библиотечные файлы с таким именем, самый новый — первым.
+    Имя файла уникально по всей Базе знаний (правило загрузки — см.
+    routers/materials.py, upload_material); больше одного здесь может
+    оказаться только из-за дублей, загруженных до этого правила."""
+    rows = (await db.execute(
+        select(Material)
+        .where(Material.original_filename == filename, Material.is_personal == False)
+        .order_by(Material.id.desc())
+    )).scalars().all()
+    return list(rows)
+
+
 async def material_name_exists(db: AsyncSession, filename: str) -> bool:
     row = (await db.execute(
         select(Material.id).where(Material.original_filename == filename, Material.is_personal == False).limit(1)
