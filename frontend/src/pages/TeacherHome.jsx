@@ -90,7 +90,6 @@ function TeacherHome() {
     try {
       const payload = {
         group_id: parseInt(newLessonGroup),
-        title: 'Урок',
         date: new Date(newLessonDate).toISOString(),
       };
       const created = await api.post('/lessons/', payload);

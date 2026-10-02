@@ -7,6 +7,7 @@ from datetime import datetime, date as date_type, timedelta, timezone as dt_time
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 from ..schemas import DURATION_MIN, DURATION_MAX
+from .academy import lesson_word
 from ..lesson_lock import BAKU_TZ, is_date_locked
 from ..attendance import attendance_slots
 from ..database import get_db
@@ -26,7 +27,7 @@ ALLOWED_ATTENDANCE_STATUSES = {"in_person", "online", "excused", "absent"}
 # Схемы прямо здесь — потом перенесём в schemas.py
 class LessonCreate(BaseModel):
     group_id: int
-    title: Optional[str] = None  # не задано — «Урок» (переводится при показе, см. LessonTitle.js)
+    title: Optional[str] = None  # не задано — «Урок» на языке сектора группы (academy.lesson_word)
     order: int = 0
     date: Optional[datetime] = None
     duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # не задано — из группы
@@ -484,7 +485,7 @@ async def create_lesson(
 
     lesson = Lesson(
         group_id=data.group_id,
-        title=(data.title or "").strip() or "Урок",
+        title=(data.title or "").strip() or await lesson_word(db, group.sector),
         order=data.order,
         date=data.date,
         duration_min=data.duration_min or group.lesson_duration_min,
@@ -551,12 +552,13 @@ async def generate_schedule(
     if len(dates) < data.lesson_count:
         raise HTTPException(status_code=422, detail="Не удалось подобрать достаточно дат — проверьте дни недели и период")
 
+    word = await lesson_word(db, group.sector)
     lessons_by_order: dict[int, Lesson] = {}
     for i, lesson_date in enumerate(dates, start=1):
         lesson = Lesson(
             group_id=data.group_id,
-            # «Урок N» всегда по-русски — часть платформы, переводится при показе (LessonTitle.js)
-            title=f"Урок {i}",
+            # Название — сразу на языке сектора группы («Урок N» / «Dərs N»), при показе не переводится
+            title=f"{word} {i}",
             order=i,
             date=lesson_date,
             duration_min=data.duration_min or group.lesson_duration_min,

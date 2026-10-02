@@ -10,6 +10,7 @@ from ..attendance import attendance_slots, summarize
 from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url, DURATION_MIN, DURATION_MAX
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
+from .academy import sector_exists
 import secrets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -23,7 +24,7 @@ class GroupUpdate(BaseModel):
     whatsapp: Optional[str] = None
     video_url: Optional[str] = None
     lesson_duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # None — не менять
-    sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
+    sector: Optional[str] = None  # присылается формой, но менять нельзя (см. update_group)
 
     @field_validator("video_url")
     @classmethod
@@ -332,6 +333,9 @@ async def create_group(data: GroupCreate, db: AsyncSession = Depends(get_db), ad
     if not teacher_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Выберите корректного педагога")
 
+    if not await sector_exists(db, data.sector):
+        raise HTTPException(status_code=400, detail="Выберите сектор группы")
+
     invite_code = secrets.token_urlsafe(8)
     group = Group(
         name=data.name,
@@ -368,19 +372,20 @@ async def update_group(
     if not teacher_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Выберите корректного педагога")
 
-    course_result = await db.execute(select(Course).where(Course.id == data.course_id))
-    if not course_result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Выберите корректный курс")
+    # Курс и сектор задаются при создании группы и не меняются: на них
+    # держатся привязка материалов шаблона и язык названий уроков.
+    if data.course_id != group.course_id:
+        raise HTTPException(status_code=400, detail="Курс группы изменить нельзя")
+    if data.sector is not None and data.sector != group.sector:
+        raise HTTPException(status_code=400, detail="Сектор группы изменить нельзя")
 
     group.name = data.name
-    group.course_id = data.course_id
     group.teacher_id = data.teacher_id
     group.telegram_chat_id = data.telegram_chat_id
     group.whatsapp = data.whatsapp
     group.video_url = data.video_url
     if data.lesson_duration_min is not None:
         group.lesson_duration_min = data.lesson_duration_min
-    group.sector = data.sector
     await db.commit()
     await db.refresh(group)
     return group

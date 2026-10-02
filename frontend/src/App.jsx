@@ -25,6 +25,7 @@ import MethodologyPage from './pages/MethodologyPage';
 const SlideViewerPage = lazy(() => import('./pages/SlideViewerPage'));
 import RoleRoute from './components/RoleRoute';
 import TooltipLayer from './components/Tooltip';
+import { useAcademyName } from './utils/academyName';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -32,6 +33,7 @@ function PrivateRoute({ children }) {
 }
 
 function App() {
+  useAcademyName(); // название академии из настроек — в заголовок вкладки браузера
   return (
     <AuthProvider>
       {/* Единая мгновенная подсказка для всех элементов с data-tip */}

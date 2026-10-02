@@ -7,15 +7,14 @@ import { ContactIcon } from '../components/ContactIcons';
 import VideoCallButton from '../components/VideoCallButton';
 import IconButton from '../components/IconButton';
 import DeleteButton from '../components/DeleteButton';
+import AcademyTab from '../components/AcademyTab';
+import { getSectors } from '../api/academy';
 
 const emptyTeacher = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyAdmin   = { username: '', password: '', full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyCourse  = { title: '', description: '' };
 const emptyGroup   = { name: '', course_id: '', teacher_id: '', telegram_chat_id: '', whatsapp: '', video_url: '', sector: '' };
 
-// 'ru' | 'az' — см. course-templates-plan.md
-const SECTOR_LABELS = { ru: 'Русский сектор', az: 'Azərbaycan sektoru' };
-const sectorLabel = (sector) => SECTOR_LABELS[sector] || '—';
 const emptyUserEdit = { full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '' };
 const emptyCourseEdit = { title: '', description: '' };
 
@@ -27,6 +26,8 @@ function AdminPage() {
   const [admins,   setAdmins]   = useState([]);
   const [courses,  setCourses]  = useState([]);
   const [groups,   setGroups]   = useState([]);
+  // Секторы — справочник с вкладки «Академия»: [{code, name, lesson_word}]
+  const [sectors,  setSectors]  = useState([]);
 
   const [newTeacher, setNewTeacher] = useState(emptyTeacher);
   const [newAdmin,   setNewAdmin]   = useState(emptyAdmin);
@@ -93,12 +94,14 @@ function AdminPage() {
     loadAdmins();
     loadCourses();
     loadGroups();
+    loadSectors();
   };
 
   const loadTeachers = async () => { const r = await api.get('/admin/teachers'); setTeachers(r.data); };
   const loadAdmins   = async () => { const r = await api.get('/admin/admins');   setAdmins(r.data); };
   const loadCourses  = async () => { const r = await api.get('/admin/courses');  setCourses(r.data); };
   const loadGroups   = async () => { const r = await api.get('/admin/groups');   setGroups(r.data); };
+  const loadSectors  = async () => { setSectors(await getSectors()); };
 
   const handleError = (e) => {
     setError(e.response?.data?.detail || 'Ошибка');
@@ -111,6 +114,7 @@ function AdminPage() {
       groupData.name.trim() !== ''
       && String(groupData.course_id).trim() !== ''
       && String(groupData.teacher_id).trim() !== ''
+      && String(groupData.sector || '').trim() !== ''
     );
   };
 
@@ -313,12 +317,14 @@ function AdminPage() {
     { key: 'admins',   label: 'Админы' },
     { key: 'courses',  label: 'Курсы' },
     { key: 'groups',   label: 'Группы' },
+    { key: 'academy',  label: 'Академия' },
   ];
 
   const teachersForGroups = [...teachers, ...admins].filter(
     (user, index, arr) => arr.findIndex(u => u.id === user.id) === index
   );
 
+  const sectorLabel = (code) => sectors.find(s => s.code === code)?.name || code || '—';
   const courseLabelById = (courseId) => courses.find(c => c.id === courseId)?.title || `#${courseId}`;
   const teacherLabelById = (teacherId) => {
     const user = teachersForGroups.find(u => u.id === teacherId);
@@ -543,29 +549,11 @@ function AdminPage() {
                       ) : g.name}
                     </td>
                     <td>
-                      {editingGroupId === g.id ? (
-                        <select
-                          className="input input--min160"
-                          value={editingGroupDraft.course_id}
-                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, course_id: e.target.value })}
-                        >
-                          <option value="">{'— Курс —'}</option>
-                          {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                        </select>
-                      ) : courseLabelById(g.course_id)}
+                      {/* Курс и сектор задаются при создании группы и не меняются */}
+                      {courseLabelById(g.course_id)}
                     </td>
                     <td>
-                      {editingGroupId === g.id ? (
-                        <select
-                          className="input input--min160"
-                          value={editingGroupDraft.sector}
-                          onChange={e => setEditingGroupDraft({ ...editingGroupDraft, sector: e.target.value })}
-                        >
-                          <option value="">{'— Сектор —'}</option>
-                          <option value="ru">{'Русский сектор'}</option>
-                          <option value="az">{'Azərbaycan sektoru'}</option>
-                        </select>
-                      ) : sectorLabel(g.sector)}
+                      {sectorLabel(g.sector)}
                     </td>
                     <td>
                       {editingGroupId === g.id ? (
@@ -646,6 +634,11 @@ function AdminPage() {
         </div>
       )}
 
+      {/* АКАДЕМИЯ: данные академии и секторы */}
+      {tab === 'academy' && (
+        <AcademyTab sectors={sectors} onSectorsChanged={loadSectors} onError={showError} />
+      )}
+
       {/* Модалка: новый педагог */}
       {openAddModal === 'teacher' && (
         <Modal title={'Новый педагог'} onClose={closeAddModal} footer={(
@@ -718,8 +711,7 @@ function AdminPage() {
             <select className="input input--min160" value={newGroup.sector}
               onChange={e => setNewGroup({ ...newGroup, sector: e.target.value })}>
               <option value="">{'— Сектор —'}</option>
-              <option value="ru">{'Русский сектор'}</option>
-              <option value="az">{'Azərbaycan sektoru'}</option>
+              {sectors.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
             </select>
             <select className="input input--min160" value={newGroup.teacher_id}
               onChange={e => setNewGroup({ ...newGroup, teacher_id: e.target.value })}>

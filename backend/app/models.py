@@ -283,3 +283,27 @@ class CspReport(Base):
     count = Column(Integer, nullable=False, default=1)
     first_seen = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_seen = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+# Данные академии — одна запись (вкладка «Академия» у админа, routers/academy.py)
+class Academy(Base):
+    __tablename__ = "academy"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    website = Column(String, nullable=True)
+    telegram = Column(String, nullable=True)   # канал новостей
+    whatsapp = Column(String, nullable=True)
+    instagram = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+
+
+# Сектор — направление обучения (ru, az, …). Код хранится строкой у групп и
+# у материалов шаблонов курсов и после создания не меняется.
+class Sector(Base):
+    __tablename__ = "sectors"
+    id = Column(Integer, primary_key=True)
+    code = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False)          # «Русский сектор»
+    lesson_word = Column(String, nullable=False)   # «Урок» на языке сектора — для названий уроков

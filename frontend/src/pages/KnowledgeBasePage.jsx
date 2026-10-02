@@ -4,6 +4,7 @@ import api from '../api/auth';
 import DeleteButton from '../components/DeleteButton';
 import IconButton from '../components/IconButton';
 import { getCourses } from '../api/admin';
+import { getSectors } from '../api/academy';
 import { uploadMaterial, updateMaterialTemplate, bulkUpdateMaterialTemplate } from '../api/materials';
 import { useAuth } from '../context/AuthContext';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
@@ -44,6 +45,7 @@ function KnowledgeBasePage() {
   const [showCourseUpload, setShowCourseUpload] = useState(false);
   const [courses, setCourses] = useState([]);
   const [coursesLoaded, setCoursesLoaded] = useState(false);
+  const [sectors, setSectors] = useState([]); // справочник секторов: [{code, name}]
   const [courseId, setCourseId] = useState('');
   const [courseSector, setCourseSector] = useState('');
   const [courseRows, setCourseRows] = useState([]); // [{file, relPath, lessonNo}]
@@ -159,8 +161,9 @@ function KnowledgeBasePage() {
   const ensureCoursesLoaded = async () => {
     if (coursesLoaded) return;
     try {
-      const data = await getCourses();
+      const [data, sectorList] = await Promise.all([getCourses(), getSectors()]);
       setCourses(data);
+      setSectors(sectorList);
       setCoursesLoaded(true);
     } catch (err) {
       setCourseUploadError(err?.response?.data?.detail || 'Не удалось загрузить список курсов');
@@ -374,8 +377,7 @@ function KnowledgeBasePage() {
               </select>
               <select className="input input--min160" value={filterSector} onChange={e => setFilterSector(e.target.value)}>
                 <option value="">{'Сектор: все'}</option>
-                <option value="ru">{'Русский сектор'}</option>
-                <option value="az">{'Azərbaycan sektoru'}</option>
+                {sectors.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
               </select>
             </>
           )}
@@ -459,8 +461,7 @@ function KnowledgeBasePage() {
             </select>
             <select className="input" value={courseSector} onChange={e => setCourseSector(e.target.value)}>
               <option value="">{'Направление...'}</option>
-              <option value="ru">{'Русский сектор'}</option>
-              <option value="az">{'Azərbaycan sektoru'}</option>
+              {sectors.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
             </select>
             <input
               type="file"

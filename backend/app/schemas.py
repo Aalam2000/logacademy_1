@@ -75,12 +75,22 @@ class GroupCreate(BaseModel):
     whatsapp: Optional[str] = None
     video_url: Optional[str] = None
     lesson_duration_min: int = Field(default=120, ge=DURATION_MIN, le=DURATION_MAX)
-    sector: Optional[str] = None  # 'ru' | 'az' — см. course-templates-plan.md
+    # Обязателен; после создания группы не меняется (как и курс). Код из
+    # справочника секторов (вкладка «Академия») — наличие проверяет роутер.
+    sector: str
 
     @field_validator("video_url")
     @classmethod
     def _check_video_url(cls, v):
         return clean_video_url(v)
+
+    @field_validator("sector")
+    @classmethod
+    def _check_sector(cls, v):
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Укажите сектор группы")
+        return v
 
 class GroupOut(BaseModel):
     id: int

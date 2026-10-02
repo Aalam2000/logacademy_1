@@ -389,3 +389,57 @@
   color: var(--color-muted);
   margin: 0;
 }
+
+/* ===== Панели настроек (AdminPage, вкладка «Академия») ===== */
+/* На широком экране панели стоят рядом, на узком — друг под другом */
+.settings-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+.settings-panel {
+  flex: 1 1 520px;
+  max-width: 860px;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--color-white);
+  border: 2px solid var(--color-primary-border);
+  padding: var(--space-6);
+}
+.settings-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+.settings-panel__title {
+  margin: 0;
+}
+.settings-panel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+/* Поля в две колонки; .form-grid__wide — на всю ширину */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4) var(--space-6);
+}
+.form-grid__wide {
+  grid-column: 1 / -1;
+}
+.form-grid .input {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

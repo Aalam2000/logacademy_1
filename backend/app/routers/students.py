@@ -20,6 +20,7 @@ from ..models import (
     LessonMessage, User,
 )
 from .i18n import translator
+from .academy import academy_name
 
 import logging
 
@@ -239,7 +240,7 @@ FONTS_DIR = (Path(__file__).parent.parent.parent / "fonts").resolve()
 PDF_POLICY = ResourceAccessPolicy(base_dir=FONTS_DIR, allow_remote=False)
 
 
-def render_student_card_html(lang: str, student: User, groups: list[dict], summary: dict) -> str:
+def render_student_card_html(lang: str, student: User, groups: list[dict], summary: dict, academy: str = "Log Academy") -> str:
     """Строит HTML карточки из статического шаблона (backend/templates/
     student_card.html). Шаблон переводится ДО подстановки данных — так же,
     как render_translated_template() в quizzes.py — потому что apply_to_html()
@@ -272,6 +273,7 @@ def render_student_card_html(lang: str, student: User, groups: list[dict], summa
     data = {
         "fonts_dir": FONTS_DIR.as_posix(),
         "generated_date": datetime.now().strftime("%d.%m.%Y"),
+        "academy_name": academy,
         "student_name": student.full_name or student.username,
         "phone_display": phone_display,
         "phone_value": phone_value,
@@ -332,7 +334,7 @@ async def get_student_card(
     summary = _stats_summary(stats[student_id])
     groups = [groups_by_id[gid] for gid in matched_group_ids]
 
-    html = render_student_card_html(lang, student, groups, summary)
+    html = render_student_card_html(lang, student, groups, summary, await academy_name(db))
 
     buffer = io.BytesIO()
     pisa_status = pisa.CreatePDF(src=html, dest=buffer, resource_policy=PDF_POLICY)

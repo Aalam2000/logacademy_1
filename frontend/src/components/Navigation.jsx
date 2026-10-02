@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAcademyName } from '../utils/academyName';
 import {
   IconDashboard,
   IconKnowledge,
@@ -14,6 +15,7 @@ import {
 } from './CyberIcons';
 
 function Navigation({ user, isOpen, onClose }) {
+  const academyName = useAcademyName();
   const linkClass = ({ isActive }) => `nav__link${isActive ? ' nav__link--active' : ''}`;
 
   const handleLinkClick = () => {
@@ -26,7 +28,7 @@ function Navigation({ user, isOpen, onClose }) {
   return (
     <nav className={`nav${isOpen ? ' nav--open' : ''}`}>
       <div className="nav__logo">
-        <img src="/assets/logo.svg" alt="Log Academy" width="120" height="40" />
+        <img src="/assets/logo.svg" alt={academyName} width="120" height="40" />
       </div>
       <ul className="nav__list">
         <li className="nav__item">

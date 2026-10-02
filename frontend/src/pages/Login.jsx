@@ -5,8 +5,10 @@ import { login as loginRequest } from '../api/auth';
 import { getErrorMessage } from '../api/errors';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import { useAcademyName } from '../utils/academyName';
 
 function Login() {
+  const academyName = useAcademyName();
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
@@ -30,7 +32,7 @@ function Login() {
   return (
     <div className="centered-page">
       <div className="card">
-        <img src="/assets/logo.svg" alt="Log Academy" width="200" height="66" />
+        <img src="/assets/logo.svg" alt={academyName} width="200" height="66" />
         <form className="login-form" onSubmit={handleSubmit}>
           <Input
             className="input--lg"

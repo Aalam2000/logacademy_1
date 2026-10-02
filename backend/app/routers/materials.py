@@ -18,6 +18,7 @@ from ..database import get_db
 from ..dependencies import require_admin, require_teacher, get_current_user
 from ..models import Material, User, Lesson, LessonResource, GroupMember, HomeworkTask, Course
 from ..resources import clean_filename, content_hash, find_duplicate_material, find_materials_by_name, conflict
+from .academy import sector_exists
 from ..usages import ensure_not_used
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -199,6 +200,9 @@ async def upload_material(
     if (course_id is not None or sector is not None or template_lesson_no is not None) \
             and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Теги шаблона курса может проставлять только администратор")
+
+    if sector is not None and not await sector_exists(db, sector):
+        raise HTTPException(status_code=400, detail="Выберите сектор из списка")
 
     file.filename = clean_filename(file.filename)  # имя без папок
     contents = await file.read()

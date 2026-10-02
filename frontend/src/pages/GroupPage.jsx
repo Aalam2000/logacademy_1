@@ -177,7 +177,6 @@ function GroupPage() {
     try {
       const payload = {
         group_id: gid,
-        title: 'Урок',
         date: newLessonDate.toISOString(),
         duration_min: newLessonDuration,
       };

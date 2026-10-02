@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../api/auth';
+import { useAcademyName } from '../utils/academyName';
 
 function JoinGroupPage() {
+  const academyName = useAcademyName();
   const { inviteCode } = useParams();
   const navigate = useNavigate();
 
@@ -77,7 +79,7 @@ function JoinGroupPage() {
   return (
     <div className="centered-page">
       <div className="card">
-        <img src="/assets/logo.svg" alt="Log Academy" width="180" height="60" />
+        <img src="/assets/logo.svg" alt={academyName} width="180" height="60" />
         <h2 className="card__title">{'Регистрация ученика'}</h2>
         <p className="card__meta">
           {'Группа'}: <b>{group?.name}</b>
