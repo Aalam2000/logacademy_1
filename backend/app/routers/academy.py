@@ -7,11 +7,13 @@
 Секторы — направления обучения (ru, az, …). Раньше были зашиты в коде,
 теперь это справочник: код, название и слово «Урок» на языке сектора
 (названия уроков создаются сразу на этом языке и при показе не
-переводятся). Код сектора после создания не меняется — он хранится у
+переводятся). Код сектора = код языка интерфейса: языки задаются в .env
+(SOURCE_LANG + AUTO_I18N_TARGET_LANGS), на каждый язык — не больше одного
+сектора; когда все языки заняты, новый сектор добавить нельзя (сначала
+язык добавляют в .env). Код после создания не меняется — он хранится у
 групп и у материалов шаблонов курсов. Сектор, который где-то
 используется, удалить нельзя.
 """
-import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,12 +24,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
 from ..models import Academy, Group, Link, Material, Quiz, Sector, User
+from .i18n import translator
 
 router = APIRouter(tags=["academy"])
 
 DEFAULT_ACADEMY_NAME = "Log Academy"
 DEFAULT_LESSON_WORD = "Урок"
-_CODE_RE = re.compile(r"^[a-z][a-z0-9_-]{1,9}$")
+
+
+def interface_languages() -> list[str]:
+    """Языки интерфейса из .env: основной + целевые (их читает autoi18n)."""
+    langs = [translator.source_lang] + list(translator.get_target_langs())
+    return [lang for i, lang in enumerate(langs) if lang and lang not in langs[:i]]
 
 
 def _clean(value: Optional[str]) -> Optional[str]:
@@ -148,16 +156,24 @@ async def list_sectors(db: AsyncSession = Depends(get_db), user: User = Depends(
     return (await db.execute(select(Sector).order_by(Sector.id))).scalars().all()
 
 
+# Языки, для которых ещё можно создать сектор (язык интерфейса без сектора)
+@router.get("/admin/sector-languages")
+async def list_sector_languages(db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
+    used = set((await db.execute(select(Sector.code))).scalars().all())
+    languages = interface_languages()
+    return {"languages": languages, "available": [lang for lang in languages if lang not in used]}
+
+
 @router.post("/admin/sectors", response_model=SectorOut)
 async def create_sector(data: SectorCreate, db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
     code = (data.code or "").strip().lower()
-    if not _CODE_RE.match(code):
+    if code not in interface_languages():
         raise HTTPException(
             status_code=422,
-            detail="Код сектора — от 2 до 10 латинских букв или цифр, начинается с буквы (например: kz)",
+            detail="Сектор создаётся только для языка интерфейса — сначала добавьте язык в настройках сервера",
         )
     if await sector_exists(db, code):
-        raise HTTPException(status_code=409, detail=f"Сектор с кодом «{code}» уже есть")
+        raise HTTPException(status_code=409, detail=f"Сектор для языка «{code}» уже есть")
     sector = Sector(
         code=code,
         name=_require_text(data.name, "Укажите название сектора"),

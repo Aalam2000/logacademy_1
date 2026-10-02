@@ -4,12 +4,15 @@
 // Сектор: код (не меняется после создания — хранится у групп и материалов),
 // название и «название урока» — слово, с которого начинаются названия
 // уроков в группах этого сектора («Урок 5», «Dərs 5»).
+// Код сектора = язык интерфейса (языки задаются в .env на сервере): в окне
+// «Новый сектор» выбирается язык, у которого сектора ещё нет; когда все
+// языки заняты, добавить сектор нельзя.
 import React, { useEffect, useState } from 'react';
 import Button from './Button';
 import Modal from './Modal';
 import IconButton from './IconButton';
 import {
-  getAcademy, updateAcademy, createSector, updateSector, deleteSector,
+  getAcademy, updateAcademy, createSector, updateSector, deleteSector, getSectorLanguages,
 } from '../api/academy';
 import { setAcademyName } from '../utils/academyName';
 import { extractErrorMessage } from '../utils/errors';
@@ -29,6 +32,8 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
   const [editingCode, setEditingCode] = useState(null);
   const [draft, setDraft] = useState({ name: '', lesson_word: '' });
   const [busy, setBusy] = useState(false);
+  const [freeLanguages, setFreeLanguages] = useState(null); // языки интерфейса без сектора; null — ещё не загружены
+  const noFreeLanguages = Array.isArray(freeLanguages) && freeLanguages.length === 0;
 
   const fail = (err, fallback) => onError(extractErrorMessage(err, fallback));
 
@@ -42,6 +47,18 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
       .catch(err => fail(err, 'Не удалось загрузить данные академии'));
     // eslint-disable-next-line
   }, []);
+
+  // Свободные языки пересчитываются при каждом изменении списка секторов
+  useEffect(() => {
+    getSectorLanguages()
+      .then(data => setFreeLanguages(data.available || []))
+      .catch(() => setFreeLanguages([]));
+  }, [sectors]);
+
+  const openAdd = () => {
+    setNewSector({ ...emptySector, code: freeLanguages?.[0] || '' });
+    setIsAddOpen(true);
+  };
 
   const field = (key, label, placeholder, wide) => (
     <label className={`field-label${wide ? ' form-grid__wide' : ''}`}>
@@ -150,12 +167,22 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
       <div className="settings-panel">
         <div className="settings-panel__head">
           <h3 className="settings-panel__title">{'Секторы'}</h3>
-          <Button onClick={() => setIsAddOpen(true)}>{'+ Добавить сектор'}</Button>
+          <Button
+            onClick={openAdd}
+            disabled={!freeLanguages || noFreeLanguages}
+          >
+            {'+ Добавить сектор'}
+          </Button>
         </div>
+        {noFreeLanguages && (
+          <p className="text-muted">
+            {'У каждого языка интерфейса уже есть сектор. Чтобы добавить сектор, сначала добавьте язык в настройках сервера.'}
+          </p>
+        )}
       <div className="table-scroll">
         <table className="table">
           <thead><tr>
-            <th>{'Код'}</th>
+            <th>{'Язык'}</th>
             <th>{'Название'}</th>
             <th data-tip={'С этого слова начинаются названия уроков в группах сектора'}>{'Название урока'}</th>
             <th></th>
@@ -212,11 +239,13 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
           </>
         )}>
           <div className="form-stack">
-            <input placeholder={'Код латиницей, например: kz'} className="input input--min160"
-              autoComplete="off" maxLength={10}
-              value={newSector.code}
-              onChange={e => setNewSector({ ...newSector, code: e.target.value.toLowerCase() })}
-            />
+            <label className="field-label">
+              {'Язык сектора'}
+              <select className="input input--min160" value={newSector.code}
+                onChange={e => setNewSector({ ...newSector, code: e.target.value })}>
+                {(freeLanguages || []).map(lang => <option key={lang} value={lang}>{lang}</option>)}
+              </select>
+            </label>
             <input placeholder={'Название сектора'} className="input input--min160"
               autoComplete="off"
               value={newSector.name}
@@ -227,7 +256,7 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
               value={newSector.lesson_word}
               onChange={e => setNewSector({ ...newSector, lesson_word: e.target.value })}
             />
-            <p className="text-muted">{'Код сектора после создания изменить нельзя.'}</p>
+            <p className="text-muted">{'Язык сектора после создания изменить нельзя.'}</p>
           </div>
         </Modal>
       )}

@@ -19,6 +19,12 @@ export function updateAcademy(data) {
   return api.put('/admin/academy', data).then(res => res.data);
 }
 
+// {languages: [...], available: [...]} — языки интерфейса и те из них, у
+// которых ещё нет сектора (сектор создаётся только для свободного языка)
+export function getSectorLanguages() {
+  return api.get('/admin/sector-languages').then(res => res.data);
+}
+
 export function createSector(data) {
   return api.post('/admin/sectors', data).then(res => res.data);
 }
