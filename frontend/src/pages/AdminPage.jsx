@@ -317,7 +317,7 @@ function AdminPage() {
     { key: 'admins',   label: 'Админы' },
     { key: 'courses',  label: 'Курсы' },
     { key: 'groups',   label: 'Группы' },
-    { key: 'academy',  label: 'Академия' },
+    { key: 'academy',  label: 'Компания' },
   ];
 
   const teachersForGroups = [...teachers, ...admins].filter(

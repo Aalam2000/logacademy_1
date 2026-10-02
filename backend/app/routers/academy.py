@@ -92,7 +92,7 @@ class AcademyData(BaseModel):
     def _check_name(cls, v):
         v = (v or "").strip()
         if not v:
-            raise ValueError("Укажите название академии")
+            raise ValueError("Укажите название компании")
         return v
 
 

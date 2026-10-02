@@ -44,7 +44,7 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
         Object.keys(filled).forEach(k => { filled[k] = data[k] || ''; });
         setAcademy(filled);
       })
-      .catch(err => fail(err, 'Не удалось загрузить данные академии'));
+      .catch(err => fail(err, 'Не удалось загрузить данные компании'));
     // eslint-disable-next-line
   }, []);
 
@@ -75,7 +75,7 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
 
   const saveAcademy = async () => {
     if (!academy.name.trim()) {
-      onError('Укажите название академии');
+      onError('Укажите название компании');
       return;
     }
     setIsSaving(true);
@@ -84,7 +84,7 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
       setAcademyName(saved.name);
       setSavedNotice(true);
     } catch (err) {
-      fail(err, 'Не удалось сохранить данные академии');
+      fail(err, 'Не удалось сохранить данные компании');
     } finally {
       setIsSaving(false);
     }
@@ -146,7 +146,7 @@ function AcademyTab({ sectors, onSectorsChanged, onError }) {
     <div className="settings-layout">
       <div className="settings-panel">
         <div className="settings-panel__head">
-          <h3 className="settings-panel__title">{'Данные академии'}</h3>
+          <h3 className="settings-panel__title">{'Данные компании'}</h3>
         </div>
         <div className="form-grid">
           {field('name', 'Название', 'Log Academy', true)}
