@@ -170,6 +170,7 @@ function KnowledgeBasePage() {
   const handleOpenCourseUpload = () => {
     setShowCourseUpload(v => !v);
     setCourseUploadError('');
+    setCourseUploadFailures([]);
     ensureCoursesLoaded();
   };
 
@@ -202,8 +203,15 @@ function KnowledgeBasePage() {
     const counts = { created: 0, replaced: 0, unchanged: 0 };
     const failures = [];
     setCourseUploadProgress({ done, total, failed });
+    // Имя в Базе знаний — без папок: одинаковые имена из разных подпапок
+    // затёрли бы друг друга, такие файлы не загружаем.
+    const nameCounts = {};
+    for (const row of courseRows) nameCounts[row.file.name] = (nameCounts[row.file.name] || 0) + 1;
     for (const row of courseRows) {
       try {
+        if (nameCounts[row.file.name] > 1) {
+          throw { response: { data: { detail: 'В выбранной папке несколько файлов с таким именем — переименуйте' } } };
+        }
         const res = await uploadMaterial(row.file, {
           course_id: courseId,
           sector: courseSector,
@@ -225,12 +233,13 @@ function KnowledgeBasePage() {
     // Итог пакета: новые / заменённые / без изменений / не загруженные
     const summary = `Загружено новых: ${counts.created}, заменено: ${counts.replaced}, `
       + `без изменений: ${counts.unchanged}, не загружено: ${failed}`;
+    // Панель закрываем всегда; итог и список отказов остаются над таблицей
+    setCourseRows([]);
+    setCourseId('');
+    setCourseSector('');
+    setShowCourseUpload(false);
+    if (courseFolderInputRef.current) courseFolderInputRef.current.value = '';
     if (failed === 0) {
-      setCourseRows([]);
-      setCourseId('');
-      setCourseSector('');
-      setShowCourseUpload(false);
-      if (courseFolderInputRef.current) courseFolderInputRef.current.value = '';
       setUploadNotice(summary);
     } else {
       setCourseUploadError(summary);
@@ -510,15 +519,16 @@ function KnowledgeBasePage() {
             </>
           )}
 
-          {courseUploadError && <div className="error-text error-text--muted">{courseUploadError}</div>}
-          {courseUploadFailures.length > 0 && (
-            <ul className="text-muted">
-              {courseUploadFailures.map((f, i) => (
-                <li key={f.name + i}>{f.name}{' — '}{f.reason}</li>
-              ))}
-            </ul>
-          )}
         </div>
+      )}
+
+      {courseUploadError && <div className="error-text error-text--muted">{courseUploadError}</div>}
+      {courseUploadFailures.length > 0 && (
+        <ul className="text-muted">
+          {courseUploadFailures.map((f, i) => (
+            <li key={f.name + i}>{f.name}{' — '}{f.reason}</li>
+          ))}
+        </ul>
       )}
 
       {error && <div className="error-text error-text--muted">{error}</div>}

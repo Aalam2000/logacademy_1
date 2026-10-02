@@ -17,7 +17,7 @@ from .. import storage
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher, get_current_user
 from ..models import Material, User, Lesson, LessonResource, GroupMember, HomeworkTask, Course
-from ..resources import content_hash, find_duplicate_material, find_materials_by_name, conflict
+from ..resources import clean_filename, content_hash, find_duplicate_material, find_materials_by_name, conflict
 from ..usages import ensure_not_used
 
 router = APIRouter(prefix="/materials", tags=["materials"])
@@ -200,6 +200,7 @@ async def upload_material(
             and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Теги шаблона курса может проставлять только администратор")
 
+    file.filename = clean_filename(file.filename)  # имя без папок
     contents = await file.read()
     size_bytes = len(contents)
     if size_bytes == 0:

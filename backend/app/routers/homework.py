@@ -36,7 +36,7 @@ from ..dependencies import require_teacher, get_current_user
 from ..models import (
     GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMessage, Material, User,
 )
-from ..resources import content_hash, find_duplicate_material, find_materials_by_name, conflict
+from ..resources import clean_filename, content_hash, find_duplicate_material, find_materials_by_name, conflict
 from .lessons import (
     _safe_delete_object, delete_homework_tasks, get_lesson_for_student, get_lesson_for_teacher_or_admin,
 )
@@ -331,6 +331,7 @@ async def student_open_items(db: AsyncSession, lesson_ids: list[int], student_id
 
 
 async def _read_upload(upload: UploadFile) -> bytes:
+    upload.filename = clean_filename(upload.filename)  # имя без папок
     data = await upload.read()
     if len(data) == 0:
         raise HTTPException(status_code=400, detail=f"Пустой файл: {upload.filename}")

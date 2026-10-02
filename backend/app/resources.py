@@ -200,6 +200,12 @@ async def find_duplicate_link(db: AsyncSession, url: str) -> Optional[tuple[Link
     return None
 
 
+def clean_filename(name: Optional[str]) -> str:
+    """Имя файла без папок. При загрузке папкой браузер присылает путь
+    («LESSONS/Урок 1/Урок 1.1.docx») — храним и сравниваем только имя."""
+    return (name or "").replace("\\", "/").rsplit("/", 1)[-1].strip() or "file"
+
+
 def conflict(code: str, detail: str, existing_id: Optional[int] = None) -> JSONResponse:
     """409 с понятным текстом (detail) + code (duplicate | same_name) и id
     уже существующего ресурса — фронт в уроке привязывает его вместо копии."""
