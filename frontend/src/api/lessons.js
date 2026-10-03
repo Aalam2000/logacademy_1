@@ -78,3 +78,8 @@ export function saveLessonMark(lessonId, studentId, payload) {
 export function saveLessonMarksBulk(lessonId, items) {
   return api.put(`/lessons/${lessonId}/marks`, items).then(res => res.data);
 }
+
+// Сумма звёзд студента за все уроки (шапка кабинета студента) → { stars }
+export function getMyStars() {
+  return api.get('/lessons/student/stars').then(res => res.data);
+}

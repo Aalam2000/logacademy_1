@@ -1946,3 +1946,60 @@ a.row-icon:hover {
   font-size: var(--font-base);
   cursor: pointer;
 }
+
+/* ===== Звёзды студента в шапке (StudentStars): янтарная плашка с бликом ===== */
+.student-stars {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px var(--space-3) 4px var(--space-4);
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-pill);
+  background: #FFF6DD;
+  color: var(--color-text);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.student-stars__num {
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #b45309;
+}
+.student-stars__icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  animation: student-stars-twinkle 1.6s ease-in-out infinite;
+}
+/* Блик, проходящий по плашке раз в ~3 секунды */
+.student-stars::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.95), transparent);
+  transform: skewX(-20deg);
+  animation: student-stars-shine 3.2s ease-in-out infinite;
+}
+@keyframes student-stars-shine {
+  0%, 35% { left: -60%; }
+  75%, 100% { left: 130%; }
+}
+@keyframes student-stars-twinkle {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.82); opacity: 0.75; }
+}
+/* У кого в системе отключены анимации — спокойная плашка */
+@media (prefers-reduced-motion: reduce) {
+  .student-stars::after,
+  .student-stars__icon {
+    animation: none;
+  }
+}

@@ -2,7 +2,7 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from datetime import datetime, date as date_type, timedelta, timezone as dt_timezone
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
@@ -874,6 +874,26 @@ def _grade_group(items: list[GradeItemOut]) -> GradeGroupOut:
         max=max(grades) if grades else None,
         items=items,
     )
+
+
+# Звёзды студента для шапки его кабинета («У тебя уже есть N ★»): сумма
+# всех звёзд за уроки за всё время, по всем группам, включая прошлые
+# (решение Андрея). ДОЛЖЕН идти раньше маршрутов с /{lesson_id}.
+class MyStarsOut(BaseModel):
+    stars: int
+
+
+@router.get("/student/stars", response_model=MyStarsOut)
+async def get_student_stars(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+    total = (await db.execute(
+        select(func.coalesce(func.sum(LessonMark.stars), 0)).where(LessonMark.student_id == current_user.id)
+    )).scalar()
+    return MyStarsOut(stars=int(total or 0))
 
 
 # Три вида оценок студента (за урок / за ДЗ / экзаменационная) — каждая со

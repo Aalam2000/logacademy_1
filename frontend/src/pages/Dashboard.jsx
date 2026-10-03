@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navigation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import StudentStars from '../components/StudentStars';
 import { usePresencePing } from '../hooks/usePresencePing';
 
 function Dashboard() {
@@ -41,12 +42,16 @@ function Dashboard() {
             <span></span>
           </button>
 
-          <h2>
-            {`Добро пожаловать, ${user?.username || ''}!`}
-            {user?.role && (
-              <span className={roleBadgeClass}>{user.role}</span>
-            )}
-          </h2>
+          <div className="dashboard-header-left">
+            <h2>
+              {`Добро пожаловать, ${user?.username || ''}!`}
+              {user?.role && (
+                <span className={roleBadgeClass}>{user.role}</span>
+              )}
+            </h2>
+            {/* Только у студента и только когда звёзды есть */}
+            <StudentStars user={user} />
+          </div>
           <div className="dashboard-header-right">
             <LanguageSwitcher />
             <button onClick={() => { logout(); navigate('/login'); }} className="btn btn--danger btn--pill">

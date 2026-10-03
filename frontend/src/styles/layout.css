@@ -109,6 +109,13 @@
   flex-shrink: 0;
   box-sizing: border-box;
 }
+/* Приветствие + звёзды студента (StudentStars) */
+.dashboard-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
 .dashboard-header-right {
   display: flex;
   align-items: center;
