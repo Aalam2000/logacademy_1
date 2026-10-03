@@ -6,7 +6,7 @@ from typing import Optional
 from ..database import get_db
 from ..models import User, Course, Group, GroupMember, Lesson, LessonMark
 from ..usages import ensure_not_used
-from ..attendance import attendance_slots, summarize
+from ..attendance import attendance_slots, summarize, PRESENT
 from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url, DURATION_MIN, DURATION_MAX
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
@@ -110,6 +110,7 @@ class TeacherStatsOut(BaseModel):
     student_count: int
     attendance_pct: Optional[float] = None
     avg_score: Optional[float] = None
+    lessons_held: int = 0  # проведённые уроки: урок открыт и на нём был хотя бы один студент
 
 
 # Справочник преподов: по каждому — кол-во активных групп, уникальных
@@ -154,6 +155,21 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
     for gid, score in marks_result.all():
         scores_by_group.setdefault(gid, []).append(score)
 
+    # Проведённый урок — открыт педагогом и на нём отмечен хотя бы один
+    # присутствовавший студент (очно или онлайн). Считается по активным
+    # группам преподавателя, как и остальные колонки справочника.
+    held_result = await db.execute(
+        select(Lesson.group_id, func.count(func.distinct(Lesson.id)))
+        .join(LessonMark, LessonMark.lesson_id == Lesson.id)
+        .where(
+            Lesson.group_id.in_(all_group_ids),
+            Lesson.is_open == True,
+            LessonMark.attendance_status.in_(PRESENT),
+        )
+        .group_by(Lesson.group_id)
+    )
+    held_by_group = {gid: cnt for gid, cnt in held_result.all()}
+
     # Посещаемость — по общему правилу (attendance.py): пропуск = урок
     # заблокирован, ученик был в группе, а «был/онлайн/уважительная» нет.
     slots_by_group: dict[int, list] = {}
@@ -177,6 +193,7 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
             student_count=len(student_ids),
             attendance_pct=summarize(teacher_slots).pct,
             avg_score=round(sum(scores) / len(scores), 1) if scores else None,
+            lessons_held=sum(held_by_group.get(gid, 0) for gid in gids),
         ))
 
     out.sort(key=lambda t: t.full_name.lower())

@@ -30,21 +30,23 @@ function TeachersDirectoryPage() {
               <th>{'Имя'}</th>
               <th>{'Групп'}</th>
               <th>{'Студентов'}</th>
+              <th data-tip={'Урок открыт, и на нём был хотя бы один студент'}>{'Проведено уроков'}</th>
               <th>{'Посещаемость'}</th>
               <th>{'Средний балл'}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="table__empty">{'Загрузка...'}</td></tr>
+              <tr><td colSpan={6} className="table__empty">{'Загрузка...'}</td></tr>
             ) : teachers.length === 0 ? (
-              <tr><td colSpan={5} className="table__empty">{'Преподов не найдено'}</td></tr>
+              <tr><td colSpan={6} className="table__empty">{'Преподов не найдено'}</td></tr>
             ) : (
               teachers.map(t => (
                 <tr key={t.id}>
                   <td>{t.full_name}</td>
                   <td>{t.group_count}</td>
                   <td>{t.student_count}</td>
+                  <td>{t.lessons_held ?? 0}</td>
                   <td>{t.attendance_pct != null ? `${t.attendance_pct}%` : '—'}</td>
                   <td>{t.avg_score ?? '—'}</td>
                 </tr>
