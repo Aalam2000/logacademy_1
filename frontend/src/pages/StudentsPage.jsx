@@ -5,6 +5,8 @@ import { useLang } from '../hooks/useLang';
 import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
 import DeleteButton from '../components/DeleteButton';
+import IconButton from '../components/IconButton';
+import StudentPasswordModal from '../components/StudentPasswordModal';
 
 function StudentsPage() {
   const { user, hasRole } = useAuth();
@@ -16,6 +18,7 @@ function StudentsPage() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [passwordStudent, setPasswordStudent] = useState(null); // ученик, которому меняют пароль
 
   const [courseId, setCourseId] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -113,7 +116,7 @@ function StudentsPage() {
   // «Препод» показываем только пока admin смотрит сводно (не выбран ни
   // конкретный препод, ни «Моё») — иначе колонка избыточна, все и так его.
   const showTeacherColumn = isAdmin && !mine && !teacherId;
-  const columnCount = 8 + (showTeacherColumn ? 1 : 0) + (isAdmin ? 1 : 0);
+  const columnCount = 9 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
 
   return (
     <div className="page">
@@ -170,7 +173,7 @@ function StudentsPage() {
               <th>{'Пропуски'}</th>
               <th>{'Опоздания'}</th>
               <th>{'Контакты'}</th>
-              {isAdmin && <th></th>}
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -198,9 +201,12 @@ function StudentsPage() {
                   <td>
                     <StudentContactIcons telegram={s.telegram_username} whatsapp={s.whatsapp} />
                   </td>
-                  {isAdmin && (
-                    <td>
+                  <td>
+                    <div className="icon-row">
+                      {/* Ученик забыл пароль — педагог (своим ученикам) или админ задаёт новый */}
+                      <IconButton icon="key" tip="Сменить пароль" onClick={() => setPasswordStudent(s)} />
                       {/* Общая кнопка удаления с контролем использования (app/usages.py) */}
+                      {isAdmin && (
                       <DeleteButton
                         entity="student"
                         id={s.id}
@@ -211,14 +217,19 @@ function StudentsPage() {
                         onDeleted={() => setStudents(prev => prev.filter(x => x.id !== s.id))}
                         onError={setError}
                       />
-                    </td>
-                  )}
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {passwordStudent && (
+        <StudentPasswordModal student={passwordStudent} onClose={() => setPasswordStudent(null)} />
+      )}
     </div>
   );
 }

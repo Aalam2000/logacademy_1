@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
@@ -13,6 +13,7 @@ from xhtml2pdf.config.resources import ResourceAccessPolicy
 
 from ..usages import ensure_not_used
 from ..attendance import attendance_slots, summarize_by_student
+from ..core.security import get_password_hash
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher
 from ..models import (
@@ -303,23 +304,19 @@ def render_student_card_html(lang: str, student: User, groups: list[dict], summa
 
 # PDF-карточка одного студента. teacher видит только своих (по своим
 # группам), admin — любого зарегистрированного студента.
-@router.get("/{student_id}/card")
-async def get_student_card(
-    student_id: int,
-    lang: str = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_teacher),
-):
-    lang = lang or translator.source_lang
+# Общая проверка доступа к конкретному студенту (карточка, смена пароля):
+# admin — к любому, teacher — только к активному ученику своих групп, то же
+# разграничение видимости, что и в списке /students. Возвращает студента,
+# его группы в области видимости и справочник этих групп.
+async def _get_accessible_student(
+    db: AsyncSession, student_id: int, current_user: User
+) -> tuple[User, list[int], dict[int, dict]]:
     student_result = await db.execute(select(User).where(User.id == student_id, User.role == "student"))
     student = student_result.scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="Студент не найден")
 
-    # admin: все группы; teacher: только свои (без доп. фильтров) —
-    # то же самое разграничение видимости, что и в списке /students.
     groups_by_id = await _scope_group_ids(db, current_user)
-
     member_result = await db.execute(
         select(GroupMember.group_id)
         .where(GroupMember.student_id == student_id, GroupMember.status == "active")
@@ -329,6 +326,18 @@ async def get_student_card(
 
     if current_user.role != "admin" and not matched_group_ids:
         raise HTTPException(status_code=403, detail="Этот студент не в ваших группах")
+    return student, matched_group_ids, groups_by_id
+
+
+@router.get("/{student_id}/card")
+async def get_student_card(
+    student_id: int,
+    lang: str = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    lang = lang or translator.source_lang
+    student, matched_group_ids, groups_by_id = await _get_accessible_student(db, student_id, current_user)
 
     stats = await _compute_stats(db, [student_id], matched_group_ids)
     summary = _stats_summary(stats[student_id])
@@ -347,6 +356,34 @@ async def get_student_card(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
+
+# Смена пароля ученика педагогом (ученик забыл пароль): без старого пароля.
+# Педагог — только ученикам своих групп, admin — любому ученику; пароль
+# педагога/админа этим путём сменить нельзя (_get_accessible_student ищет
+# только роль student). Уже выданный токен ученика действует до своего срока.
+class StudentPasswordIn(BaseModel):
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Пароль не может быть пустым")
+        return v
+
+
+@router.put("/{student_id}/password", status_code=204)
+async def set_student_password(
+    student_id: int,
+    data: StudentPasswordIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    student, _, _ = await _get_accessible_student(db, student_id, current_user)
+    student.hashed_password = get_password_hash(data.new_password)
+    await db.commit()
+    return Response(status_code=204)
+
 
 # Удалить ученика — только admin. Общий контроль удаления (app/usages.py):
 # если ученик где-либо есть — группы (в т.ч. отчислен / архив), оценки,
