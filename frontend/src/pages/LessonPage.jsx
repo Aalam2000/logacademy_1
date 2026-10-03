@@ -6,6 +6,7 @@ import VideoCallButton from '../components/VideoCallButton';
 import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
+import IconButton from '../components/IconButton';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
 import { StudentContactIcons } from '../components/ContactIcons';
@@ -729,6 +730,16 @@ function LessonPage() {
                             <td>{item.added_by_name || '—'}</td>
                             <td className="table__col--date nowrap">{item.added_at ? new Date(item.added_at).toLocaleDateString('ru-RU') : '—'}</td>
                             <td className="table__col--delete">
+                              <div className="icon-row">
+                              {/* Редактор квиза; после сохранения/отмены вернёт в этот урок (?lessonId) */}
+                              {item.resource_type === 'quiz' && (
+                                <IconButton
+                                  icon="edit"
+                                  disabled={!item.can_edit}
+                                  tip={item.can_edit ? 'Редактировать квиз' : 'Редактировать может только автор или администратор'}
+                                  onClick={() => navigate(`/dashboard/add-quiz/${item.resource_id}?lessonId=${lessonId}`)}
+                                />
+                              )}
                               <button
                                 type="button"
                                 className="btn btn--sm"
@@ -737,6 +748,7 @@ function LessonPage() {
                               >
                                 ✕
                               </button>
+                              </div>
                             </td>
                           </tr>
                         );

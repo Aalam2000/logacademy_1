@@ -129,6 +129,9 @@ class LessonItemOut(BaseModel):
     url: Optional[str] = None            # link
     added_by_name: Optional[str] = None
     added_at: Optional[datetime] = None
+    # Квиз можно редактировать (кнопка-карандаш в уроке): автор или admin —
+    # то же правило, что в quizzes._editable_quiz_query
+    can_edit: bool = False
 
 
 class LessonItemAttach(BaseModel):
@@ -1196,6 +1199,9 @@ async def get_lesson_items(
             url=detail["url"],
             added_by_name=full_name or username,
             added_at=attachment.added_at,
+            can_edit=detail["resource_type"] == "quiz" and (
+                current_user.role == "admin" or detail["owner_id"] == current_user.id
+            ),
         ))
 
     items.sort(key=lambda i: (_TYPE_ORDER[i.resource_type], i.added_at or datetime.min))

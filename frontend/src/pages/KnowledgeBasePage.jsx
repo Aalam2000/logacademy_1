@@ -614,6 +614,16 @@ function KnowledgeBasePage() {
                       ) : '—'}
                     </td>
                     <td>
+                      <div className="icon-row">
+                      {/* Редактор квиза (AddQuizPage): автор или admin — то же право, что на удаление */}
+                      {item.resource_type === 'quiz' && (
+                        <IconButton
+                          icon="edit"
+                          disabled={!deletable}
+                          tip={deletable ? 'Редактировать квиз' : 'Редактировать может только автор или администратор'}
+                          onClick={() => navigate(`/dashboard/add-quiz/${item.id}`)}
+                        />
+                      )}
                       {deletable ? (
                         <DeleteButton
                           entity={item.resource_type}
@@ -633,6 +643,7 @@ function KnowledgeBasePage() {
                             : 'Удалить может только администратор'}
                         />
                       )}
+                      </div>
                     </td>
                   </tr>
                 );
