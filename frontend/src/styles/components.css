@@ -470,6 +470,12 @@
 .table__th--sorted {
   color: var(--color-text, inherit);
 }
+.table .table__cell--center {
+  text-align: center;
+}
+.table__cell--center .table__th-label {
+  transform-origin: center center;
+}
 .table__th-arrow {
   margin-left: 4px;
   font-size: .7em;

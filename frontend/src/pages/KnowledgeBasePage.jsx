@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import SortTh, { sortRows } from '../components/SortTh';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import DeleteButton from '../components/DeleteButton';
@@ -29,7 +30,9 @@ function KnowledgeBasePage() {
   const [error, setError] = useState('');
   const [typeFilter, setTypeFilter] = useState(''); // '' | material | quiz | link
   const [onlyMine, setOnlyMine] = useState(false);
-  const [sort, setSort] = useState('date'); // date | title
+  // Сортировка — в браузере, кликом по шапке столбца (SortTh). По умолчанию — свежие сверху.
+  const [sortKey, setSortKey] = useState('date');
+  const [sortDir, setSortDir] = useState('desc'); // asc | desc
   const [openingKey, setOpeningKey] = useState(null);
 
   const [isUploading, setIsUploading] = useState(false);
@@ -71,7 +74,7 @@ function KnowledgeBasePage() {
   useEffect(() => {
     loadItems();
     // eslint-disable-next-line
-  }, [typeFilter, onlyMine, sort, filterCourseId, filterSector, showTemplates]);
+  }, [typeFilter, onlyMine, filterCourseId, filterSector, showTemplates]);
 
   useEffect(() => {
     if (isAdmin) ensureCoursesLoaded();
@@ -82,7 +85,7 @@ function KnowledgeBasePage() {
     setLoading(true);
     setError('');
     try {
-      const params = { sort };
+      const params = {};
       if (typeFilter) params.type = typeFilter;
       if (onlyMine && user) params.uploader = user.id;
       if (isAdmin && filterCourseId) params.course_id = filterCourseId;
@@ -342,6 +345,30 @@ function KnowledgeBasePage() {
 
   const columnCount = 9;
 
+  // Сортировка кликом по шапке. Текстовые столбцы — от А до Я, дата и «В уроках» — сначала большие.
+  const TEXT_KEYS = ['type', 'course', 'title', 'uploader'];
+  const sortValue = (item, key) => {
+    if (key === 'type') return subtypeLabel(item);
+    if (key === 'course') return (item.attached_courses || []).join(', ');
+    if (key === 'title') return item.title || '';
+    if (key === 'uploader') return item.uploaded_by_name || '';
+    if (key === 'date') return new Date(item.created_at).getTime();
+    if (key === 'lessons') return item.attached_lessons_count > 0 ? item.attached_lessons_count : null;
+    return null;
+  };
+  const handleSort = (key) => {
+    if (key === sortKey) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(TEXT_KEYS.includes(key) ? 'asc' : 'desc');
+    }
+  };
+  const sortedItems = sortRows(items, sortKey, sortDir, sortValue, TEXT_KEYS, item => item.title);
+  const sortTh = (key, label, tip) => (
+    <SortTh k={key} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} tip={tip}>{label}</SortTh>
+  );
+
   return (
     <div className="page">
       <div className="toolbar toolbar--underline-row">
@@ -381,10 +408,6 @@ function KnowledgeBasePage() {
               </select>
             </>
           )}
-          <select className="input" value={sort} onChange={e => setSort(e.target.value)}>
-            <option value="date">{'По дате'}</option>
-            <option value="title">{'По названию'}</option>
-          </select>
         </div>
       </div>
 
@@ -539,13 +562,13 @@ function KnowledgeBasePage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{'Тип'}</th>
-              <th data-tip="Курсы, в уроках которых это используется">{'Курс'}</th>
-              <th>{'Название'}</th>
+              {sortTh('type', 'Тип')}
+              {sortTh('course', 'Курс', 'Курсы, в уроках которых это используется')}
+              {sortTh('title', 'Название')}
               <th>{'Детали'}</th>
-              <th>{'Загрузил'}</th>
-              <th>{'Дата'}</th>
-              <th>{'В уроках'}</th>
+              {sortTh('uploader', 'Загрузил')}
+              {sortTh('date', 'Дата')}
+              {sortTh('lessons', 'В уроках')}
               <th>{'Статус'}</th>
               <th>{'Удалить'}</th>
             </tr>
@@ -556,7 +579,7 @@ function KnowledgeBasePage() {
             ) : items.length === 0 ? (
               <tr><td colSpan={columnCount} className="table__empty">{'В базе знаний пока пусто'}</td></tr>
             ) : (
-              items.map(item => {
+              sortedItems.map(item => {
                 const meta = TYPE_META[item.resource_type];
                 const key = itemKey(item);
                 const deletable = canDelete(item);

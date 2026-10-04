@@ -7,6 +7,7 @@ import Dropdown from '../components/Dropdown';
 import DeleteButton from '../components/DeleteButton';
 import IconButton from '../components/IconButton';
 import PasswordModal from '../components/PasswordModal';
+import SortTh, { sortRows } from '../components/SortTh';
 import { setStudentPassword } from '../api/students';
 
 function StudentsPage() {
@@ -141,38 +142,14 @@ function StudentsPage() {
     }
   };
 
-  const sortedStudents = useMemo(() => {
-    const isText = TEXT_KEYS.includes(sortKey);
-    const sign = sortDir === 'asc' ? 1 : -1;
-    const byName = (a, b) => (a.full_name || '').localeCompare(b.full_name || '');
-    return [...students].sort((a, b) => {
-      const va = sortValue(a, sortKey);
-      const vb = sortValue(b, sortKey);
-      // пустые («—») — всегда внизу, при любом направлении
-      const ea = va === null || va === undefined || va === '';
-      const eb = vb === null || vb === undefined || vb === '';
-      if (ea || eb) return ea && eb ? byName(a, b) : (ea ? 1 : -1);
-      const cmp = isText ? String(va).localeCompare(String(vb)) : va - vb;
-      return cmp !== 0 ? cmp * sign : byName(a, b);
-    });
+  const sortedStudents = useMemo(
+    () => sortRows(students, sortKey, sortDir, sortValue, TEXT_KEYS, s => s.full_name),
     // eslint-disable-next-line
-  }, [students, sortKey, sortDir]);
+    [students, sortKey, sortDir]
+  );
 
-  // Шапка сортируемого столбца: клик — сортировка, наведение — название чуть крупнее
-  const sortTh = (key, label, tip) => (
-    <th
-      className={`table__th--sort${sortKey === key ? ' table__th--sorted' : ''}`}
-      data-tip={tip}
-      aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      tabIndex={0}
-      onClick={() => handleSort(key)}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort(key); } }}
-    >
-      <span className="table__th-label">
-        {label}
-        {sortKey === key && <span className="table__th-arrow">{sortDir === 'asc' ? '▲' : '▼'}</span>}
-      </span>
-    </th>
+  const sortTh = (key, label, tip, center) => (
+    <SortTh k={key} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} tip={tip} center={center}>{label}</SortTh>
   );
 
   return (
@@ -223,7 +200,7 @@ function StudentsPage() {
               {sortTh('avg_score', 'Ср. уроки', 'Средняя оценка за уроки')}
               {sortTh('avg_hw_score', 'Ср. ДЗ', 'Средняя оценка за домашние задания')}
               {sortTh('avg_exam_score', 'Ср. экзамены', 'Средняя экзаменационная оценка')}
-              {sortTh('stars_total', <span className="table__th-star">★</span>, 'Звёзды')}
+              {sortTh('stars_total', <span className="table__th-star">★</span>, 'Звёзды', true)}
               {sortTh('unexcused_absences', 'Пропуски')}
               {sortTh('late_count', 'Опоздания')}
               <th>{'Контакты'}</th>
@@ -250,7 +227,7 @@ function StudentsPage() {
                   <td>{s.avg_score ?? '—'}</td>
                   <td>{s.avg_hw_score ?? '—'}</td>
                   <td>{s.avg_exam_score ?? '—'}</td>
-                  <td>{s.stars_total ?? 0}</td>
+                  <td className="table__cell--center">{s.stars_total ?? 0}</td>
                   <td>{s.unexcused_absences}</td>
                   <td>{s.late_count}</td>
                   <td>
