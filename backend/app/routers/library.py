@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..dependencies import require_teacher
 from ..models import HomeworkTask, Link, Material, Quiz, User
-from ..resources import count_attachments_map
+from ..resources import attachment_usage_map
 
 router = APIRouter(prefix="/library", tags=["library"])
 
@@ -37,6 +37,8 @@ class LibraryItemOut(BaseModel):
     uploaded_by_name: Optional[str] = None
     created_at: datetime
     attached_lessons_count: int = 0
+    # Курсы, в уроках которых ресурс используется (по алфавиту) — колонка «Курс» в БЗ
+    attached_courses: list[str] = []
     # Файл используется как ДЗ хотя бы в одном уроке
     is_homework: bool = False
     # Теги шаблона курса (см. claude/course-templates-plan.md) — сейчас
@@ -172,9 +174,12 @@ async def list_library_items(
     if sector:
         items = [item for item in items if item.sector == sector]
 
-    counts = await count_attachments_map(db)
+    usage = await attachment_usage_map(db)
     for item in items:
-        item.attached_lessons_count = counts.get((item.resource_type, item.id), 0)
+        row = usage.get((item.resource_type, item.id))
+        if row:
+            item.attached_lessons_count = row["count"]
+            item.attached_courses = row["courses"]
 
     if sort == "title":
         items.sort(key=lambda item: item.title.lower())

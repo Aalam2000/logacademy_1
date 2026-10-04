@@ -340,7 +340,7 @@ function KnowledgeBasePage() {
   const DELETE_PATH = { material: 'materials', quiz: 'quizzes', link: 'links' };
   const DELETE_TIP = { material: 'Удалить файл', quiz: 'Удалить квиз', link: 'Удалить ссылку' };
 
-  const columnCount = 8;
+  const columnCount = 9;
 
   return (
     <div className="page">
@@ -540,6 +540,7 @@ function KnowledgeBasePage() {
           <thead>
             <tr>
               <th>{'Тип'}</th>
+              <th data-tip="Курсы, в уроках которых это используется">{'Курс'}</th>
               <th>{'Название'}</th>
               <th>{'Детали'}</th>
               <th>{'Загрузил'}</th>
@@ -569,6 +570,14 @@ function KnowledgeBasePage() {
                       {item.is_homework && (
                         <span className="badge badge--homework badge--inline" data-tip={'Используется как ДЗ в уроке'}>{'ДЗ'}</span>
                       )}
+                    </td>
+                    <td>
+                      {/* Курсы, в уроках которых ресурс используется — чтобы понимать, где он может понадобиться */}
+                      {item.attached_courses?.length > 0 ? (
+                        <span className="table__cell--truncate" data-tip={item.attached_courses.join(', ')}>
+                          {item.attached_courses.join(', ')}
+                        </span>
+                      ) : '—'}
                     </td>
                     <td>
                       <button type="button" className="link" onClick={() => handleOpen(item)} disabled={openingKey === key}>

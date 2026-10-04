@@ -12,7 +12,7 @@ from typing import Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import Link, LessonResource, Material, Quiz, User
+from .models import Course, Group, Lesson, Link, LessonResource, Material, Quiz, User
 
 RESOURCE_MODELS = {
     "material": Material,
@@ -44,6 +44,26 @@ async def count_attachments_map(db: AsyncSession) -> dict[tuple[str, int], int]:
         ).group_by(LessonResource.resource_type, LessonResource.resource_id)
     )
     return {(resource_type, resource_id): cnt for resource_type, resource_id, cnt in result.all()}
+
+
+# Где ресурс используется — для ленты «Базы знаний»: число уроков, к
+# которым он привязан, и курсы этих уроков (курс группы урока), по алфавиту
+# без повторов. Одним запросом сразу для всех ресурсов.
+async def attachment_usage_map(db: AsyncSession) -> dict[tuple[str, int], dict]:
+    result = await db.execute(
+        select(LessonResource.resource_type, LessonResource.resource_id, Course.title)
+        .join(Lesson, Lesson.id == LessonResource.lesson_id)
+        .join(Group, Group.id == Lesson.group_id)
+        .join(Course, Course.id == Group.course_id)
+    )
+    usage: dict[tuple[str, int], dict] = {}
+    for resource_type, resource_id, course_title in result.all():
+        row = usage.setdefault((resource_type, resource_id), {"count": 0, "courses": set()})
+        row["count"] += 1
+        row["courses"].add(course_title)
+    for row in usage.values():
+        row["courses"] = sorted(row["courses"], key=str.lower)
+    return usage
 
 
 # Единая форма "деталей ресурса" вне зависимости от таблицы-источника —
