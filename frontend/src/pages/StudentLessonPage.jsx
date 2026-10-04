@@ -146,7 +146,7 @@ function StudentLessonPage() {
             {'Назад'}
           </button>
           {lesson.group_name && (
-            <StudentGroupsBar groups={[{ id: lesson.group_id, name: lesson.group_name, video_url: lesson.group_video_url }]} />
+            <StudentGroupsBar groups={[{ id: lesson.group_id, name: lesson.group_name, video_url: lesson.group_video_url, telegram_chat_id: lesson.group_telegram, whatsapp: lesson.group_whatsapp }]} />
           )}
           <span className="lesson-toolbar__group">
             {lesson.title}

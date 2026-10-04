@@ -62,6 +62,8 @@ class LessonOut(BaseModel):
     # Только для GET /lessons/{id}: группа урока и вход в видеоконференцию
     group_name: Optional[str] = None
     group_video_url: Optional[str] = None
+    group_telegram: Optional[str] = None
+    group_whatsapp: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -1307,10 +1309,11 @@ async def get_lesson(
     out = LessonOut.model_validate(lesson)
     out.is_locked = lesson_locked_for(lesson, current_user)
     group_row = (await db.execute(
-        select(Group.name, Group.video_url).where(Group.id == lesson.group_id)
+        select(Group.name, Group.video_url, Group.telegram_chat_id, Group.whatsapp)
+        .where(Group.id == lesson.group_id)
     )).first()
     if group_row:
-        out.group_name, out.group_video_url = group_row
+        out.group_name, out.group_video_url, out.group_telegram, out.group_whatsapp = group_row
     return out
 
 

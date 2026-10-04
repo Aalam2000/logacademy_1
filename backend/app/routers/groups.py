@@ -46,6 +46,8 @@ class StudentGroupOut(BaseModel):
     id: int
     name: str
     video_url: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+    whatsapp: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

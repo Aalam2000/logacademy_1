@@ -5,7 +5,7 @@ import IconButton from '../components/IconButton';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
-import VideoCallButton from '../components/VideoCallButton';
+import { GroupContactIcons } from '../components/ContactIcons';
 import DurationSelect from '../components/DurationSelect';
 import { DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import Calendar from '../components/Calendar';
@@ -411,7 +411,7 @@ function GroupPage() {
           </div>
         </div>
         <div className="button-row">
-          <VideoCallButton url={group.video_url} />
+          <GroupContactIcons video={group.video_url} telegram={group.telegram_chat_id} whatsapp={group.whatsapp} />
           <button className="btn btn--outline btn--compact" onClick={() => setIsSettingsOpen(true)}>
             {'Настройки группы'}
           </button>

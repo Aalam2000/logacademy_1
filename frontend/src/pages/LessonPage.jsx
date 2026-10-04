@@ -2,14 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import DateTimePicker, { formatDateTime } from '../components/DateTimePicker';
-import VideoCallButton from '../components/VideoCallButton';
 import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
 import IconButton from '../components/IconButton';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
-import { StudentContactIcons } from '../components/ContactIcons';
+import { StudentContactIcons, GroupContactIcons } from '../components/ContactIcons';
 import { subscribeLessonMarksUpdated } from '../utils/lessonMarksChannel';
 import { HomeworkAddModal, HomeworkFlags, HomeworkCheckView, personalOrCommonDeadline } from '../components/HomeworkTeacher';
 import { DialogCell } from '../components/LessonDialog';
@@ -546,7 +545,8 @@ function LessonPage() {
     );
   }
 
-  const groupName = groups.find(g => g.id === lesson.group_id)?.name || `#${lesson.group_id}`;
+  const lessonGroup = groups.find(g => g.id === lesson.group_id);
+  const groupName = lessonGroup?.name || `#${lesson.group_id}`;
 
   return (
     <div className="page">
@@ -556,7 +556,7 @@ function LessonPage() {
             {'Назад'}
           </button>
           <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
-          <VideoCallButton url={groups.find(g => g.id === lesson.group_id)?.video_url} />
+          <GroupContactIcons video={lessonGroup?.video_url} telegram={lessonGroup?.telegram_chat_id} whatsapp={lessonGroup?.whatsapp} />
           <span className="lesson-toolbar__date">
             {formatDateTime(dateValue) || '—'}
             {dateValue && ` · ${formatDuration(durationValue)}`}

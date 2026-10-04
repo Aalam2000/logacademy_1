@@ -4,7 +4,6 @@ import Button from '../components/Button';
 import Modal from '../components/Modal';
 import api from '../api/auth';
 import { ContactIcon } from '../components/ContactIcons';
-import VideoCallButton from '../components/VideoCallButton';
 import IconButton from '../components/IconButton';
 import DeleteButton from '../components/DeleteButton';
 import PasswordModal from '../components/PasswordModal';
@@ -608,7 +607,7 @@ function AdminPage() {
                           value={editingGroupDraft.video_url}
                           onChange={e => setEditingGroupDraft({ ...editingGroupDraft, video_url: e.target.value })}
                         />
-                      ) : <VideoCallButton url={g.video_url} compact />}
+                      ) : <ContactIcon type="video" value={g.video_url} />}
                     </td>
                     <td>
                       <div className="icon-row">
