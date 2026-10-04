@@ -52,3 +52,8 @@ export function deleteGroup(id) {
 export function updateGroup(id, data) {
   return api.patch(`/admin/groups/${id}`, data).then(res => res.data);
 }
+
+// Смена пароля любому пользователю (педагог, админ, ученик) — только admin
+export function setUserPassword(userId, newPassword) {
+  return api.put(`/admin/users/${userId}/password`, { new_password: newPassword });
+}

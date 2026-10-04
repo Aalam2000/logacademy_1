@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
@@ -15,6 +15,7 @@ from ..usages import ensure_not_used
 from ..attendance import attendance_slots, summarize_by_student
 from ..core.security import get_password_hash
 from ..database import get_db
+from ..schemas import NewPasswordIn
 from ..dependencies import require_admin, require_teacher
 from ..models import (
     Course, Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMark,
@@ -361,21 +362,10 @@ async def get_student_card(
 # Педагог — только ученикам своих групп, admin — любому ученику; пароль
 # педагога/админа этим путём сменить нельзя (_get_accessible_student ищет
 # только роль student). Уже выданный токен ученика действует до своего срока.
-class StudentPasswordIn(BaseModel):
-    new_password: str
-
-    @field_validator("new_password")
-    @classmethod
-    def _not_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError("Пароль не может быть пустым")
-        return v
-
-
 @router.put("/{student_id}/password", status_code=204)
 async def set_student_password(
     student_id: int,
-    data: StudentPasswordIn,
+    data: NewPasswordIn,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):

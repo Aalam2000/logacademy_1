@@ -153,3 +153,17 @@ class QuizOut(BaseModel):
     html_translations: Optional[Dict[str, str]] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Новый пароль, заданный за пользователя (без старого): педагог — ученику
+# (students.py), admin — любому пользователю (admin.py). Длину не
+# ограничиваем — как при регистрации; пустой не принимаем.
+class NewPasswordIn(BaseModel):
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Пароль не может быть пустым")
+        return v

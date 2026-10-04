@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field, field_validator
@@ -7,7 +7,7 @@ from ..database import get_db
 from ..models import User, Course, Group, GroupMember, Lesson, LessonMark
 from ..usages import ensure_not_used
 from ..attendance import attendance_slots, summarize, PRESENT
-from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url, DURATION_MIN, DURATION_MAX
+from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate, GroupOut, clean_video_url, DURATION_MIN, DURATION_MAX, NewPasswordIn
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
 from .academy import sector_exists
@@ -227,6 +227,24 @@ async def create_admin(data: UserCreate, db: AsyncSession = Depends(get_db), adm
     await db.commit()
     await db.refresh(user)
     return user
+
+# Смена пароля любому пользователю (педагог, админ, ученик) — только admin,
+# без старого пароля. Уже выданный токен пользователя действует до своего
+# срока. Ученикам пароль меняет и педагог — см. students.py.
+@router.put("/users/{user_id}/password", status_code=204)
+async def set_user_password(
+    user_id: int,
+    data: NewPasswordIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    user.hashed_password = get_password_hash(data.new_password)
+    await db.commit()
+    return Response(status_code=204)
+
 
 @router.patch("/admins/{user_id}", response_model=UserOut)
 async def update_admin(

@@ -1,26 +1,27 @@
-// Смена пароля ученика педагогом (ученик забыл пароль): педагог вводит
-// новый пароль сам и сообщает его ученику. Пароль виден при вводе —
-// как и при регистрации ученика педагогом (QRModal.jsx).
-// PUT /students/{id}/password, права проверяет бэкенд.
+// Смена пароля пользователю без старого пароля: пользователь забыл пароль —
+// педагог (своему ученику) или админ (кому угодно) вводит новый и сообщает
+// его. Пароль виден при вводе — как при регистрации ученика педагогом
+// (QRModal.jsx). Кто и кому может менять — проверяет бэкенд.
+//
+// <PasswordModal user={{ id, full_name }} save={(password) => Promise} onClose={...} />
 import React, { useState } from 'react';
 import Modal from './Modal';
 import FormField from './FormField';
-import { setStudentPassword } from '../api/students';
 import { extractErrorMessage } from '../utils/errors';
 
-function StudentPasswordModal({ student, onClose }) {
+function PasswordModal({ user, save, onClose }) {
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
-  const save = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (!password.trim()) { setError('Введите новый пароль'); return; }
     setSaving(true);
     setError('');
     try {
-      await setStudentPassword(student.id, password);
+      await save(password);
       setSaved(true);
     } catch (err) {
       setError(extractErrorMessage(err, 'Не удалось сменить пароль'));
@@ -31,12 +32,12 @@ function StudentPasswordModal({ student, onClose }) {
 
   return (
     <Modal
-      title={'Смена пароля ученика'}
+      title={'Смена пароля'}
       onClose={onClose}
       footer={saved ? undefined : (
         <>
           <button type="button" className="btn btn--secondary" onClick={onClose}>{'Отмена'}</button>
-          <button type="submit" form="student-password-form" className="btn" disabled={saving}>
+          <button type="submit" form="password-form" className="btn" disabled={saving}>
             {saving ? 'Сохранение…' : 'Сохранить'}
           </button>
         </>
@@ -44,13 +45,13 @@ function StudentPasswordModal({ student, onClose }) {
     >
       {saved ? (
         <div className="form-stack">
-          <div className="meta-row"><b>{student.full_name}</b></div>
-          <div>{'Пароль изменён. Сообщите ученику новый пароль'}:</div>
+          <div className="meta-row"><b>{user.full_name || user.username}</b></div>
+          <div>{'Пароль изменён. Сообщите пользователю новый пароль'}:</div>
           <div><b>{password}</b></div>
         </div>
       ) : (
-        <form id="student-password-form" onSubmit={save} className="form-stack">
-          <div className="meta-row"><b>{student.full_name}</b></div>
+        <form id="password-form" onSubmit={submit} className="form-stack">
+          <div className="meta-row"><b>{user.full_name || user.username}</b></div>
           <FormField
             label={'Новый пароль'}
             value={password}
@@ -65,4 +66,4 @@ function StudentPasswordModal({ student, onClose }) {
   );
 }
 
-export default StudentPasswordModal;
+export default PasswordModal;

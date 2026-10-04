@@ -7,6 +7,8 @@ import { ContactIcon } from '../components/ContactIcons';
 import VideoCallButton from '../components/VideoCallButton';
 import IconButton from '../components/IconButton';
 import DeleteButton from '../components/DeleteButton';
+import PasswordModal from '../components/PasswordModal';
+import { setUserPassword } from '../api/admin';
 import AcademyTab from '../components/AcademyTab';
 import { getSectors } from '../api/academy';
 
@@ -58,6 +60,7 @@ function AdminPage() {
   const groupsTableRef = useRef(null);
 
   const [error, setError] = useState('');
+  const [passwordUser, setPasswordUser] = useState(null); // кому админ меняет пароль
 
   useEffect(() => {
     loadAll();
@@ -402,15 +405,19 @@ function AdminPage() {
                 ) : u.whatsapp}
               </td>
               <td>
-                <DeleteButton
-                  entity="user"
-                  id={u.id}
-                  name={u.full_name || u.username}
-                  tip={del.tip}
-                  onDelete={() => api.delete(`${del.path}/${u.id}`)}
-                  onDeleted={del.reload}
-                  onError={showError}
-                />
+                {/* stopPropagation: клик по строке включает правку — кнопкам это не нужно */}
+                <div className="icon-row" onClick={e => e.stopPropagation()}>
+                  <IconButton icon="key" tip="Сменить пароль" onClick={() => setPasswordUser(u)} />
+                  <DeleteButton
+                    entity="user"
+                    id={u.id}
+                    name={u.full_name || u.username}
+                    tip={del.tip}
+                    onDelete={() => api.delete(`${del.path}/${u.id}`)}
+                    onDeleted={del.reload}
+                    onError={showError}
+                  />
+                </div>
               </td>
             </tr>
           ))}
@@ -422,6 +429,14 @@ function AdminPage() {
   return (
     <div className="page">
       {error && <div className="banner banner--error">{error}</div>}
+
+      {passwordUser && (
+        <PasswordModal
+          user={passwordUser}
+          save={(password) => setUserPassword(passwordUser.id, password)}
+          onClose={() => setPasswordUser(null)}
+        />
+      )}
 
       <div className="tabs-row">
         {tabs.map(tb => (

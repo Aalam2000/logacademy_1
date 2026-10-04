@@ -6,7 +6,8 @@ import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
 import DeleteButton from '../components/DeleteButton';
 import IconButton from '../components/IconButton';
-import StudentPasswordModal from '../components/StudentPasswordModal';
+import PasswordModal from '../components/PasswordModal';
+import { setStudentPassword } from '../api/students';
 
 function StudentsPage() {
   const { user, hasRole } = useAuth();
@@ -228,7 +229,11 @@ function StudentsPage() {
       </div>
 
       {passwordStudent && (
-        <StudentPasswordModal student={passwordStudent} onClose={() => setPasswordStudent(null)} />
+        <PasswordModal
+          user={passwordStudent}
+          save={(password) => setStudentPassword(passwordStudent.id, password)}
+          onClose={() => setPasswordStudent(null)}
+        />
       )}
     </div>
   );
