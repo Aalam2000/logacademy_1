@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/auth';
+import Modal from '../components/Modal';
+import FormField from '../components/FormField';
 
 function ProfilePage() {
   const { refreshUser } = useAuth();
   const [form, setForm] = useState({
-    full_name: '', email: '', phone: '', telegram_username: '', whatsapp: '',
-    old_password: '', new_password: ''
+    full_name: '', email: '', phone: '', telegram_username: '', whatsapp: ''
   });
+  // Смена пароля — в отдельном окне (кнопка «Сменить пароль»)
+  const [pwdOpen, setPwdOpen]     = useState(false);
+  const [pwd, setPwd]             = useState({ old_password: '', new_password: '' });
+  const [pwdError, setPwdError]   = useState('');
+  const [pwdSaving, setPwdSaving] = useState(false);
   const [username, setUsername] = useState('');
   const [role, setRole]         = useState('');
   const [msg, setMsg]           = useState('');
@@ -41,6 +47,30 @@ function ProfilePage() {
     }
   };
 
+  const openPwd = () => {
+    setPwd({ old_password: '', new_password: '' });
+    setPwdError('');
+    setPwdOpen(true);
+  };
+
+  const savePwd = async (e) => {
+    e.preventDefault();
+    if (!pwd.old_password || !pwd.new_password) { setPwdError('Заполните оба поля'); return; }
+    setPwdSaving(true);
+    setPwdError('');
+    try {
+      await api.put('/auth/me', pwd);
+      setPwdOpen(false);
+      setMsg('Пароль изменён');
+      setError('');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (err) {
+      setPwdError(err.response?.data?.detail || 'Не удалось сменить пароль');
+    } finally {
+      setPwdSaving(false);
+    }
+  };
+
   const f = (field, label, type='text') => (
     <div className="form-row">
       <label className="form-row__label">{label}</label>
@@ -66,15 +96,47 @@ function ProfilePage() {
       {f('telegram_username', 'Telegram')}
       {f('whatsapp',          'WhatsApp')}
 
-      <hr className="divider"/>
-      <h3>{'Смена пароля'}</h3>
-      {f('old_password', 'Текущий пароль', 'password')}
-      {f('new_password', 'Новый пароль',   'password')}
-
       {msg   && <div className="banner banner--success">{msg}</div>}
       {error && <div className="banner banner--error">{error}</div>}
 
-      <button className="btn" onClick={save}>{'Сохранить'}</button>
+      <div className="icon-row">
+        <button className="btn" onClick={save}>{'Сохранить'}</button>
+        <button type="button" className="btn btn--secondary" onClick={openPwd}>{'Сменить пароль'}</button>
+      </div>
+
+      {pwdOpen && (
+        <Modal
+          title={'Смена пароля'}
+          onClose={() => setPwdOpen(false)}
+          footer={(
+            <>
+              <button type="button" className="btn btn--secondary" onClick={() => setPwdOpen(false)}>{'Отмена'}</button>
+              <button type="submit" form="profile-password-form" className="btn" disabled={pwdSaving}>
+                {pwdSaving ? 'Сохранение…' : 'Сохранить'}
+              </button>
+            </>
+          )}
+        >
+          <form id="profile-password-form" onSubmit={savePwd} className="form-stack">
+            <FormField
+              label={'Текущий пароль'}
+              type="password"
+              autoComplete="current-password"
+              autoFocus
+              value={pwd.old_password}
+              onChange={e => setPwd({ ...pwd, old_password: e.target.value })}
+            />
+            <FormField
+              label={'Новый пароль'}
+              type="password"
+              autoComplete="new-password"
+              value={pwd.new_password}
+              onChange={e => setPwd({ ...pwd, new_password: e.target.value })}
+            />
+            {pwdError && <div className="form-field__error">{pwdError}</div>}
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
