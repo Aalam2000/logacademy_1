@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../api/auth';
 import { useAcademyName } from '../utils/academyName';
+import { isValidPhone, registerErrorText, PHONE_PLACEHOLDER } from '../utils/phone';
 
 function JoinGroupPage() {
   const academyName = useAcademyName();
@@ -15,6 +16,7 @@ function JoinGroupPage() {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,25 +39,23 @@ function JoinGroupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError('');
+    if (!isValidPhone(phone)) {
+      setSubmitError('Введите номер в формате +994 50 123 45 67 или 050 123 45 67');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await api.post('/auth/register/student', {
         username,
         password,
         full_name: fullName || null,
+        phone,
         invite_code: inviteCode,
       });
       // Успех — на логин с автозаполнением логина
       navigate('/login', { state: { username } });
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      if (err?.response?.status === 400) {
-        setSubmitError('Пользователь с таким логином уже существует');
-      } else if (err?.response?.status === 404) {
-        setSubmitError('Приглашение недействительно');
-      } else {
-        setSubmitError(detail || 'Не удалось зарегистрироваться');
-      }
+      setSubmitError(registerErrorText(err, 'Не удалось зарегистрироваться'));
       setIsSubmitting(false);
     }
   };
@@ -93,6 +93,15 @@ function JoinGroupPage() {
             placeholder={'Имя и фамилия'}
             value={fullName}
             onChange={e => setFullName(e.target.value)}
+          />
+          <input
+            className="input input--lg"
+            type="tel"
+            placeholder={PHONE_PLACEHOLDER}
+            data-tip="Телефон: +994 50 123 45 67 или 050 123 45 67"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            required
           />
           <input
             className="input input--lg"

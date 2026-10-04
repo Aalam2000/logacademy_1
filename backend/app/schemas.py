@@ -39,6 +39,7 @@ class StudentRegister(BaseModel):
     password: str
     full_name: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None  # обязателен; формат и запрет повторов — app/phones.py
     invite_code: str  # код группы из QR
 
 class UserOut(BaseModel):

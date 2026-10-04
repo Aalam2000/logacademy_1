@@ -11,6 +11,7 @@ from ..schemas import UserCreate, UserOut, CourseCreate, CourseOut, GroupCreate,
 from ..core.security import get_password_hash
 from ..dependencies import require_admin
 from .academy import sector_exists
+from ..phones import ensure_phone_free
 import secrets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -54,6 +55,7 @@ async def create_teacher(data: UserCreate, db: AsyncSession = Depends(get_db), a
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Пользователь уже существует")
+    await ensure_phone_free(db, data.phone)  # номер в базе не повторяется
     user = User(
         username=data.username,
         hashed_password=get_password_hash(data.password),
@@ -81,6 +83,7 @@ async def update_teacher(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Педагог не найден")
+    await ensure_phone_free(db, data.phone, exclude_user_id=user.id)  # номер в базе не повторяется
     user.full_name = data.full_name
     user.email = data.email
     user.phone = data.phone
@@ -212,6 +215,7 @@ async def create_admin(data: UserCreate, db: AsyncSession = Depends(get_db), adm
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Пользователь уже существует")
+    await ensure_phone_free(db, data.phone)  # номер в базе не повторяется
     user = User(
         username=data.username,
         hashed_password=get_password_hash(data.password),
@@ -285,6 +289,7 @@ async def update_admin(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Админ не найден")
+    await ensure_phone_free(db, data.phone, exclude_user_id=user.id)  # номер в базе не повторяется
     user.full_name = data.full_name
     user.email = data.email
     user.phone = data.phone

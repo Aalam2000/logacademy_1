@@ -25,6 +25,7 @@ import MethodologyPage from './pages/MethodologyPage';
 const SlideViewerPage = lazy(() => import('./pages/SlideViewerPage'));
 import RoleRoute from './components/RoleRoute';
 import TooltipLayer from './components/Tooltip';
+import PhoneGate from './components/PhoneGate';
 import { useAcademyName } from './utils/academyName';
 
 function PrivateRoute({ children }) {
@@ -38,6 +39,7 @@ function App() {
     <AuthProvider>
       {/* Единая мгновенная подсказка для всех элементов с data-tip */}
       <TooltipLayer />
+      <PhoneGate />
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/login" element={<Login />} />

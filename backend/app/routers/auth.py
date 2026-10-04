@@ -6,6 +6,7 @@ from ..models import User, Group, GroupMember
 from ..schemas import UserLogin, Token, UserOut, UserCreate, StudentRegister, UserUpdate
 from ..core.security import verify_password, get_password_hash, create_access_token, decode_token
 from ..dependencies import get_current_user
+from ..phones import checked_student_phone, ensure_phone_free, normalize_phone, PHONE_REQUIRED_ERROR
 
 router = APIRouter()
 
@@ -73,12 +74,16 @@ async def register_student(data: StudentRegister, db: AsyncSession = Depends(get
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Пользователь уже существует")
 
+    # Телефон обязателен: азербайджанский формат, один телефон — один ученик
+    phone = await checked_student_phone(db, data.phone)
+
     # Создаём студента
     student = User(
         username=data.username,
         hashed_password=get_password_hash(data.password),
         email=data.email,
         full_name=data.full_name,
+        phone=phone,
         role="student"
     )
     db.add(student)
@@ -99,7 +104,16 @@ async def update_me(
 ):
     if data.full_name is not None:        current_user.full_name = data.full_name
     if data.email is not None:            current_user.email = data.email
-    if data.phone is not None:            current_user.phone = data.phone
+    if data.phone is not None:
+        # Телефон обязателен у всех — стереть его нельзя
+        if not data.phone.strip():
+            raise HTTPException(status_code=422, detail=PHONE_REQUIRED_ERROR)
+        # У ученика телефон проверяется так же, как при регистрации
+        if current_user.role == "student":
+            current_user.phone = await checked_student_phone(db, data.phone, exclude_user_id=current_user.id)
+        else:
+            await ensure_phone_free(db, data.phone, exclude_user_id=current_user.id)
+            current_user.phone = normalize_phone(data.phone) or data.phone.strip()
     if data.telegram_username is not None: current_user.telegram_username = data.telegram_username
     if data.whatsapp is not None:         current_user.whatsapp = data.whatsapp
     if data.new_password:

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Modal from './Modal';
 import { registerStudent } from '../api/auth';
+import { isValidPhone, registerErrorText, PHONE_PLACEHOLDER } from '../utils/phone';
 
 // QR для регистрации + «Добавить студента»: педагог сам вносит студентов
 // (имя, логин, пароль). После «Сохранить» — снова QR, и так сколько нужно.
@@ -11,6 +12,7 @@ function QRModal({ group, onClose, onAdded }) {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [lastAdded, setLastAdded] = useState('');
@@ -39,24 +41,28 @@ function QRModal({ group, onClose, onAdded }) {
   const handleSave = async (e) => {
     e.preventDefault();
     setError('');
+    if (!isValidPhone(phone)) {
+      setError('Введите номер в формате +994 50 123 45 67 или 050 123 45 67');
+      return;
+    }
     setSaving(true);
     try {
       await registerStudent({
         username: username.trim(),
         password,
         full_name: fullName.trim() || null,
+        phone,
         invite_code: group.invite_code,
       });
       setLastAdded(`${fullName.trim() || username.trim()} (${username.trim()})`);
       setFullName('');
       setUsername('');
       setPassword('');
+      setPhone('');
       setAdding(false);
       if (onAdded) onAdded();
     } catch (err) {
-      setError(err?.response?.status === 400
-        ? 'Пользователь с таким логином уже существует'
-        : (err?.response?.data?.detail || 'Не удалось сохранить'));
+      setError(registerErrorText(err, 'Не удалось сохранить'));
     } finally {
       setSaving(false);
     }
@@ -68,6 +74,7 @@ function QRModal({ group, onClose, onAdded }) {
         <p className="text-muted">{group.name}</p>
         <form onSubmit={handleSave} className="form-stack">
           <input className="input" placeholder={'Имя и фамилия'} value={fullName} onChange={e => setFullName(e.target.value)} autoFocus />
+          <input className="input" type="tel" placeholder={PHONE_PLACEHOLDER} data-tip="Телефон: +994 50 123 45 67 или 050 123 45 67" value={phone} onChange={e => setPhone(e.target.value)} required />
           <input className="input" placeholder={'Логин'} value={username} onChange={e => setUsername(e.target.value)} required />
           <input className="input" placeholder={'Пароль'} value={password} onChange={e => setPassword(e.target.value)} required />
           <button className="btn" type="submit" disabled={saving}>
