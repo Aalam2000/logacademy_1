@@ -57,3 +57,8 @@ export function updateGroup(id, data) {
 export function setUserPassword(userId, newPassword) {
   return api.put(`/admin/users/${userId}/password`, { new_password: newPassword });
 }
+
+// Смена роли педагог ⇄ админ — только admin; себе менять нельзя
+export function setUserRole(userId, role) {
+  return api.put(`/admin/users/${userId}/role`, { role }).then(res => res.data);
+}

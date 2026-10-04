@@ -7,7 +7,8 @@ import { ContactIcon } from '../components/ContactIcons';
 import IconButton from '../components/IconButton';
 import DeleteButton from '../components/DeleteButton';
 import PasswordModal from '../components/PasswordModal';
-import { setUserPassword } from '../api/admin';
+import { setUserPassword, setUserRole } from '../api/admin';
+import { useAuth } from '../context/AuthContext';
 import AcademyTab from '../components/AcademyTab';
 import { getSectors } from '../api/academy';
 
@@ -21,6 +22,7 @@ const emptyCourseEdit = { title: '', description: '' };
 
 function AdminPage() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [tab, setTab] = useState('teachers');
 
   const [teachers, setTeachers] = useState([]);
@@ -352,6 +354,19 @@ function AdminPage() {
   // del: {path, reload, tip} — удаление через общую кнопку с контролем
   // использования (DeleteButton, entity "user")
   const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 4000); };
+
+  // Смена роли педагог ⇄ админ. Себе менять нельзя (кнопка неактивна, бэкенд тоже откажет).
+  const changeRole = async (u, role) => {
+    const name = u.full_name || u.username;
+    const question = role === 'admin'
+      ? `Сделать админом: ${name}?`
+      : `Перевести в педагоги: ${name}?`;
+    if (!window.confirm(question)) return;
+    try {
+      await setUserRole(u.id, role);
+      await Promise.all([loadTeachers(), loadAdmins()]);
+    } catch (e) { handleError(e); }
+  };
   const userTable = (list, del, editingId, editingDraft, setEditingDraft, onRowClick, tableRef) => (
     <div className="table-scroll" ref={tableRef}>
       <table className="table">
@@ -407,6 +422,13 @@ function AdminPage() {
                 {/* stopPropagation: клик по строке включает правку — кнопкам это не нужно */}
                 <div className="icon-row" onClick={e => e.stopPropagation()}>
                   <IconButton icon="key" tip="Сменить пароль" onClick={() => setPasswordUser(u)} />
+                  {u.id === currentUser?.id ? (
+                    <IconButton icon="role" tip="Нельзя сменить роль самому себе" disabled />
+                  ) : del.toRole === 'admin' ? (
+                    <IconButton icon="role" tip="Сделать админом" onClick={() => changeRole(u, 'admin')} />
+                  ) : (
+                    <IconButton icon="role" tip="Сделать педагогом" onClick={() => changeRole(u, 'teacher')} />
+                  )}
                   <DeleteButton
                     entity="user"
                     id={u.id}
@@ -453,7 +475,7 @@ function AdminPage() {
             <h3 className="toolbar__title">{'Список педагогов'}</h3>
             <Button onClick={() => setOpenAddModal('teacher')}>{'+ Добавить педагога'}</Button>
           </div>
-          {userTable(teachers, { path: '/admin/teachers', reload: loadTeachers, tip: 'Удалить педагога' }, editingTeacherId, editingTeacherDraft, setEditingTeacherDraft, startEditTeacher, teachersTableRef)}
+          {userTable(teachers, { path: '/admin/teachers', reload: loadTeachers, tip: 'Удалить педагога', toRole: 'admin' }, editingTeacherId, editingTeacherDraft, setEditingTeacherDraft, startEditTeacher, teachersTableRef)}
         </div>
       )}
 
@@ -464,7 +486,7 @@ function AdminPage() {
             <h3 className="toolbar__title">{'Список администраторов'}</h3>
             <Button onClick={() => setOpenAddModal('admin')}>{'+ Добавить администратора'}</Button>
           </div>
-          {userTable(admins, { path: '/admin/admins', reload: loadAdmins, tip: 'Удалить админа' }, editingAdminId, editingAdminDraft, setEditingAdminDraft, startEditAdmin, adminsTableRef)}
+          {userTable(admins, { path: '/admin/admins', reload: loadAdmins, tip: 'Удалить админа', toRole: 'teacher' }, editingAdminId, editingAdminDraft, setEditingAdminDraft, startEditAdmin, adminsTableRef)}
         </div>
       )}
 

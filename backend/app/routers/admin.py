@@ -246,6 +246,34 @@ async def set_user_password(
     return Response(status_code=204)
 
 
+class RoleIn(BaseModel):
+    role: str  # teacher | admin
+
+
+# Смена роли педагог ⇄ админ — только admin. Себе менять нельзя (так в
+# системе всегда остаётся хотя бы один админ). Учеников не трогает. Группы,
+# материалы и квизы остаются за пользователем: группу может вести и админ.
+@router.put("/users/{user_id}/role", response_model=UserOut)
+async def set_user_role(
+    user_id: int,
+    data: RoleIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    if data.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=400, detail="Недопустимая роль")
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Нельзя сменить роль самому себе")
+    result = await db.execute(select(User).where(User.id == user_id, User.role.in_(["teacher", "admin"])))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    user.role = data.role
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 @router.patch("/admins/{user_id}", response_model=UserOut)
 async def update_admin(
     user_id: int,
