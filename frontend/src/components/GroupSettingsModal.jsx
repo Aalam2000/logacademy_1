@@ -56,7 +56,7 @@ function GroupSettingsModal({ group, onClose, onSaved }) {
     >
       <FormField label={'Название'} value={form.name} onChange={set('name')} />
       <FormField label={'Telegram (@группа или ссылка t.me/…)'} value={form.telegram_chat_id} onChange={set('telegram_chat_id')} />
-      <FormField label={'WhatsApp (номер)'} value={form.whatsapp} onChange={set('whatsapp')} />
+      <FormField label={'WhatsApp (номер или ссылка на группу)'} value={form.whatsapp} onChange={set('whatsapp')} />
       <FormField
         label={'Ссылка на видеоконференцию'}
         placeholder="https://meet.google.com/abc-defg-hij"

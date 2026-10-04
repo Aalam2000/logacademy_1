@@ -11,9 +11,16 @@ export function telegramHref(value) {
   return `https://t.me/${v.replace(/^@/, '')}`;
 }
 
-// whatsapp хранит номер телефона — wa.me принимает только цифры.
+// Поле хранит либо номер телефона (личный чат — wa.me принимает только
+// цифры), либо готовую ссылку: приглашение в группу
+// (https://chat.whatsapp.com/…) или wa.me/… — её открываем как есть.
+// Раньше из ссылки вырезались одни цифры и получался несуществующий «номер».
 export function whatsappHref(value) {
-  const digits = (value || '').replace(/\D/g, '');
+  const v = (value || '').trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^(chat\.whatsapp\.com|wa\.me|api\.whatsapp\.com)\//i.test(v)) return `https://${v}`;
+  const digits = v.replace(/\D/g, '');
   return digits ? `https://wa.me/${digits}` : null;
 }
 
