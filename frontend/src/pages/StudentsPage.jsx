@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../hooks/useLang';
@@ -36,7 +36,10 @@ function StudentsPage() {
     localStorage.setItem('la_students_mine', String(mine));
   }, [mine]);
 
-  const [sort, setSort] = useState('name'); // name | score
+  // Сортировка — в браузере, кликом по шапке столбца: таблица приходит
+  // целиком, без постраничной загрузки. Повторный клик меняет направление.
+  const [sortKey, setSortKey] = useState('name');
+  const [sortDir, setSortDir] = useState('asc'); // asc | desc
 
   // Курсы и группы — для фильтров. Группы у admin — все (чтобы построить
   // и список «Группа», и список «Препод» по teacher_name), у teacher —
@@ -51,13 +54,13 @@ function StudentsPage() {
   useEffect(() => {
     loadStudents();
     // eslint-disable-next-line
-  }, [courseId, groupId, teacherId, mine, sort]);
+  }, [courseId, groupId, teacherId, mine]);
 
   const loadStudents = async () => {
     setLoading(true);
     setError('');
     try {
-      const params = { sort };
+      const params = {};
       if (courseId) params.course_id = courseId;
       if (groupId) params.group_id = groupId;
       if (isAdmin && mine) params.mine = true;
@@ -117,7 +120,60 @@ function StudentsPage() {
   // «Препод» показываем только пока admin смотрит сводно (не выбран ни
   // конкретный препод, ни «Моё») — иначе колонка избыточна, все и так его.
   const showTeacherColumn = isAdmin && !mine && !teacherId;
-  const columnCount = 9 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
+  const columnCount = 10 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
+
+  // Значение ячейки для сортировки: текстовые колонки — строка, остальные — число (или null)
+  const TEXT_KEYS = ['name', 'group', 'teacher'];
+  const sortValue = (s, key) => {
+    if (key === 'name') return s.full_name || '';
+    if (key === 'group') return s.groups.map(g => g.name).join(', ');
+    if (key === 'teacher') return [...new Set(s.groups.map(g => g.teacher_name).filter(Boolean))].join(', ');
+    return s[key];
+  };
+
+  const handleSort = (key) => {
+    if (key === sortKey) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      // текст — от А до Я, числа — сначала большие
+      setSortDir(TEXT_KEYS.includes(key) ? 'asc' : 'desc');
+    }
+  };
+
+  const sortedStudents = useMemo(() => {
+    const isText = TEXT_KEYS.includes(sortKey);
+    const sign = sortDir === 'asc' ? 1 : -1;
+    const byName = (a, b) => (a.full_name || '').localeCompare(b.full_name || '');
+    return [...students].sort((a, b) => {
+      const va = sortValue(a, sortKey);
+      const vb = sortValue(b, sortKey);
+      // пустые («—») — всегда внизу, при любом направлении
+      const ea = va === null || va === undefined || va === '';
+      const eb = vb === null || vb === undefined || vb === '';
+      if (ea || eb) return ea && eb ? byName(a, b) : (ea ? 1 : -1);
+      const cmp = isText ? String(va).localeCompare(String(vb)) : va - vb;
+      return cmp !== 0 ? cmp * sign : byName(a, b);
+    });
+    // eslint-disable-next-line
+  }, [students, sortKey, sortDir]);
+
+  // Шапка сортируемого столбца: клик — сортировка, наведение — название чуть крупнее
+  const sortTh = (key, label, tip) => (
+    <th
+      className={`table__th--sort${sortKey === key ? ' table__th--sorted' : ''}`}
+      data-tip={tip}
+      aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      tabIndex={0}
+      onClick={() => handleSort(key)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort(key); } }}
+    >
+      <span className="table__th-label">
+        {label}
+        {sortKey === key && <span className="table__th-arrow">{sortDir === 'asc' ? '▲' : '▼'}</span>}
+      </span>
+    </th>
+  );
 
   return (
     <div className="page">
@@ -151,10 +207,6 @@ function StudentsPage() {
               {'Моё'}
             </button>
           )}
-          <select className="input" value={sort} onChange={e => setSort(e.target.value)}>
-            <option value="name">{'По имени'}</option>
-            <option value="score">{'По успеваемости'}</option>
-          </select>
         </div>
       </div>
 
@@ -164,15 +216,16 @@ function StudentsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{'Имя'}</th>
-              <th>{'Группа'}</th>
-              {showTeacherColumn && <th>{'Учитель'}</th>}
+              {sortTh('name', 'Имя')}
+              {sortTh('group', 'Группа')}
+              {showTeacherColumn && sortTh('teacher', 'Учитель')}
               {/* Три вида оценок — у каждой своя средняя */}
-              <th data-tip="Средняя оценка за уроки">{'Ср. уроки'}</th>
-              <th data-tip="Средняя оценка за домашние задания">{'Ср. ДЗ'}</th>
-              <th data-tip="Средняя экзаменационная оценка">{'Ср. экзамены'}</th>
-              <th>{'Пропуски'}</th>
-              <th>{'Опоздания'}</th>
+              {sortTh('avg_score', 'Ср. уроки', 'Средняя оценка за уроки')}
+              {sortTh('avg_hw_score', 'Ср. ДЗ', 'Средняя оценка за домашние задания')}
+              {sortTh('avg_exam_score', 'Ср. экзамены', 'Средняя экзаменационная оценка')}
+              {sortTh('stars_total', <span className="table__th-star">★</span>, 'Звёзды')}
+              {sortTh('unexcused_absences', 'Пропуски')}
+              {sortTh('late_count', 'Опоздания')}
               <th>{'Контакты'}</th>
               <th></th>
             </tr>
@@ -183,7 +236,7 @@ function StudentsPage() {
             ) : students.length === 0 ? (
               <tr><td colSpan={columnCount} className="table__empty">{'Студентов не найдено'}</td></tr>
             ) : (
-              students.map(s => (
+              sortedStudents.map(s => (
                 <tr key={s.id}>
                   <td>
                     <button type="button" className="link" onClick={() => handleOpenCard(s.id)}>
@@ -197,6 +250,7 @@ function StudentsPage() {
                   <td>{s.avg_score ?? '—'}</td>
                   <td>{s.avg_hw_score ?? '—'}</td>
                   <td>{s.avg_exam_score ?? '—'}</td>
+                  <td>{s.stars_total ?? 0}</td>
                   <td>{s.unexcused_absences}</td>
                   <td>{s.late_count}</td>
                   <td>

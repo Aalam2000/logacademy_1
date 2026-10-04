@@ -451,6 +451,34 @@
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border-light);
 }
+/* Сортируемая шапка столбца: клик — сортировка, наведение — название чуть крупнее */
+.table__th--sort {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.table__th-label {
+  display: inline-block;
+  transform-origin: left center;
+  transition: transform .12s ease, color .12s ease;
+}
+.table__th--sort:hover .table__th-label,
+.table__th--sort:focus-visible .table__th-label {
+  transform: scale(1.08);
+  color: var(--color-text, inherit);
+}
+.table__th--sorted {
+  color: var(--color-text, inherit);
+}
+.table__th-arrow {
+  margin-left: 4px;
+  font-size: .7em;
+}
+.table__th-star {
+  color: var(--color-warning);
+  font-size: var(--font-xl);
+  line-height: 1;
+}
 .table__row--clickable {
   cursor: pointer;
 }

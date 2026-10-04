@@ -51,6 +51,7 @@ class StudentStatsOut(BaseModel):
     max_hw_score: Optional[int] = None
     avg_exam_score: Optional[float] = None  # экзаменационная
     max_exam_score: Optional[int] = None
+    stars_total: int = 0                    # сумма звёзд за уроки
     unexcused_absences: int = 0
     late_count: int = 0
     groups: list[StudentGroupOut] = []
@@ -110,19 +111,19 @@ async def _scope_group_ids(
 async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: list[int]) -> dict[int, dict]:
     """Средний/макс балл и опоздания — по отметкам (LessonMark), пропуски —
     по общему правилу посещаемости (attendance.py) в пределах заданных групп."""
-    stats = {sid: {"scores": [], "exam_scores": [], "hw_scores": [], "unexcused": 0, "late": 0} for sid in student_ids}
+    stats = {sid: {"scores": [], "exam_scores": [], "hw_scores": [], "stars": 0, "unexcused": 0, "late": 0} for sid in student_ids}
     if not student_ids or not group_ids:
         return stats
 
     marks_result = await db.execute(
         select(
             LessonMark.student_id, LessonMark.score, LessonMark.exam_score,
-            LessonMark.is_late,
+            LessonMark.is_late, LessonMark.stars,
         )
         .join(Lesson, Lesson.id == LessonMark.lesson_id)
         .where(Lesson.group_id.in_(group_ids), LessonMark.student_id.in_(student_ids))
     )
-    for student_id, score, exam_score, is_late in marks_result.all():
+    for student_id, score, exam_score, is_late, stars in marks_result.all():
         row = stats[student_id]
         if score is not None:
             row["scores"].append(score)
@@ -130,6 +131,8 @@ async def _compute_stats(db: AsyncSession, student_ids: list[int], group_ids: li
             row["exam_scores"].append(exam_score)
         if is_late:
             row["late"] += 1
+        if stars:
+            row["stars"] += stars
 
     for sid, summary in summarize_by_student(await attendance_slots(db, group_ids, student_ids)).items():
         if sid in stats:
@@ -167,6 +170,7 @@ def _stats_summary(stats_row: dict) -> dict:
         "avg_exam_score": _avg(exam_scores),
         "max_exam_score": max(exam_scores) if exam_scores else None,
         "exams_count": len(exam_scores),
+        "stars_total": stats_row.get("stars", 0),
         "unexcused_absences": stats_row["unexcused"],
         "late_count": stats_row["late"],
     }
