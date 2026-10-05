@@ -1131,6 +1131,16 @@ a.row-icon:hover {
   width: 18px;
   height: 18px;
 }
+/* Значок с подписью рядом (число учеников) — ширина по содержимому */
+.icon-btn--labeled {
+  width: auto;
+  padding: 0 var(--space-2);
+  gap: 6px;
+}
+.icon-btn__label {
+  font-weight: var(--weight-bold, 700);
+  line-height: 1;
+}
 .icon-btn:hover:not(:disabled),
 .icon-btn--active {
   background: var(--color-primary-border);

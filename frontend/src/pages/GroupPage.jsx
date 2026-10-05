@@ -32,6 +32,7 @@ function GroupPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newLessonDate, setNewLessonDate] = useState(null); // Date | null
   const [newLessonDuration, setNewLessonDuration] = useState(DEFAULT_DURATION_MIN); // мин
+  const [newLessonTitle, setNewLessonTitle] = useState(''); // пусто — стандартное «Урок» на языке сектора
   const [createError, setCreateError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -154,6 +155,7 @@ function GroupPage() {
 
   const openCreateModal = () => {
     setCreateError('');
+    setNewLessonTitle('');
     setNewLessonDate(null);
     setNewLessonDuration(group?.lesson_duration_min || DEFAULT_DURATION_MIN);
     setIsModalOpen(true);
@@ -180,6 +182,7 @@ function GroupPage() {
         date: newLessonDate.toISOString(),
         duration_min: newLessonDuration,
       };
+      if (newLessonTitle.trim()) payload.title = newLessonTitle.trim();
       const created = await createLesson(payload);
       setLessons(prev => [...prev, created]);
       closeCreateModal();
@@ -395,7 +398,7 @@ function GroupPage() {
 
   return (
     <div className="page page--group">
-      {/* Шапка группы в одну строку: «Назад», название/курс/педагог — слева; QR и ученики — справа */}
+      {/* Шапка группы в одну строку: «Назад», название/курс/педагог — слева; контакты и значки (настройки, QR, ученики) — справа */}
       <div className="group-header">
         <div className="group-header__left">
           <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
@@ -410,17 +413,11 @@ function GroupPage() {
             </div>
           </div>
         </div>
-        <div className="button-row">
+        <div className="icon-row">
           <GroupContactIcons video={group.video_url} telegram={group.telegram_chat_id} whatsapp={group.whatsapp} />
-          <button className="btn btn--outline btn--compact" onClick={() => setIsSettingsOpen(true)}>
-            {'Настройки группы'}
-          </button>
-          <button className="btn btn--info btn--compact" onClick={() => setIsQRModalOpen(true)}>
-            {'QR для регистрации'}
-          </button>
-          <button className="btn btn--compact" onClick={() => setIsStudentsModalOpen(true)}>
-            {'Ученики'} ({group.student_count ?? 0})
-          </button>
+          <IconButton icon="settings" tip={'Настройки группы'} onClick={() => setIsSettingsOpen(true)} />
+          <IconButton icon="qr" tip={'QR для регистрации'} onClick={() => setIsQRModalOpen(true)} />
+          <IconButton icon="students" tip={'Ученики'} label={group.student_count ?? 0} onClick={() => setIsStudentsModalOpen(true)} />
         </div>
       </div>
 
@@ -458,8 +455,8 @@ function GroupPage() {
             {'+ Урок'}
           </button>
           <IconButton icon="unlock" tip={'Открыть уроки'} onClick={openOpenRangeModal} />
-          <IconButton icon="schedule" tip={'Заполнить расписание'} onClick={handleOpenScheduleFlow} />
-          <IconButton icon="materials" tip={'Обновить материалы'} onClick={openFillModal} />
+          {/* Материалы заполняются здесь же: «Оставить даты — дозаполнить материалами» */}
+          <IconButton icon="schedule" tip={'Расписание и материалы'} onClick={handleOpenScheduleFlow} />
         </div>
       </div>
 
@@ -571,6 +568,16 @@ function GroupPage() {
           )}
         >
           <form id="new-lesson-form" onSubmit={handleCreateLesson} className="form-stack">
+            <label className="field-label">
+              {'Название урока'}
+              <input
+                className="input"
+                value={newLessonTitle}
+                onChange={e => setNewLessonTitle(e.target.value)}
+                placeholder={'Необязательно'}
+                maxLength={200}
+              />
+            </label>
             {/* Тот же выбор даты, что в уроке: минуты шагом 10, по умолчанию :00 */}
             <div className="field-label">
               {'Дата, время начала и длительность'}

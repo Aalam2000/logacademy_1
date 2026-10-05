@@ -85,6 +85,31 @@ const ICONS = {
       <polyline points="8.5,12.5 5,16 8.5,19.5" />
     </svg>
   ),
+  // Настройки — шестерёнка
+  settings: (
+    <svg {...svgProps}>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" />
+    </svg>
+  ),
+  // QR для регистрации — три угловых квадрата и точки
+  qr: (
+    <svg {...svgProps}>
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+      <path d="M14 14h3v3h-3zM20 14v3M17 20h4M14 20v1" />
+    </svg>
+  ),
+  // Ученики — два человечка
+  students: (
+    <svg {...svgProps}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+      <path d="M16 5.2a3.2 3.2 0 0 1 0 5.6" />
+      <path d="M17.5 14.3A4 4 0 0 1 21 18v2" />
+    </svg>
+  ),
   // Удалить навсегда — корзина
   delete: (
     <svg {...svgProps}>
@@ -97,8 +122,10 @@ const ICONS = {
   ),
 };
 
-function IconButton({ icon, tip, variant, active, disabled, onClick, type = 'button' }) {
+// label — короткая подпись рядом со значком (например, число учеников)
+function IconButton({ icon, tip, variant, active, disabled, onClick, label, type = 'button' }) {
   const classes = ['icon-btn'];
+  if (label !== undefined && label !== null) classes.push('icon-btn--labeled');
   if (variant) classes.push(`icon-btn--${variant}`);
   if (active) classes.push('icon-btn--active');
   return (
@@ -112,6 +139,7 @@ function IconButton({ icon, tip, variant, active, disabled, onClick, type = 'but
       onClick={onClick}
     >
       {ICONS[icon]}
+      {label !== undefined && label !== null && <span className="icon-btn__label">{label}</span>}
     </button>
   );
 }
