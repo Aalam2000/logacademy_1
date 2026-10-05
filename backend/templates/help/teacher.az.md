@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=az sha1=4cdba946ddb4d0a9dd57c8e6c0a8d415c9eccb1d -->
+<!-- autoi18n: source=teacher.md lang=az sha1=40d22170434ae2be17b9b3751be9d1c34ce144dd -->
 # Platformada necə işləmək
 
 ## Qruplarım
@@ -99,6 +99,18 @@ Təqdim etmə müddətini hamıya eyni anda və ya ayrı-ayrılıqda bir tələb
 Şagirdin telefonu məcburidir və iki istifadəçidə təkrarlana bilməz. Uşağın öz telefonu yoxdursa, valideynin telefonunu yazın. Nömrəni +994 50 123 45 67 və ya 050 123 45 67 şəklində daxil etmək olar.
 
 Şagirdlər hər dərsi smayliklə qiymətləndirir (yaşıl, sarı, qırmızı). Kimin hansı smayliki qoyduğunu siz görmürsünüz: beləcə uşaqlar düzünü cavablandırır.
+
+### Tələbə üzrə hesabat
+
+Şagirdin adına klikləyin — valideynlər üçün aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir, **Çap et** düyməsi hesabatı bir vərəqdə çap edir.
+
+- **Bir cümlə ilə nəticə** — ayın necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
+- **Ay rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
+- **İşlər necə gedir** — rəngli altı göstərici: dərslərə gəlirmi, vaxtında gəlirmi, dərsdə necə işləyir, ev tapşırıqlarını təslim edirmi və necə yerinə yetirir, imtahanları necə verir.
+- **Ayın əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
+- **Ayın dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+
+Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik kənarlaşma, qırmızı — valideynlərin köməyi lazımdır, boz — hələ məlumat yoxdur. Hesabata yalnız sizin qruplarınızın dərsləri düşür.
 
 ## Profil
 

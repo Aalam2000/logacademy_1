@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .attendance import PRESENT, ABSENT, attendance_slots, summarize
 from .lesson_lock import BAKU_TZ, aware, baku_day
+from .report_common import avg as _avg, month_bounds, pct as _pct, status_max, status_min, summarize_indicators
 from .models import (
     Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonFeedback,
     LessonMark, User, UserSession,
@@ -40,35 +41,11 @@ PLATFORM_WINDOW_DAYS = 7
 
 
 def _status_min(value: Optional[float], key: str) -> str:
-    """Чем больше, тем лучше."""
-    if value is None:
-        return "none"
-    norm, warn = NORMS[key]
-    return "good" if value >= norm else "warn" if value >= warn else "bad"
+    return status_min(value, NORMS[key])
 
 
 def _status_max(value: Optional[float], key: str) -> str:
-    """Чем меньше, тем лучше."""
-    if value is None:
-        return "none"
-    norm, warn = NORMS[key]
-    return "good" if value <= norm else "warn" if value <= warn else "bad"
-
-
-def _pct(part: int, total: int) -> Optional[float]:
-    return round(part / total * 100, 1) if total else None
-
-
-def _avg(values: list) -> Optional[float]:
-    return round(sum(values) / len(values), 1) if values else None
-
-
-def month_bounds(month: str) -> tuple[datetime, datetime]:
-    """'2026-09' → начало месяца и начало следующего, по Баку."""
-    year, mon = (int(part) for part in month.split("-"))
-    start = datetime(year, mon, 1, tzinfo=BAKU_TZ)
-    end = datetime(year + (mon == 12), mon % 12 + 1, 1, tzinfo=BAKU_TZ)
-    return start, end
+    return status_max(value, NORMS[key])
 
 
 async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> dict:
@@ -238,17 +215,7 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
         {"key": "feedback", "status": _status_min(feedback_pct, "feedback"), "pct": feedback_pct,
          "green": feedback[3], "yellow": feedback[2], "red": feedback[1]},
     ]
-    rated = [i for i in indicators if i["status"] != "none"]
-    bad = sum(1 for i in rated if i["status"] == "bad")
-    good = sum(1 for i in rated if i["status"] == "good")
-    if not rated or not due:
-        level = "none"  # в этом месяце уроков ещё не было — оценивать нечего
-    elif bad == 0 and good == len(rated):
-        level = "excellent"
-    elif bad <= 1 and good * 2 >= len(rated):
-        level = "good"
-    else:
-        level = "problems"
+    verdict = summarize_indicators(indicators, has_lessons=bool(due))
 
     # ---------- По группам ----------
     slots_by_group: dict[int, list] = {}
@@ -304,9 +271,7 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
         "is_current_month": end > now,
         "groups": [g.name for g in groups.values() if g.status == "active"],
         "students": len(active_students),
-        "level": level,
-        "rated": len(rated),
-        "good": good,
+        **verdict,
         "work": {
             "planned_held": len(planned_held),
             "planned_due": len(planned_due),

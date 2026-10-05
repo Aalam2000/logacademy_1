@@ -1,6 +1,4 @@
-import io
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,8 +6,6 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from xhtml2pdf import pisa
-from xhtml2pdf.config.resources import ResourceAccessPolicy
 
 from ..usages import ensure_not_used
 from ..attendance import attendance_slots, summarize_by_student
@@ -18,16 +14,12 @@ from ..database import get_db
 from ..schemas import NewPasswordIn
 from ..dependencies import require_admin, require_teacher
 from ..phones import checked_student_phone, normalize_phone, PHONE_FORMAT_ERROR, PHONE_REQUIRED_ERROR
+from ..report_common import resolve_month
+from ..student_report import build_student_report
 from ..models import (
     Course, Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMark,
     LessonMessage, User, UserSession,
 )
-from .i18n import translator
-from .academy import academy_name
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/students", tags=["students"])
 
@@ -259,78 +251,7 @@ async def list_students(
     return out
 
 
-TEMPLATE_PATH = Path(__file__).parent.parent.parent / "templates" / "student_card.html"
-# Шрифты PDF лежат в проекте (backend/fonts, Noto Sans: кириллица + азербайджанские
-# ə ı ğ ş). xhtml2pdf с 0.2.17+ читает локальные файлы только из разрешённой папки —
-# без resource_policy шрифт молча не грузился, и вместо букв шли квадраты.
-FONTS_DIR = (Path(__file__).parent.parent.parent / "fonts").resolve()
-PDF_POLICY = ResourceAccessPolicy(base_dir=FONTS_DIR, allow_remote=False)
-
-
-def render_student_card_html(lang: str, student: User, groups: list[dict], summary: dict, academy: str = "Log Academy") -> str:
-    """Строит HTML карточки из статического шаблона (backend/templates/
-    student_card.html). Шаблон переводится ДО подстановки данных — так же,
-    как render_translated_template() в quizzes.py — потому что apply_to_html()
-    умеет переводить только то, что autoi18n нашёл сканированием файлов на
-    диске (backend/templates входит в scan_paths), и не видит текст,
-    собранный на лету из f-строк. Имена/группы/цифры подставляются после
-    перевода и никогда не переводятся."""
-    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
-        template = f.read()
-
-    if lang != translator.source_lang:
-        try:
-            template = translator.apply_to_html(template, lang)
-        except Exception as e:
-            logger.warning("Ошибка перевода карточки студента: %s", e)
-
-    def contact_row(value: Optional[str]):
-        return ("", value) if value else ("display:none", "")
-
-    phone_display, phone_value = contact_row(student.phone)
-    telegram_display, telegram_value = contact_row(student.telegram_username)
-    whatsapp_display, whatsapp_value = contact_row(student.whatsapp)
-    email_display, email_value = contact_row(student.email)
-
-    groups_rows = "".join(
-        f"<tr><td>{g['name']}</td><td>{g['course_title'] or '—'}</td><td>{g['teacher_name'] or '—'}</td></tr>"
-        for g in groups
-    )
-
-    data = {
-        "fonts_dir": FONTS_DIR.as_posix(),
-        "generated_date": datetime.now().strftime("%d.%m.%Y"),
-        "academy_name": academy,
-        "student_name": student.full_name or student.username,
-        "phone_display": phone_display,
-        "phone_value": phone_value,
-        "telegram_display": telegram_display,
-        "telegram_value": telegram_value,
-        "whatsapp_display": whatsapp_display,
-        "whatsapp_value": whatsapp_value,
-        "email_display": email_display,
-        "email_value": email_value,
-        "groups_rows": groups_rows,
-        "empty_groups_display": "" if not groups else "display:none",
-        "avg": summary["avg_score"] if summary["avg_score"] is not None else "—",
-        "max_score": summary["max_score"] if summary["max_score"] is not None else "—",
-        "avg_hw": summary["avg_hw_score"] if summary["avg_hw_score"] is not None else "—",
-        "max_hw": summary["max_hw_score"] if summary["max_hw_score"] is not None else "—",
-        "unexcused": summary["unexcused_absences"],
-        "late": summary["late_count"],
-        "avg_exam": summary["avg_exam_score"] if summary["avg_exam_score"] is not None else "—",
-        "max_exam": summary["max_exam_score"] if summary["max_exam_score"] is not None else "—",
-        "exams_count": summary["exams_count"],
-    }
-    for key, value in data.items():
-        template = template.replace(f"{{{{ {key} }}}}", str(value))
-
-    return template
-
-
-# PDF-карточка одного студента. teacher видит только своих (по своим
-# группам), admin — любого зарегистрированного студента.
-# Общая проверка доступа к конкретному студенту (карточка, смена пароля):
+# Общая проверка доступа к конкретному студенту (отчёт, смена пароля, данные):
 # admin — к любому, teacher — только к активному ученику своих групп, то же
 # разграничение видимости, что и в списке /students. Возвращает студента,
 # его группы в области видимости и справочник этих групп.
@@ -355,33 +276,20 @@ async def _get_accessible_student(
     return student, matched_group_ids, groups_by_id
 
 
-@router.get("/{student_id}/card")
-async def get_student_card(
+# Отчёт по ученику за месяц — для родителей (правила и нормы — app/student_report.py).
+# teacher — только по ученику своих групп и только по своим группам, admin — по любому.
+# month=ГГГГ-ММ; не задан — текущий месяц (по Баку).
+@router.get("/{student_id}/report")
+async def get_student_report(
     student_id: int,
-    lang: str = Query(None),
+    month: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
-    lang = lang or translator.source_lang
+    month = resolve_month(month)
     student, matched_group_ids, groups_by_id = await _get_accessible_student(db, student_id, current_user)
+    return await build_student_report(db, student, [groups_by_id[gid] for gid in matched_group_ids], month)
 
-    stats = await _compute_stats(db, [student_id], matched_group_ids)
-    summary = _stats_summary(stats[student_id])
-    groups = [groups_by_id[gid] for gid in matched_group_ids]
-
-    html = render_student_card_html(lang, student, groups, summary, await academy_name(db))
-
-    buffer = io.BytesIO()
-    pisa_status = pisa.CreatePDF(src=html, dest=buffer, resource_policy=PDF_POLICY)
-    if pisa_status.err:
-        raise HTTPException(status_code=500, detail="Не удалось сформировать PDF")
-
-    filename = f"student_{student_id}.pdf"
-    return Response(
-        content=buffer.getvalue(),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
-    )
 
 # Смена пароля ученика педагогом (ученик забыл пароль): без старого пароля.
 # Педагог — только ученикам своих групп, admin — любому ученику; пароль

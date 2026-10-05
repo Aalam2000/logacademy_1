@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=en sha1=9ebf4f7a4994dd8f19d773824716ef4288f1e365 -->
+<!-- autoi18n: source=admin.md lang=en sha1=bf50bf1e3193db0654d6112e75d1c7899f74a091 -->
 # How to work on the platform
 
 The administrator sees everything that the teacher sees — but for all groups and all teachers — and additionally manages users, courses, and groups.
@@ -72,13 +72,25 @@ Click the **pencil** icon in the student's row. In the window you can change the
 - **Delete** (trash can) — the system will show what is linked to the student and ask for confirmation.
 - To move a student to another group or unenroll them — on the group page, the **Students** icon.
 
+### Student report
+
+Click the student's name — the monthly report for parents will open. The month is selected at the top of the page; the **Print** button prints the report on one sheet.
+
+- **One-sentence conclusion** — how the month went and what is worth paying attention to.
+- **The month in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
+- **How things are going** — six color-coded indicators: whether the student attends lessons, arrives on time, how they work in class, whether homework is submitted and how well it is done, and how exams are going.
+- **Highlights of the month** — what to be proud of and what to pay attention to.
+- **Lessons of the month** — for each lesson: attendance, grade, homework, and stars.
+
+Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet.
+
 ## Teachers
 
 In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, lessons held, attendance, and average grade.
 
 ### Teacher report
 
-Click on a teacher — the report for the month will open. The month is selected at the top of the page.
+Click on a teacher — the report for the month will open. The month is selected at the top of the page; the **Print** button prints the report.
 
 - **One-sentence conclusion** — how the month went and which indicators need attention.
 - **Amount of work** — scheduled lessons held, personal lessons, hours, and lessons not held. A lesson counts as held if it is open and at least one student attended.

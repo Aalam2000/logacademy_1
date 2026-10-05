@@ -38,6 +38,9 @@ from ..models import (
 )
 from ..resources import clean_filename, content_hash, find_duplicate_material, find_materials_by_name, conflict
 from ..personal import is_participant, lesson_students_condition
+from ..homework_status import (
+    answer_status, effective_deadline as _effective_deadline, expired as _expired, task_is_for as _task_is_for,
+)
 from .lessons import (
     _safe_delete_object, delete_homework_tasks, get_lesson_for_student, get_lesson_for_teacher_or_admin,
 )
@@ -148,44 +151,12 @@ def _now() -> datetime:
     return datetime.now(dt_timezone.utc)
 
 
-def _expired(deadline: Optional[datetime]) -> bool:
-    if deadline is None:
-        return False
-    if deadline.tzinfo is None:
-        deadline = deadline.replace(tzinfo=dt_timezone.utc)
-    return _now() > deadline
-
-
-def _task_is_for(task: HomeworkTask, student_id: int) -> bool:
-    return task.student_id is None or task.student_id == student_id
-
-
-def _effective_deadline(tasks: list[HomeworkTask]) -> Optional[datetime]:
-    """Срок всего ДЗ студента: самый поздний из сроков его заданий; если у
-    какого-то задания срока нет — срока нет."""
-    if not tasks or any(t.deadline is None for t in tasks):
-        return None
-    return max(t.deadline for t in tasks)
-
+# Правило статуса ДЗ (_expired, _task_is_for, _effective_deadline, answer_status) —
+# в app/homework_status.py, одно на роутер и на отчёт по ученику.
 
 def _answer_state(tasks: list[HomeworkTask], answer: Optional[HomeworkAnswer], files: list[FileOut]) -> AnswerState:
     deadline = _effective_deadline(tasks)
-    if not tasks:
-        status = "none"
-    elif answer is not None and answer.grade is not None:
-        status = "graded"
-    elif answer is not None and answer.accepted:
-        status = "accepted"
-    elif answer is not None and answer.reviewed_at is not None:
-        # педагог вернул на доработку (оценки нет, «принято» нет, но проверка была);
-        # снова «submitted» — когда студент загрузит новый файл
-        status = "returned"
-    elif files:
-        status = "submitted"
-    elif _expired(deadline):
-        status = "expired"
-    else:
-        status = "pending"
+    status = answer_status(tasks, answer, bool(files))
     reviewed = status in ("graded", "accepted")
     return AnswerState(
         status=status,

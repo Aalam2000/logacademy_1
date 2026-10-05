@@ -646,6 +646,24 @@
   color: var(--color-primary);
 }
 
+/* ===== Выбор месяца «‹ Сентябрь 2026 ›» (MonthPicker.jsx) ===== */
+.month-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.month-picker__arrow {
+  width: var(--control-height);
+  padding: 0;
+  font-size: var(--font-lg);
+}
+.month-picker__label {
+  min-width: 9.5em;
+  text-align: center;
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
 /* ===== Отчёт по педагогу (TeacherReportPage.jsx) ===== */
 .report {
   max-width: 980px;
@@ -666,6 +684,10 @@
 .report__name {
   font-size: 1.4rem;
   font-weight: var(--weight-bold);
+}
+.report__period {
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
 }
 .report__meta,
 .report__hint,
@@ -773,6 +795,32 @@
 .report__attention li {
   margin: var(--space-1) 0;
 }
+/* Отчёт по ученику: «Чем можно гордиться» и «На что обратить внимание» рядом */
+.report__two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.report__note {
+  padding: var(--space-3) var(--space-4);
+}
+.report__note--good {
+  background: color-mix(in srgb, var(--color-role-student) 14%, var(--color-white));
+}
+.report__note--warn {
+  background: var(--color-warning-bg);
+}
+.report__note ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-5);
+}
+.report__note li {
+  margin: var(--space-1) 0;
+}
+.report__stars {
+  color: var(--color-warning);
+  font-style: normal;
+}
 .report__foot {
   margin-top: var(--space-5);
   padding-top: var(--space-3);
@@ -789,6 +837,9 @@
   }
   .report__tiles {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .report__two {
+    grid-template-columns: 1fr;
   }
 }
 

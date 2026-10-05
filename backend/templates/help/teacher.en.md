@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=en sha1=4cdba946ddb4d0a9dd57c8e6c0a8d415c9eccb1d -->
+<!-- autoi18n: source=teacher.md lang=en sha1=40d22170434ae2be17b9b3751be9d1c34ce144dd -->
 # How to work on the platform
 
 ## My groups
@@ -99,6 +99,18 @@ In the [Students](/dashboard/students) section — all your students: group, ave
 The student's phone is required and cannot be repeated for two users. If the child has no phone of their own, enter the parent's phone. The number can be entered as +994 50 123 45 67 or 050 123 45 67.
 
 Students rate each lesson with a smiley (green, yellow, red). You do not see who chose which smiley: this way children answer honestly.
+
+### Student report
+
+Click the student's name — the monthly report for parents will open. The month is selected at the top of the page; the **Print** button prints the report on one sheet.
+
+- **One-sentence conclusion** — how the month went and what is worth paying attention to.
+- **The month in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
+- **How things are going** — six color-coded indicators: whether the student attends lessons, arrives on time, how they work in class, whether homework is submitted and how well it is done, and how exams are going.
+- **Highlights of the month** — what to be proud of and what to pay attention to.
+- **Lessons of the month** — for each lesson: attendance, grade, homework, and stars.
+
+Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet. The report includes only the lessons of your groups.
 
 ## Profile
 

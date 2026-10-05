@@ -1,11 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import DurationSelect from './DurationSelect';
+import { MONTH_NAMES } from '../utils/months';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const MONTHS = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-];
 const MINUTE_STEPS = [0, 10, 20, 30, 40, 50];
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -165,7 +162,7 @@ function DateTimePicker({ value, onChange, onCommit, disabled, hourOnly, placeho
         <div className="datetime-picker__popover" style={floating ? floatingStyle(containerRef.current) : undefined}>
           <div className="datetime-picker__calendar-header">
             <button type="button" className="datetime-picker__nav" onClick={() => navMonth(-1)}>{'‹'}</button>
-            <span>{MONTHS[gridMonth]} {gridYear}</span>
+            <span>{MONTH_NAMES[gridMonth]} {gridYear}</span>
             <button type="button" className="datetime-picker__nav" onClick={() => navMonth(1)}>{'›'}</button>
           </div>
 

@@ -185,3 +185,95 @@
     display: none;
   }
 }
+
+/* ===== Печать =====
+   На бумагу идёт только содержимое страницы: без меню, шапки и панели кнопок.
+   .print-only — показывать только на бумаге, .no-print — только на экране. */
+.print-only {
+  display: none;
+}
+@page {
+  size: A4;
+  margin: 12mm;
+}
+@media print {
+  .print-only {
+    display: block;
+  }
+  .nav,
+  .dashboard-header,
+  .dashboard-overlay,
+  .help-panel-backdrop,
+  .toolbar,
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: var(--color-white);
+  }
+  /* Экранная раскладка «меню стоит, прокручивается правая часть» на бумаге не нужна */
+  .dashboard-layout {
+    display: block;
+    height: auto;
+    overflow: visible;
+    background: none;
+  }
+  .dashboard-content {
+    display: block;
+  }
+  .dashboard-page-content,
+  .table-scroll {
+    overflow: visible;
+  }
+  .page {
+    padding: 0;
+  }
+  /* Отчёт: без рамки, цвета оценок печатаются как на экране */
+  .report {
+    max-width: none;
+    border: none;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .report .table th,
+  .report .table td {
+    position: static;
+    padding: 4px var(--space-2);
+  }
+  /* Плотнее, чем на экране: обычный месяц помещается на один лист A4 */
+  .report {
+    font-size: 12px;
+  }
+  .report__head {
+    margin-bottom: var(--space-3);
+  }
+  .report__h {
+    margin: var(--space-3) 0 var(--space-1);
+  }
+  .report__tile {
+    padding: var(--space-2) var(--space-3);
+  }
+  .report__tile b {
+    font-size: 1.3rem;
+  }
+  .report__note,
+  .report__verdict,
+  .report__attention {
+    padding: var(--space-2) var(--space-3);
+  }
+  .report__foot {
+    margin-top: var(--space-3);
+  }
+  .report__verdict,
+  .report__tiles,
+  .report__attention,
+  .report__note,
+  .report tr {
+    break-inside: avoid;
+  }
+  .report__h {
+    break-after: avoid;
+  }
+}

@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=az sha1=9ebf4f7a4994dd8f19d773824716ef4288f1e365 -->
+<!-- autoi18n: source=admin.md lang=az sha1=bf50bf1e3193db0654d6112e75d1c7899f74a091 -->
 # Platformada necə işləmək
 
 Administrator müəllimlərin gördüyü hər şeyi görür — lakin bütün qruplar və bütün müəllimlər üzrə — və əlavə olaraq istifadəçiləri, kursları və qrupları idarə edir.
@@ -72,13 +72,25 @@ Ad, kurs, sektor, müəllim, videokonfrans, Telegram.
 - **Sil** (səbət) — sistem şagirdlə bağlı olanları göstərəcək və təsdiq istəyəcək.
 - Şagirdi başqa qrupa keçirmək və ya xaric etmək — qrup səhifəsində, **Şagirdlər** nişanı.
 
+### Tələbə üzrə hesabat
+
+Şagirdin adına klikləyin — valideynlər üçün aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir, **Çap et** düyməsi hesabatı bir vərəqdə çap edir.
+
+- **Bir cümlə ilə nəticə** — ayın necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
+- **Ay rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
+- **İşlər necə gedir** — rəngli altı göstərici: dərslərə gəlirmi, vaxtında gəlirmi, dərsdə necə işləyir, ev tapşırıqlarını təslim edirmi və necə yerinə yetirir, imtahanları necə verir.
+- **Ayın əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
+- **Ayın dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+
+Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik kənarlaşma, qırmızı — valideynlərin köməyi lazımdır, boz — hələ məlumat yoxdur.
+
 ## Müəllimlər
 
 [Müəllimlər](/dashboard/teachers) bölməsində — hər müəllim üzrə xülasə: neçə qrup və şagird, keçirilmiş dərslər, davamiyyət və orta bal.
 
 ### Müəllim üzrə hesabat
 
-Müəllimin üzərinə klikləyin — aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir.
+Müəllimin üzərinə klikləyin — aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir, **Çap et** düyməsi hesabatı kağıza çıxarır.
 
 - **Bir cümlə ilə nəticə** — ayın necə işləndiyi və hansı göstəricilərin diqqət tələb etdiyi.
 - **İşin həcmi** — cədvəl üzrə keçirilmiş dərslər, fərdi dərslər, saatlar və keçirilməmiş dərslər. Ən azı bir şagirdin iştirak etdiyi açıq dərs keçirilmiş sayılır.

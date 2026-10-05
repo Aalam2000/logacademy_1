@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-import { useLang } from '../hooks/useLang';
 import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
 import DeleteButton from '../components/DeleteButton';
@@ -20,7 +20,6 @@ const formatLogin = (value) => {
 
 function StudentsPage() {
   const { user, hasRole } = useAuth();
-  const { lang } = useLang();
   const isAdmin = hasRole('admin');
 
   const [students, setStudents] = useState([]);
@@ -82,26 +81,6 @@ function StudentsPage() {
       setError(err?.response?.data?.detail || 'Не удалось загрузить список студентов');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Открываем окно СИНХРОННО по клику (до await) — иначе браузер считает
-  // это попапом не по действию пользователя и блокирует (тот же приём,
-  // что и в KnowledgeBasePage.handleOpen).
-  const handleOpenCard = async (studentId) => {
-    setError('');
-    const win = window.open('', '_blank');
-    try {
-      const res = await api.get(`/students/${studentId}/card`, {
-        params: { lang },
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      if (win) win.location.href = url;
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-    } catch (err) {
-      if (win) win.close();
-      setError(err?.response?.data?.detail || 'Не удалось сформировать карточку');
     }
   };
 
@@ -231,9 +210,10 @@ function StudentsPage() {
               sortedStudents.map(s => (
                 <tr key={s.id}>
                   <td>
-                    <button type="button" className="link" onClick={() => handleOpenCard(s.id)}>
+                    {/* Отчёт по ученику за месяц — для родителей (StudentReportPage.jsx) */}
+                    <Link className="link" to={`/dashboard/students/${s.id}/report`} data-tip="Отчёт по ученику">
                       {s.full_name}
-                    </button>
+                    </Link>
                   </td>
                   <td>{s.groups.map(g => g.name).join(', ') || '—'}</td>
                   {showTeacherColumn && (

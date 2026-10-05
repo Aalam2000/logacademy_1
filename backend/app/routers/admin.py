@@ -13,9 +13,7 @@ from ..dependencies import require_admin
 from .academy import sector_exists
 from ..phones import ensure_phone_free
 from ..teacher_report import build_teacher_report
-import re
-from datetime import datetime
-from ..lesson_lock import BAKU_TZ
+from ..report_common import resolve_month
 import secrets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -218,10 +216,7 @@ async def get_teacher_report(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    if month is None:
-        month = datetime.now(BAKU_TZ).strftime("%Y-%m")
-    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
-        raise HTTPException(status_code=422, detail="Месяц должен быть в виде ГГГГ-ММ")
+    month = resolve_month(month)
     teacher = (await db.execute(
         select(User).where(User.id == user_id, User.role.in_(["teacher", "admin"]))
     )).scalar_one_or_none()

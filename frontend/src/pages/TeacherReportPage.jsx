@@ -6,26 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { extractErrorMessage } from '../utils/errors';
-
-const currentMonth = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-};
-
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ru-RU') : '—');
-const withSign = (n) => (n > 0 ? `+${n}` : `${n}`);
-
-// ВАЖНО для перевода: autoi18n находит фразы только в JSX — текст, {'строка'},
-// тернарник в {...} и атрибуты. Строки в свойствах объектов ({ q: '...' }),
-// в словарях и после && он не видит, поэтому все фразы здесь обёрнуты в JSX.
-function Status({ status }) {
-  return (
-    <>
-      <span className={`report__dot report__dot--${status}`} />
-      {status === 'good' ? 'в норме' : status === 'warn' ? 'внимание' : status === 'bad' ? 'ниже нормы' : 'нет данных'}
-    </>
-  );
-}
+import {
+  ReportPeriod, ReportToolbar, Status, currentMonth, formatDate, withSign,
+} from '../components/ReportParts';
 
 // Строки «Как отработано»: вопрос, пояснение, значение «сейчас» и норма
 function indicatorRow(ind, norms) {
@@ -124,17 +107,12 @@ function TeacherReportPage() {
 
   return (
     <div className="page">
-      <div className="toolbar toolbar--inline">
-        <button className="btn btn--outline" onClick={() => navigate('/dashboard/teachers')}>{'Назад'}</button>
-        <input
-          className="input"
-          type="month"
-          value={month}
-          max={currentMonth()}
-          onChange={e => e.target.value && setMonth(e.target.value)}
-          data-tip="Месяц отчёта"
-        />
-      </div>
+      <ReportToolbar
+        onBack={() => navigate('/dashboard/teachers')}
+        month={month}
+        onMonth={setMonth}
+        canPrint={!loading && !!report}
+      />
 
       {error && <div className="error-text error-text--muted">{error}</div>}
       {loading && <div className="text-muted">{'Загрузка...'}</div>}
@@ -150,7 +128,10 @@ function TeacherReportPage() {
                 </div>
               )}
             </div>
-            {report.is_current_month && <div className="report__meta">{'Месяц ещё идёт — данные на сегодня'}</div>}
+            <div className="report__meta">
+              <ReportPeriod month={month} />
+              {report.is_current_month && <div>{'Месяц ещё идёт — данные на сегодня'}</div>}
+            </div>
           </div>
 
           {report.empty ? (
