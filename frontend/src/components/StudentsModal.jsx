@@ -210,16 +210,17 @@ function StudentsModal({ groupId, groupName, onClose }) {
         {error && <p style={s.error}>{error}</p>}
 
         {!loading && (
-          <table style={s.table}>
+          <div className="table-scroll">
+          <table className="table table--on-white">
             <thead>
               <tr>
-                <th style={s.th}>{'Имя'}</th>
-                <th style={s.th}>{'Логин'}</th>
-                <th style={s.th}>{'Телефон'}</th>
-                {tab === 'active' && <th style={s.th}>{'Дата регистрации'}</th>}
-                {tab === 'archived' && <th style={s.th}>{'Причина'}</th>}
-                {tab === 'archived' && <th style={s.th}>{'Дата отчисления'}</th>}
-                <th style={s.th}></th>
+                <th>{'Имя'}</th>
+                <th>{'Логин'}</th>
+                <th>{'Телефон'}</th>
+                {tab === 'active' && <th>{'Дата регистрации'}</th>}
+                {tab === 'archived' && <th>{'Причина'}</th>}
+                {tab === 'archived' && <th>{'Дата отчисления'}</th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -232,19 +233,19 @@ function StudentsModal({ groupId, groupName, onClose }) {
               )}
               {students.map(st => (
                 <React.Fragment key={st.id}>
-                  <tr style={s.row}>
-                    <td style={s.td}>{st.full_name || '—'}</td>
-                    <td style={s.td}>{st.username}</td>
+                  <tr>
+                    <td>{st.full_name || '—'}</td>
+                    <td>{st.username}</td>
                     {/* нет телефона — красный прочерк, чтобы пропуск было видно сразу */}
-                    <td style={{ ...s.td, whiteSpace: 'nowrap', color: st.phone ? undefined : '#B91C1C' }}>{st.phone || '—'}</td>
+                    <td className="nowrap" style={{ color: st.phone ? undefined : '#B91C1C' }}>{st.phone || '—'}</td>
                     {tab === 'active' && (
-                      <td style={s.td}>{st.created_at ? new Date(st.created_at).toLocaleDateString('ru-RU') : '—'}</td>
+                      <td>{st.created_at ? new Date(st.created_at).toLocaleDateString('ru-RU') : '—'}</td>
                     )}
-                    {tab === 'archived' && <td style={s.td}>{st.expel_reason || '—'}</td>}
+                    {tab === 'archived' && <td>{st.expel_reason || '—'}</td>}
                     {tab === 'archived' && (
-                      <td style={s.td}>{st.expelled_at ? new Date(st.expelled_at).toLocaleDateString('ru-RU') : '—'}</td>
+                      <td>{st.expelled_at ? new Date(st.expelled_at).toLocaleDateString('ru-RU') : '—'}</td>
                     )}
-                    <td style={s.td}>
+                    <td>
                       {tab === 'active' && expellingId !== st.id && editingId !== st.id && (
                         <span style={s.rowActions}>
                           <button style={s.linkBtn} onClick={() => openEdit(st.id)}>
@@ -331,6 +332,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         <div style={s.actions}>
@@ -356,10 +358,6 @@ const s = {
   addRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 2px', fontSize: '0.9rem' },
   info: { color: '#6B7280', textAlign: 'center', padding: '1rem' },
   error: { color: '#B91C1C', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-  th: { textAlign: 'left', padding: '8px 10px', borderBottom: '2px solid #e8f4f0', color: '#4B5563', fontWeight: 600 },
-  td: { padding: '8px 10px', borderBottom: '1px solid #e8f4f0' },
-  row: {},
   smallBtn: { padding: '5px 12px', background: '#e5e7eb', color: '#111827', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' },
   rowActions: { display: 'inline-flex', gap: '12px', whiteSpace: 'nowrap' },
   linkBtn: { background: 'none', border: 'none', color: '#111827', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', padding: 0 },
