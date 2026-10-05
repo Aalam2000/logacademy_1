@@ -40,7 +40,7 @@ function JoinGroupPage() {
     e.preventDefault();
     setSubmitError('');
     if (!isValidPhone(phone)) {
-      setSubmitError('Введите номер в формате +994 50 123 45 67 или 050 123 45 67');
+      setSubmitError('Введите номер с кодом страны, например +994 50 123 45 67');
       return;
     }
     setIsSubmitting(true);
@@ -98,7 +98,7 @@ function JoinGroupPage() {
             className="input input--lg"
             type="tel"
             placeholder={PHONE_PLACEHOLDER}
-            data-tip="Телефон: +994 50 123 45 67 или 050 123 45 67"
+            data-tip="Телефон с кодом страны, например +994 50 123 45 67"
             value={phone}
             onChange={e => setPhone(e.target.value)}
             required

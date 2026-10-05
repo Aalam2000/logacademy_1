@@ -19,7 +19,7 @@ function PhoneGate() {
   const submit = async (e) => {
     e.preventDefault();
     if (!isValidPhone(phone)) {
-      setError('Введите номер в формате +994 50 123 45 67 или 050 123 45 67');
+      setError('Введите номер с кодом страны, например +994 50 123 45 67');
       return;
     }
     setSaving(true);
@@ -32,7 +32,7 @@ function PhoneGate() {
       setError(status === 409
         ? 'Этот телефон уже зарегистрирован. Обратитесь к педагогу или администратору'
         : status === 422
-          ? 'Введите номер в формате +994 50 123 45 67 или 050 123 45 67'
+          ? 'Введите номер с кодом страны, например +994 50 123 45 67'
           : (err?.response?.data?.detail || 'Не удалось сохранить'));
     } finally {
       setSaving(false);

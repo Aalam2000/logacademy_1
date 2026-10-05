@@ -42,7 +42,7 @@ function QRModal({ group, onClose, onAdded }) {
     e.preventDefault();
     setError('');
     if (!isValidPhone(phone)) {
-      setError('Введите номер в формате +994 50 123 45 67 или 050 123 45 67');
+      setError('Введите номер с кодом страны, например +994 50 123 45 67');
       return;
     }
     setSaving(true);
@@ -74,7 +74,7 @@ function QRModal({ group, onClose, onAdded }) {
         <p className="text-muted">{group.name}</p>
         <form onSubmit={handleSave} className="form-stack">
           <input className="input" placeholder={'Имя и фамилия'} value={fullName} onChange={e => setFullName(e.target.value)} autoFocus />
-          <input className="input" type="tel" placeholder={PHONE_PLACEHOLDER} data-tip="Телефон: +994 50 123 45 67 или 050 123 45 67" value={phone} onChange={e => setPhone(e.target.value)} required />
+          <input className="input" type="tel" placeholder={PHONE_PLACEHOLDER} data-tip="Телефон с кодом страны, например +994 50 123 45 67" value={phone} onChange={e => setPhone(e.target.value)} required />
           <input className="input" placeholder={'Логин'} value={username} onChange={e => setUsername(e.target.value)} required />
           <input className="input" placeholder={'Пароль'} value={password} onChange={e => setPassword(e.target.value)} required />
           <button className="btn" type="submit" disabled={saving}>
