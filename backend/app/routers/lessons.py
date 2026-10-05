@@ -112,17 +112,6 @@ class LessonMarkOut(BaseModel):
     marked_at: Optional[datetime]
 
 
-class MyLessonMarkOut(BaseModel):
-    attendance_status: Optional[str]
-    is_late: bool
-    status_label: str  # человекочитаемый статус для студента, см. _build_status_label
-    score: Optional[int]
-    exam_score: Optional[int]
-    stars: Optional[int]
-    comment: Optional[str]
-    marked_at: Optional[datetime]
-
-
 class MyPerformanceRowOut(BaseModel):
     lesson_id: int
     lesson_title: str
@@ -235,15 +224,6 @@ _STATUS_LABELS = {
     "excused": "Ув.прич",
     "absent": "Пропуск",
 }
-
-
-def _build_status_label(attendance_status: Optional[str], is_late: bool) -> str:
-    base = _STATUS_LABELS.get(attendance_status)
-    if base is None:
-        return "—"
-    if is_late and attendance_status in ("in_person", "online"):
-        return f"{base}, опоздал"
-    return base
 
 
 async def get_lesson_for_teacher_or_admin(
@@ -1126,43 +1106,6 @@ async def get_lesson_marks(
         "locked": is_lesson_locked(lesson) and current_user.role != "admin",
         "students": students,
     }
-
-
-# Своя отметка студента — read-only, без доступа к оценкам одногруппников
-@router.get("/{lesson_id}/marks/me", response_model=MyLessonMarkOut)
-async def get_my_lesson_mark(
-    lesson_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.role != "student":
-        raise HTTPException(status_code=403, detail="Только для студента")
-
-    lesson = await get_lesson_for_student(lesson_id, db, current_user)
-
-    result = await db.execute(
-        select(LessonMark).where(
-            LessonMark.lesson_id == lesson_id,
-            LessonMark.student_id == current_user.id,
-        )
-    )
-    mark = result.scalar_one_or_none()
-
-    # После блокировки урока «ничего не отмечено» = пропуск (attendance.py)
-    slots = await attendance_slots(db, [lesson.group_id], [current_user.id], [lesson_id])
-    attendance_status = slots[0].status if slots else (mark.attendance_status if mark else None)
-    is_late = mark.is_late if mark else False
-
-    return MyLessonMarkOut(
-        attendance_status=attendance_status,
-        is_late=is_late,
-        status_label=_build_status_label(attendance_status, is_late),
-        score=mark.score if mark else None,
-        exam_score=mark.exam_score if mark else None,
-        stars=mark.stars if mark else None,
-        comment=mark.comment if mark else None,
-        marked_at=mark.marked_at if mark else None,
-    )
 
 
 # «Как тебе урок?» — оценка урока учеником тремя смайликами: 3 зелёный,

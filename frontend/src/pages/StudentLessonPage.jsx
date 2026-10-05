@@ -24,13 +24,12 @@ function StudentLessonPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Вкладки: Материалы | ДЗ | Диалог (набросок «В»). Над вкладками — строка
-  // «моя отметка» за урок (посещаемость, оценки, звёзды), только просмотр.
+  // Вкладки: Материалы | ДЗ | Диалог (набросок «В»). Отметки за урок
+  // (посещаемость, оценки, звёзды) ученик смотрит в разделе «Успеваемость».
   const [tab, setTab] = useState('materials');
   const [items, setItems] = useState([]);
   const [homework, setHomework] = useState({ tasks: [], answer: { status: 'none', files: [] } });
   const [newMessages, setNewMessages] = useState(0);
-  const [mark, setMark] = useState(null); // моя отметка за урок — только просмотр
   const [itemsError, setItemsError] = useState('');
   const [openingKey, setOpeningKey] = useState(null);
 
@@ -40,14 +39,12 @@ function StudentLessonPage() {
       setError('');
       setItemsError('');
       try {
-        const [lessonRes, itemsRes, hwRes, markRes] = await Promise.all([
+        const [lessonRes, itemsRes, hwRes] = await Promise.all([
           api.get(`/lessons/${lessonId}`),
           api.get(`/lessons/${lessonId}/items`),
           getMyHomework(lessonId),
-          api.get(`/lessons/${lessonId}/marks/me`).catch(() => ({ data: null })),
         ]);
         setLesson(lessonRes.data);
-        setMark(markRes.data);
         setItems(itemsRes.data);
         setHomework(hwRes);
       } catch (err) {
@@ -161,32 +158,6 @@ function StudentLessonPage() {
       </div>
 
       {error && <div className="error-text error-text--muted">{error}</div>}
-
-      {/* Моя отметка за урок — только просмотр: посещаемость, три оценки, звёзды */}
-      {mark && (
-        <div className="table-scroll">
-          <table className="table table--fixed">
-            <thead>
-              <tr>
-                <th className="table__col--attendance">{'Посещаемость'}</th>
-                <th className="table__col--score">{'Оценка'}</th>
-                <th className="table__col--score">{'Экзамен'}</th>
-                <th className="table__col--score">{'ДЗ'}</th>
-                <th className="table__col--stars">{'Звёзды'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{mark.status_label}</td>
-                <td>{mark.score ?? '—'}</td>
-                <td>{mark.exam_score ?? '—'}</td>
-                <td>{homework.answer.grade ?? (homework.answer.status === 'accepted' ? '✓' : '—')}</td>
-                <td>{'★'.repeat(mark.stars || 0)}{'☆'.repeat(3 - (mark.stars || 0))}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
 
       <div className="lesson-tabs">
         {TABS.map(t => (
