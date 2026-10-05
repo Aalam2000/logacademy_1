@@ -132,12 +132,17 @@ function GroupsPage() {
         <h2 className="toolbar__title">
           {showArchived ? 'Архив групп' : (isAdmin ? 'Группы' : 'Мои группы')}
         </h2>
-        <IconButton
-          icon="archive"
-          tip={showArchived ? 'Вернуться к активным группам' : 'Показать архив'}
-          active={showArchived}
-          onClick={() => setShowArchived(v => !v)}
-        />
+        {/* В строке заголовка: переключатель вида (выбранный значок залит) и архив */}
+        <div className="icon-row">
+          <IconButton icon="tableView" tip={'Таблица'} active={viewMode === 'table'} onClick={() => setViewMode('table')} />
+          <IconButton icon="calendarView" tip={'Календарь'} active={viewMode === 'calendar'} onClick={() => setViewMode('calendar')} />
+          <IconButton
+            icon="archive"
+            tip={showArchived ? 'Вернуться к активным группам' : 'Показать архив'}
+            active={showArchived}
+            onClick={() => setShowArchived(v => !v)}
+          />
+        </div>
       </div>
 
       {isAdmin && (
@@ -154,23 +159,6 @@ function GroupsPage() {
           </button>
         </div>
       )}
-
-      <div className="toolbar__filters">
-        <button
-          type="button"
-          className={`tab${viewMode === 'table' ? ' tab--active' : ''}`}
-          onClick={() => setViewMode('table')}
-        >
-          {'Таблица'}
-        </button>
-        <button
-          type="button"
-          className={`tab${viewMode === 'calendar' ? ' tab--active' : ''}`}
-          onClick={() => setViewMode('calendar')}
-        >
-          {'Календарь'}
-        </button>
-      </div>
 
       {error && <div className="error-text error-text--top">{error}</div>}
 
