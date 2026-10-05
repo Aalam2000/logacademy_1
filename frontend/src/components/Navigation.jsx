@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAcademyName } from '../utils/academyName';
 import {
   IconDashboard,
@@ -16,7 +16,17 @@ import {
 
 function Navigation({ user, isOpen, onClose }) {
   const academyName = useAcademyName();
+  const { pathname } = useLocation();
   const linkClass = ({ isActive }) => `nav__link${isActive ? ' nav__link--active' : ''}`;
+
+  // Вложенные страницы подсвечивают свой раздел меню: группа и урок открываются
+  // из «Главной», редактор квиза — из «Базы знаний». Без этого выделение
+  // пропадало, стоило уйти с первой страницы раздела.
+  const under = (...prefixes) => prefixes.some(p => pathname === p || pathname.startsWith(p + '/'));
+  const homeActive = pathname === '/dashboard' || pathname === '/dashboard/'
+    || under('/dashboard/groups', '/dashboard/lessons', '/dashboard/student-lessons');
+  const materialsActive = under('/dashboard/materials', '/dashboard/add-quiz');
+  const activeClass = (active) => `nav__link${active ? ' nav__link--active' : ''}`;
 
   const handleLinkClick = () => {
     // На мобильном клик по ссылке должен закрывать сайдбар.
@@ -32,7 +42,7 @@ function Navigation({ user, isOpen, onClose }) {
       </div>
       <ul className="nav__list">
         <li className="nav__item">
-          <NavLink to="/dashboard" end className={linkClass} onClick={handleLinkClick}>
+          <NavLink to="/dashboard" end className={() => activeClass(homeActive)} onClick={handleLinkClick}>
             <IconDashboard className="nav__icon" />
             <span>{'Главная'}</span>
           </NavLink>
@@ -47,7 +57,7 @@ function Navigation({ user, isOpen, onClose }) {
         )}
         {user?.role !== 'student' && (
           <li className="nav__item">
-            <NavLink to="/dashboard/materials" className={linkClass} onClick={handleLinkClick}>
+            <NavLink to="/dashboard/materials" className={() => activeClass(materialsActive)} onClick={handleLinkClick}>
               <IconKnowledge className="nav__icon" />
               <span>{'База знаний'}</span>
             </NavLink>
