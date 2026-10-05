@@ -136,23 +136,30 @@
   }
 
   /* --- Календарь: шапка в две строки вместо трёх ---
-     1) «Сегодня ‹ ›» слева, месяц (сокращённо) справа; 2) Месяц/Неделя/День на всю ширину */
+     1) тонкая строка с месяцем (сокращённо) на всю ширину;
+     2) кнопки обычной высоты: «Сегодня ‹ ›» слева, Месяц/Неделя/День справа.
+     Кнопки календаря у́же обычных (меньше боковые поля) — высота та же. */
   .la-calendar .rbc-toolbar.rbc-toolbar {
     gap: var(--space-2);
+    flex-direction: row; /* у react-big-calendar на телефоне по умолчанию column */
+    flex-wrap: wrap;
     justify-content: space-between;
+    align-items: center;
   }
   .la-calendar .rbc-toolbar .rbc-toolbar-label {
-    flex: 1 1 auto;
-    padding: 0;
-    text-align: right;
-    white-space: nowrap;
-  }
-  .la-calendar .rbc-toolbar > .rbc-btn-group:last-child {
-    display: flex;
+    order: -1;
     flex: 1 1 100%;
+    padding: 0;
+    text-align: center;
+    white-space: nowrap;
+    font-size: var(--font-base);
+    line-height: 1.2;
   }
-  .la-calendar .rbc-toolbar > .rbc-btn-group:last-child button {
-    flex: 1;
+  .la-calendar .rbc-toolbar .rbc-btn-group {
+    flex: 0 0 auto;
+  }
+  .la-calendar .rbc-toolbar .rbc-btn-group button {
+    padding: 0 var(--space-2);
   }
 
   /* --- Форма логина на всю ширину --- */

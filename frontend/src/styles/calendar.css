@@ -25,7 +25,10 @@
   border: 2px solid var(--color-primary-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
-  padding: var(--space-1) var(--space-3);
+  height: var(--control-height); /* как у всех кнопок системы */
+  box-sizing: border-box;
+  line-height: 1;
+  padding: 0 var(--space-3);
   font-size: var(--font-sm);
   font-weight: var(--weight-medium);
   box-shadow: none;

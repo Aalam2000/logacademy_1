@@ -10,13 +10,19 @@
  * Navigation · Language switcher.
  */
 
-/* ===== Buttons ===== */
+/* ===== Buttons =====
+   Высота у всех кнопок одна — --control-height (tokens.css). Модификаторы
+   размера (--sm, --lg, --pill, --compact, --outline) меняют только ширину
+   полей и шрифт, но НЕ высоту: вертикальные отступы у кнопок не задаём. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  padding: var(--space-2) var(--space-5);
+  height: var(--control-height);
+  box-sizing: border-box;
+  line-height: 1;
+  padding: 0 var(--space-5);
   border: none;
   border-radius: var(--radius-sm);
   background: var(--color-text);   /* чёрный, как в Log Academy — красный только для CTA */
@@ -52,11 +58,11 @@
   color: var(--color-white);
 }
 .btn--pill {
-  padding: var(--space-3) var(--space-6);
+  padding: 0 var(--space-6);
   border-radius: 0;
 }
 .btn--sm {
-  padding: var(--space-1) var(--space-2);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--font-xs);
   min-width: 30px;
@@ -71,24 +77,31 @@
   font-weight: var(--weight-bold);
 }
 .btn--icon-circle {
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
   padding: 0;
   border-radius: 50%;
 }
 .btn--outline {
-  padding: 6px 14px;
+  padding: 0 14px;
   background: var(--color-white);
   color: var(--color-text);
   border: 1px solid var(--color-primary-border);
 }
 .btn--compact {
-  padding: var(--space-2) var(--space-4);
+  padding: 0 var(--space-4);
 }
 
 /* ===== Tabs (AdminPage) ===== */
 .tab {
-  padding: var(--space-2) var(--space-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height);
+  box-sizing: border-box;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0 var(--space-5);
   border: 2px solid var(--color-primary-border);
   border-radius: var(--radius-lg);
   background: var(--color-white);
@@ -104,7 +117,7 @@
 
 /* ===== Tabs-в-виде-подчёркнутого-текста (AdminPage, .tabs-row) ===== */
 .tabs-row .tab {
-  padding: var(--space-2) var(--space-4);
+  padding: 0 var(--space-4);
   border: none;
   border-radius: 0;
   border-bottom: 3px solid transparent;
@@ -121,7 +134,7 @@
 
 /* ===== .tab--underline ===== */
 .tab.tab--underline {
-  padding: var(--space-2) var(--space-4);
+  padding: 0 var(--space-4);
   border: none;
   border-radius: 0;
   border-bottom: 3px solid transparent;
@@ -351,7 +364,7 @@
   background: var(--color-danger);
 }
 .btn--del-compact {
-  padding: 4px var(--space-3);
+  padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
 }
 
@@ -812,7 +825,9 @@
   display: inline-block;
 }
 .lang-switcher__select {
-  padding: 6px var(--space-3);
+  height: var(--control-height);
+  box-sizing: border-box;
+  padding: 0 var(--space-3);
   border-radius: var(--radius-md);
   border: 2px solid var(--color-primary-border);
   font-size: var(--font-sm);
@@ -888,7 +903,12 @@ a.row-icon:hover {
 .quiz-theme .text-muted,
 .quiz-theme .hint-text,
 .quiz-theme .card__meta { color: var(--qz-muted); }
+/* Игровой экран live-квиза — исключение из единой высоты кнопок: там крупные
+   кнопки для проектора и телефонов детей */
 .quiz-theme .btn {
+  height: auto;
+  line-height: normal;
+  padding: var(--space-2) var(--space-5);
   background: var(--qz-dark);
   color: var(--qz-cream);
   border: 4px solid var(--qz-dark);
@@ -1157,8 +1177,9 @@ a.row-icon:hover {
 
 /* ===== Кнопка-значок «HUD-контур» (IconButton.jsx) ===== */
 .icon-btn {
-  width: 34px;
-  height: 34px;
+  width: var(--control-height);
+  height: var(--control-height);
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;

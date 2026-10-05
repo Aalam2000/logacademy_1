@@ -160,19 +160,19 @@ function StudentsModal({ groupId, groupName, onClose }) {
 
         <div style={s.tabs}>
           <button
-            style={tab === 'active' ? s.tabActive : s.tab}
+            className={`tab${tab === 'active' ? ' tab--active' : ''}`}
             onClick={() => setTab('active')}
           >
             {'Активные'}
           </button>
           <button
-            style={tab === 'archived' ? s.tabActive : s.tab}
+            className={`tab${tab === 'archived' ? ' tab--active' : ''}`}
             onClick={() => setTab('archived')}
           >
             {'Архив'}
           </button>
           {tab === 'active' && (
-            <button style={s.addToggle} onClick={() => setShowAdd(v => !v)}>
+            <button className="btn btn--outline" style={s.addToggle} onClick={() => setShowAdd(v => !v)}>
               {showAdd ? 'Скрыть поиск' : '+ Добавить ученика'}
             </button>
           )}
@@ -195,7 +195,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
               <div key={st.id} style={s.addRow}>
                 <span>{st.full_name || st.username} {st.full_name ? `(${st.username})` : ''}</span>
                 <button
-                  style={s.smallBtn}
+                  className="btn btn--secondary btn--compact"
                   disabled={addingId === st.id}
                   onClick={() => handleAdd(st.id)}
                 >
@@ -261,7 +261,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
                       )}
                       {tab === 'archived' && (
                         <button
-                          style={s.smallBtn}
+                          className="btn btn--secondary btn--compact"
                           disabled={busyId === st.id}
                           onClick={() => handleRestore(st.id)}
                         >
@@ -285,9 +285,9 @@ function StudentsModal({ groupId, groupName, onClose }) {
                           )}
                           {editError && <p style={s.error}>{editError}</p>}
                           <div style={s.expelActions}>
-                            <button style={s.smallBtn} onClick={closeEdit}>{'Отмена'}</button>
+                            <button className="btn btn--secondary btn--compact" onClick={closeEdit}>{'Отмена'}</button>
                             <button
-                              style={s.saveBtn}
+                              className="btn btn--compact"
                               disabled={!editDraft || editSaving}
                               onClick={() => handleEditSave(st.id)}
                             >
@@ -311,13 +311,13 @@ function StudentsModal({ groupId, groupName, onClose }) {
                           />
                           <div style={s.expelActions}>
                             <button
-                              style={s.smallBtn}
+                              className="btn btn--secondary btn--compact"
                               onClick={() => { setExpellingId(null); setExpelReason(''); }}
                             >
                               {'Отмена'}
                             </button>
                             <button
-                              style={s.dangerBtn}
+                              className="btn btn--danger btn--compact"
                               disabled={!expelReason.trim() || busyId === st.id}
                               onClick={() => handleExpelConfirm(st.id)}
                             >
@@ -336,7 +336,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
         )}
 
         <div style={s.actions}>
-          <button style={s.closeBtn} onClick={onClose}>
+          <button className="btn btn--secondary" onClick={onClose}>
             {'Закрыть'}
           </button>
         </div>
@@ -350,29 +350,23 @@ const s = {
   modal: { width: '100%', maxWidth: '760px', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 12px 32px rgba(0,0,0,0.2)', maxHeight: '85vh', overflowY: 'auto' },
   title: { margin: '0 0 1rem 0' },
   tabs: { display: 'flex', gap: '8px', marginBottom: '1rem', alignItems: 'center' },
-  tab: { padding: '6px 14px', background: '#f3f4f6', color: '#4B5563', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem' },
-  tabActive: { padding: '6px 14px', background: '#EC3013', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem' },
-  addToggle: { marginLeft: 'auto', padding: '6px 14px', background: 'white', color: '#EC3013', border: '1px solid #EC3013', borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem' },
+  addToggle: { marginLeft: 'auto' },
   addBox: { background: '#f9fafb', borderRadius: '8px', padding: '10px 12px', marginBottom: '1rem' },
   addInput: { width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '0.9rem', boxSizing: 'border-box' },
   addRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 2px', fontSize: '0.9rem' },
   info: { color: '#6B7280', textAlign: 'center', padding: '1rem' },
   error: { color: '#B91C1C', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' },
-  smallBtn: { padding: '5px 12px', background: '#e5e7eb', color: '#111827', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' },
   rowActions: { display: 'inline-flex', gap: '12px', whiteSpace: 'nowrap' },
   linkBtn: { background: 'none', border: 'none', color: '#111827', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', padding: 0 },
   editBox: { background: '#f9fafb', borderRadius: '8px', padding: '10px' },
   editGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' },
   editLabel: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', color: '#4B5563' },
-  saveBtn: { padding: '5px 14px', background: '#111827', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' },
   dangerLinkBtn: { background: 'none', border: 'none', color: '#B91C1C', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', padding: 0 },
-  dangerBtn: { padding: '5px 14px', background: '#B91C1C', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' },
   expelCell: { padding: '0 10px 10px 10px', borderBottom: '1px solid #e8f4f0' },
   expelBox: { background: '#FEF2F2', borderRadius: '8px', padding: '10px' },
   expelTextarea: { width: '100%', minHeight: '54px', padding: '8px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' },
   expelActions: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' },
   actions: { marginTop: '1.25rem', display: 'flex', justifyContent: 'flex-end' },
-  closeBtn: { padding: '8px 24px', background: '#e5e7eb', color: '#111827', border: 'none', borderRadius: '8px', cursor: 'pointer' },
 };
 
 export default StudentsModal;
