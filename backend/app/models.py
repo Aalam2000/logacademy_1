@@ -17,6 +17,9 @@ class User(Base):
     phone = Column(String, nullable=True)
     telegram_username = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
+    # Родитель ученика — заполняет педагог/админ; телефон родителя может повторяться (братья и сёстры)
+    parent_name = Column(String, nullable=True)
+    parent_phone = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)  # путь к фото, MinIO — этап 2
     theme = Column(String, nullable=True)  # brand | playful | dark — выбор пользователя, NULL = brand по умолчанию
 

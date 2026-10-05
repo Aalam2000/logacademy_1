@@ -17,6 +17,7 @@ from ..core.security import get_password_hash
 from ..database import get_db
 from ..schemas import NewPasswordIn
 from ..dependencies import require_admin, require_teacher
+from ..phones import checked_student_phone, normalize_phone, PHONE_FORMAT_ERROR, PHONE_REQUIRED_ERROR
 from ..models import (
     Course, Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMark,
     LessonMessage, User, UserSession,
@@ -387,6 +388,75 @@ async def set_student_password(
     student.hashed_password = get_password_hash(data.new_password)
     await db.commit()
     return Response(status_code=204)
+
+
+# Данные ученика для правки педагогом/админом (окно «Ученики» группы):
+# имя, телефон ученика, родитель и телефон родителя. Педагог — только
+# ученикам своих групп, admin — любому (_get_accessible_student).
+class StudentProfile(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    parent_name: Optional[str] = None
+    parent_phone: Optional[str] = None
+
+
+class StudentProfileOut(StudentProfile):
+    id: int
+    username: str
+
+
+def _profile_out(student: User) -> StudentProfileOut:
+    return StudentProfileOut(
+        id=student.id, username=student.username, full_name=student.full_name,
+        phone=student.phone, parent_name=student.parent_name, parent_phone=student.parent_phone,
+    )
+
+
+@router.get("/{student_id}/profile", response_model=StudentProfileOut)
+async def get_student_profile(
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    student, _, _ = await _get_accessible_student(db, student_id, current_user)
+    return _profile_out(student)
+
+
+@router.put("/{student_id}/profile", response_model=StudentProfileOut)
+async def update_student_profile(
+    student_id: int,
+    data: StudentProfile,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    student, _, _ = await _get_accessible_student(db, student_id, current_user)
+
+    student.full_name = (data.full_name or "").strip() or None
+
+    # Телефон ученика: формат и запрет повторов — как при регистрации. Стереть
+    # уже указанный нельзя; если его ещё нет и поле пустое — не трогаем
+    # (ученик сам заполнит при входе).
+    phone = (data.phone or "").strip()
+    if phone:
+        student.phone = await checked_student_phone(db, phone, exclude_user_id=student.id)
+    elif (student.phone or "").strip():
+        raise HTTPException(status_code=422, detail=PHONE_REQUIRED_ERROR)
+
+    student.parent_name = (data.parent_name or "").strip() or None
+
+    # Телефон родителя: тот же формат, но повторяться может (братья и сёстры)
+    parent_phone = (data.parent_phone or "").strip()
+    if parent_phone:
+        normalized = normalize_phone(parent_phone)
+        if not normalized:
+            raise HTTPException(status_code=422, detail=PHONE_FORMAT_ERROR)
+        student.parent_phone = normalized
+    else:
+        student.parent_phone = None
+
+    await db.commit()
+    await db.refresh(student)
+    return _profile_out(student)
 
 
 # Удалить ученика — только admin. Общий контроль удаления (app/usages.py):
