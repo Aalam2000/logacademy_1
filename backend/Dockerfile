@@ -41,4 +41,7 @@ RUN groupadd -o -g "$APP_GID" appuser \
 USER appuser
 ENV HOME=/home/appuser
 
-CMD ["sh", "-c", "python -m app.migrate_bootstrap && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
+# exec: uvicorn заменяет собой оболочку и сам получает сигнал остановки от
+# Docker. Без exec сигнал получала sh, не передавала его дальше, и Docker
+# ждал 10 секунд, а потом убивал процесс — каждый деплой давал лишний простой.
+CMD ["sh", "-c", "python -m app.migrate_bootstrap && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
