@@ -432,8 +432,8 @@ function GroupPage() {
         />
       )}
 
-      {/* Тулбар уроков: Таблица/Календарь — слева, действия с уроками — справа */}
-      <div className="toolbar">
+      {/* Тулбар уроков: Таблица/Календарь — слева, действия с уроками — справа (в одну строку и на телефоне) */}
+      <div className="toolbar toolbar--inline">
         {/* Переключатель вида: выбранный значок залит */}
         <div className="icon-row">
           <IconButton icon="tableView" tip={'Таблица'} active={viewMode === 'table'} onClick={() => setViewMode('table')} />

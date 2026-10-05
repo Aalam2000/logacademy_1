@@ -128,7 +128,7 @@ function GroupsPage() {
 
   return (
     <div className="page">
-      <div className="toolbar">
+      <div className="toolbar toolbar--inline">
         <h2 className="toolbar__title">
           {showArchived ? 'Архив групп' : (isAdmin ? 'Группы' : 'Мои группы')}
         </h2>

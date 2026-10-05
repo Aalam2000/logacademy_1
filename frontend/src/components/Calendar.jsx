@@ -7,7 +7,7 @@
 // препода сразу) сам решает, откуда взялись уроки и как их красить
 // (getEventColor), и сам показывает список групп для выбора рядом —
 // это не забота календаря.
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 // moment — из ESM-сборки (moment/dist): локали из moment/locale/* (UMD)
 // под Vite регистрируются не в тот экземпляр moment, и календарь молча
@@ -99,10 +99,39 @@ function visibleHours(events) {
   };
 }
 
+// Телефон (та же граница, что в styles/media.css): шапка календаря компактная —
+// месяц сокращён («Окт. 2026»), вместо «Назад/Вперёд» стрелки. Сокращения
+// месяцев и дней берутся из локали moment (ru/az/en), а не из autoi18n.
+const MOBILE_QUERY = '(max-width: 768px)';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isMobile;
+}
+
+const MOBILE_FORMATS = {
+  monthHeaderFormat: 'MMM YYYY',
+  dayHeaderFormat: 'dd, D MMM',
+  dayRangeHeaderFormat: ({ start, end }, culture, loc) =>
+    `${loc.format(start, 'D MMM', culture)} – ${loc.format(end, 'D MMM', culture)}`,
+};
+const MOBILE_NAV = { previous: '‹', next: '›' };
+
 // isDisabled(lesson) — урок показан, но не открывается (у студента: закрыт педагогом)
 function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month', highlight = TEACHER_HIGHLIGHT, isDisabled, isLight = TEACHER_LIGHT }) {
   const { lang } = useLang();
   const momentLocale = MOMENT_LOCALE_BY_LANG[lang] || 'ru';
+  const isMobile = useIsMobile();
+  const messages = useMemo(() => {
+    const base = MESSAGES_BY_LANG[momentLocale] || MESSAGES_BY_LANG.ru;
+    return isMobile ? { ...base, ...MOBILE_NAV } : base;
+  }, [momentLocale, isMobile]);
 
   useEffect(() => {
     moment.locale(momentLocale);
@@ -136,7 +165,8 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
         events={events}
         views={['month', 'week', 'day']}
         defaultView={defaultView}
-        messages={MESSAGES_BY_LANG[momentLocale] || MESSAGES_BY_LANG.ru}
+        messages={messages}
+        formats={isMobile ? MOBILE_FORMATS : undefined}
         culture={momentLocale}
         popup
         min={min}
