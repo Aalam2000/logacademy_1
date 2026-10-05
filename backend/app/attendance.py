@@ -3,7 +3,9 @@
 Слот посещаемости = (ученик, урок), если:
   - урок уже заблокирован (прошла полночь дня урока по Баку, lesson_lock.py);
   - ученик в этот день состоял в группе: день урока не раньше дня добавления
-    (joined_at) и урок раньше отчисления (expelled_at), если отчислен.
+    (joined_at) и урок раньше отчисления (expelled_at), если отчислен;
+  - если урок персональный — ученик его участник (personal.py); остальным
+    ученикам группы слот не создаётся, пропуск им не ставится.
 Статус слота: in_person / online / excused — как отмечено педагогом; всё
 остальное (ничего не отмечено, отметки нет вовсе, absent) — пропуск.
 
@@ -19,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .lesson_lock import lock_cutoff, baku_day, aware
 from .models import GroupMember, Lesson, LessonMark
+from .personal import participants_by_lesson
 
 PRESENT = {"in_person", "online"}
 EXCUSED = "excused"
@@ -75,7 +78,7 @@ async def attendance_slots(
     if not members:
         return []
 
-    lessons_q = select(Lesson.id, Lesson.group_id, Lesson.date).where(
+    lessons_q = select(Lesson.id, Lesson.group_id, Lesson.date, Lesson.is_personal).where(
         Lesson.group_id.in_(group_ids),
         Lesson.date.isnot(None),
         Lesson.date < lock_cutoff(),
@@ -83,8 +86,11 @@ async def attendance_slots(
     if lesson_ids is not None:
         lessons_q = lessons_q.where(Lesson.id.in_(list(lesson_ids)))
     lessons_by_group: dict[int, list] = {}
-    for lesson_id, gid, lesson_date in (await db.execute(lessons_q)).all():
+    personal_ids: list[int] = []
+    for lesson_id, gid, lesson_date, is_personal in (await db.execute(lessons_q)).all():
         lessons_by_group.setdefault(gid, []).append((lesson_id, lesson_date))
+        if is_personal:
+            personal_ids.append(lesson_id)
     if not lessons_by_group:
         return []
 
@@ -96,6 +102,10 @@ async def attendance_slots(
         marks_q = marks_q.where(LessonMark.student_id.in_([m.student_id for m in members]))
     marks = {(lid, sid): status for lid, sid, status in (await db.execute(marks_q)).all()}
 
+    # Персональные уроки: слот только у участников
+    participants = await participants_by_lesson(db, personal_ids)
+    personal = set(personal_ids)
+
     slots = []
     for gid, sid, joined_at, expelled_at in members:
         joined_day = baku_day(joined_at) if joined_at else None
@@ -104,6 +114,8 @@ async def attendance_slots(
                 continue  # урок до добавления в группу
             if expelled_at and aware(lesson_date) >= aware(expelled_at):
                 continue  # урок после отчисления
+            if lesson_id in personal and sid not in participants.get(lesson_id, ()):
+                continue  # персональный урок без этого ученика
             status = marks.get((lesson_id, sid))
             if status not in PRESENT and status != EXCUSED:
                 status = ABSENT

@@ -3,6 +3,7 @@
 // урока/выставление оценок учителем) — отдельный лёгкий компонент на
 // том же API-слое. См. claude/student-lesson-view-plan.md.
 import React, { useEffect, useState } from 'react';
+import { PersonalBadge } from '../components/PersonalLesson';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
@@ -151,6 +152,7 @@ function StudentLessonPage() {
           <span className="lesson-toolbar__group">
             {lesson.title}
             {lesson.date ? ` — ${new Date(lesson.date).toLocaleString('ru-RU')}` : ''}
+            <PersonalBadge lesson={lesson} />
           </span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PersonalBadge } from '../components/PersonalLesson';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import Calendar from '../components/Calendar';
@@ -96,6 +97,7 @@ function StudentHome() {
                     </td>
                     <td>
                       {l.title}
+                      <PersonalBadge lesson={l} />
                       {l.hw_todo === 'returned' && (
                         <span className="badge badge--admin badge--inline" data-tip={'Педагог вернул ответ на доработку'}>{'ДЗ: доработать'}</span>
                       )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PersonalBadge } from '../components/PersonalLesson';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 import Modal from '../components/Modal';
@@ -139,7 +140,7 @@ function TeacherHome() {
           {visible.map(l => (
             <tr key={l.id} className="table__row--clickable" onClick={() => navigate(`/dashboard/lessons/${l.id}`)}>
               <td>{l.date ? new Date(l.date).toLocaleDateString('ru-RU') : '—'}</td>
-              <td>{l.title}</td>
+              <td>{l.title}<PersonalBadge lesson={l} /></td>
               <td>{groupName(l.group_id)}</td>
               <td>{courseName(l.group_id)}</td>
               <td>

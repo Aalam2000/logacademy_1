@@ -18,8 +18,14 @@ export function getLesson(id) {
   return api.get(`/lessons/${id}`).then(res => res.data);
 }
 
+// payload: {group_id, date, duration_min, title?, is_personal?, student_ids?}
 export function createLesson(payload) {
   return api.post('/lessons/', payload).then(res => res.data);
+}
+
+// Состав участников персонального урока
+export function setLessonParticipants(lessonId, studentIds) {
+  return api.put(`/lessons/${lessonId}/participants`, { student_ids: studentIds }).then(res => res.data);
 }
 
 // Генератор расписания группы — см. claude/group-schedule-plan.md.

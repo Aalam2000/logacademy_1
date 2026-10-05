@@ -17,6 +17,7 @@ from .. import storage
 from ..database import get_db
 from ..dependencies import require_admin, require_teacher, get_current_user
 from ..models import Material, User, Lesson, LessonResource, GroupMember, HomeworkTask, Course
+from ..personal import visible_to_student
 from ..resources import clean_filename, content_hash, find_duplicate_material, find_materials_by_name, conflict
 from .academy import sector_exists
 from ..usages import ensure_not_used
@@ -86,6 +87,7 @@ async def _verify_student_material_access(
             Lesson.is_open == True,
             GroupMember.student_id == current_user.id,
             GroupMember.status == "active",
+            visible_to_student(current_user.id),  # персональный урок — только участникам
         )
     )
     if result.first() is not None:
@@ -100,6 +102,7 @@ async def _verify_student_material_access(
             Lesson.is_open == True,
             GroupMember.student_id == current_user.id,
             GroupMember.status == "active",
+            visible_to_student(current_user.id),
             or_(HomeworkTask.student_id.is_(None), HomeworkTask.student_id == current_user.id),
         )
     )

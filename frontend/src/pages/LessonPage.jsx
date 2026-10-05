@@ -6,6 +6,7 @@ import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import LibraryPickerModal from '../components/LibraryPickerModal';
 import TrashIcon from '../components/TrashIcon';
 import IconButton from '../components/IconButton';
+import { PersonalBadge, ParticipantsModal } from '../components/PersonalLesson';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
 import { StudentContactIcons, GroupContactIcons } from '../components/ContactIcons';
@@ -38,6 +39,7 @@ function LessonPage() {
   const [view, setView] = useState('lesson'); // 'lesson' | 'students'
 
   const [lesson, setLesson] = useState(null);
+  const [participantsOpen, setParticipantsOpen] = useState(false); // смена участников персонального урока
   const [groups, setGroups] = useState([]);
   const [dateValue, setDateValue] = useState(null);
   const [durationValue, setDurationValue] = useState(DEFAULT_DURATION_MIN); // мин, правится в том же попапе, что и дата
@@ -556,6 +558,15 @@ function LessonPage() {
             {'Назад'}
           </button>
           <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
+          {/* Персональный урок: метка с участниками, по клику — смена состава */}
+          <PersonalBadge lesson={lesson} onClick={() => setParticipantsOpen(true)} />
+          {participantsOpen && (
+            <ParticipantsModal
+              lesson={lesson}
+              onClose={() => setParticipantsOpen(false)}
+              onSaved={() => window.location.reload()}
+            />
+          )}
           <GroupContactIcons video={lessonGroup?.video_url} telegram={lessonGroup?.telegram_chat_id} whatsapp={lessonGroup?.whatsapp} />
           <span className="lesson-toolbar__date">
             {formatDateTime(dateValue) || '—'}

@@ -85,7 +85,18 @@ class Lesson(Base):
     is_open = Column(Boolean, nullable=False, default=False)  # педагог открывает доступ
     source = Column(String, nullable=True)  # academy | teacher
     comment = Column(Text, nullable=True)  # заметки педагога по уроку в целом (не по студенту)
+    # Персональный урок: виден и учитывается только у участников (lesson_students) — app/personal.py
+    is_personal = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Участники персонального урока (Lesson.is_personal). У обычного урока записей
+# нет — его ученики = активные участники группы. Правила — app/personal.py.
+class LessonStudent(Base):
+    __tablename__ = "lesson_students"
+    __table_args__ = (Index("ix_lesson_students_student_id", "student_id"),)
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), primary_key=True)
+    student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 
 
 # Посещаемость + оценка + звёзды за урок. Одна строка на пару (урок, студент).

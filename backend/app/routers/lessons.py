@@ -10,11 +10,15 @@ from ..schemas import DURATION_MIN, DURATION_MAX
 from .academy import lesson_word
 from ..lesson_lock import BAKU_TZ, is_date_locked
 from ..attendance import attendance_slots
+from ..personal import (
+    is_participant, lesson_student_ids, lesson_students_condition, participant_names,
+    set_participants, visible_to_student,
+)
 from ..database import get_db
 from .. import storage
 from ..models import (
     Lesson, Group, GroupMember, User, LessonMark, LessonResource, Material, Link, Quiz,
-    HomeworkTask, HomeworkAnswer, HomeworkAnswerFile, LessonMessage,
+    HomeworkTask, HomeworkAnswer, HomeworkAnswerFile, LessonMessage, LessonStudent,
 )
 from ..dependencies import require_teacher, get_current_user
 from ..resources import RESOURCE_MODELS, RESOURCE_NOT_FOUND, fetch_resource_details, resource_exists
@@ -32,6 +36,16 @@ class LessonCreate(BaseModel):
     date: Optional[datetime] = None
     duration_min: Optional[int] = Field(default=None, ge=DURATION_MIN, le=DURATION_MAX)  # не задано — из группы
     source: Optional[str] = "teacher"  # academy | teacher
+    # Персональный урок: только для выбранных учеников этой группы (app/personal.py)
+    is_personal: bool = False
+    student_ids: list[int] = []
+
+class ParticipantsIn(BaseModel):
+    student_ids: list[int]
+
+class LessonParticipantOut(BaseModel):
+    id: int
+    full_name: str
 
 class LessonUpdate(BaseModel):
     title: Optional[str] = None
@@ -51,6 +65,9 @@ class LessonOut(BaseModel):
     source: Optional[str]
     comment: Optional[str] = None
     created_at: datetime
+    # Персональный урок и его участники (участников отдаём только педагогу/админу)
+    is_personal: bool = False
+    participants: list[LessonParticipantOut] = []
     # Есть ответы на ДЗ без оценки — подсветка урока в списке и календаре
     has_unreviewed_homework: bool = False
     # Прошла полночь по Баку — нельзя удалить/перенести, менять присутствие и оценку за урок
@@ -368,6 +385,9 @@ async def get_lesson_for_student(
     )
     if not member.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="Нет доступа")
+    # Персональный урок — только участникам
+    if not await is_participant(db, lesson, current_user.id):
+        raise HTTPException(status_code=403, detail="Нет доступа")
 
     return lesson
 
@@ -446,8 +466,10 @@ async def with_unreviewed_flag(db: AsyncSession, lessons: list[Lesson], user: Op
         .distinct()
     )
     flagged = {row[0] for row in rows.all()}
+    names = await participant_names(db, [item.id for item in out if item.is_personal])
     for item in out:
         item.has_unreviewed_homework = item.id in flagged
+        item.participants = names.get(item.id, [])
     return out
 
 
@@ -495,12 +517,16 @@ async def create_lesson(
         date=data.date,
         duration_min=data.duration_min or group.lesson_duration_min,
         source=data.source,
-        is_open=False
+        is_open=False,
+        is_personal=data.is_personal,
     )
     db.add(lesson)
+    if data.is_personal:
+        await db.flush()  # нужен id урока для списка участников
+        await set_participants(db, lesson, data.student_ids)
     await db.commit()
     await db.refresh(lesson)
-    return lesson
+    return (await with_unreviewed_flag(db, [lesson], current_user))[0]
 
 
 # Генератор расписания (claude/group-schedule-plan.md, задача 1). Требует
@@ -524,7 +550,10 @@ async def generate_schedule(
 ):
     group = await get_accessible_group(data.group_id, db, current_user)
 
-    existing = await db.execute(select(Lesson.id).where(Lesson.group_id == data.group_id))
+    # Персональные уроки расписанию не мешают — в серию они не входят
+    existing = await db.execute(select(Lesson.id).where(
+        Lesson.group_id == data.group_id, Lesson.is_personal.is_(False),
+    ))
     if existing.first():
         raise HTTPException(
             status_code=409,
@@ -700,7 +729,10 @@ async def delete_group_lessons(
 ):
     await get_accessible_group(group_id, db, current_user)
 
-    group_lessons = (await db.execute(select(Lesson).where(Lesson.group_id == group_id))).scalars().all()
+    # Персональные уроки не трогаем — «удалить и создать заново» касается только расписания группы
+    group_lessons = (await db.execute(select(Lesson).where(
+        Lesson.group_id == group_id, Lesson.is_personal.is_(False),
+    ))).scalars().all()
     if any(lesson_locked_for(l, current_user) for l in group_lessons):
         raise HTTPException(status_code=403, detail="В группе есть прошедшие уроки — после полуночи их удалять нельзя")
     lesson_ids = [l.id for l in group_lessons]
@@ -708,7 +740,7 @@ async def delete_group_lessons(
         await delete_lessons_homework(db, lesson_ids)
         await db.execute(delete(LessonMark).where(LessonMark.lesson_id.in_(lesson_ids)))
         await db.execute(delete(LessonResource).where(LessonResource.lesson_id.in_(lesson_ids)))
-        await db.execute(delete(Lesson).where(Lesson.group_id == group_id))
+        await db.execute(delete(Lesson).where(Lesson.id.in_(lesson_ids)))
         await db.commit()
     return {"ok": True, "deleted": len(lesson_ids)}
 
@@ -768,7 +800,11 @@ async def get_student_lessons(
         return []
     result = await db.execute(
         select(Lesson)
-        .where(Lesson.group_id.in_(group_ids), *([] if include_closed else [Lesson.is_open == True]))
+        .where(
+            Lesson.group_id.in_(group_ids),
+            visible_to_student(current_user.id),  # персональные — только свои
+            *([] if include_closed else [Lesson.is_open == True]),
+        )
         .order_by(Lesson.date.desc())
     )
     from .homework import student_open_items  # homework.py сам импортирует lessons.py
@@ -807,7 +843,7 @@ async def get_student_marks(
             LessonMark,
             (LessonMark.lesson_id == Lesson.id) & (LessonMark.student_id == current_user.id),
         )
-        .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True)
+        .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True, visible_to_student(current_user.id))
         .order_by(Lesson.date.desc())
     )
 
@@ -921,7 +957,7 @@ async def get_student_grades(
         for lesson, mark in (await db.execute(
             select(Lesson, LessonMark)
             .join(LessonMark, (LessonMark.lesson_id == Lesson.id) & (LessonMark.student_id == current_user.id))
-            .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True)
+            .where(Lesson.group_id.in_(group_ids), Lesson.is_open == True, visible_to_student(current_user.id))
             .order_by(Lesson.date.desc())
         )).all():
             if mark.score is not None:
@@ -933,7 +969,7 @@ async def get_student_grades(
             select(Lesson, HomeworkAnswer)
             .join(HomeworkAnswer, HomeworkAnswer.lesson_id == Lesson.id)
             .where(
-                Lesson.group_id.in_(group_ids), Lesson.is_open == True,
+                Lesson.group_id.in_(group_ids), Lesson.is_open == True, visible_to_student(current_user.id),
                 HomeworkAnswer.student_id == current_user.id, HomeworkAnswer.grade.isnot(None),
             )
             .order_by(Lesson.date.desc())
@@ -981,10 +1017,15 @@ async def mark_lesson_as_holiday(
         raise HTTPException(status_code=400, detail="У урока не задана дата")
     if lesson_locked_for(lesson, current_user):
         raise HTTPException(status_code=403, detail="Прошла полночь по Баку — прошедший урок переносить нельзя")
+    if lesson.is_personal:
+        raise HTTPException(status_code=400, detail="Персональный урок не входит в расписание группы — перенесите его дату вручную")
 
     tail_result = await db.execute(
         select(Lesson)
-        .where(Lesson.group_id == lesson.group_id, Lesson.order >= lesson.order)
+        .where(
+            Lesson.group_id == lesson.group_id, Lesson.order >= lesson.order,
+            Lesson.is_personal.is_(False),  # персональные уроки сдвиг не затрагивает
+        )
         .order_by(Lesson.order)
     )
     tail = tail_result.scalars().all()
@@ -1003,13 +1044,8 @@ async def mark_lesson_as_holiday(
 
 
 async def _get_active_group_student_ids(lesson: Lesson, db: AsyncSession) -> set[int]:
-    members = await db.execute(
-        select(GroupMember.student_id).where(
-            GroupMember.group_id == lesson.group_id,
-            GroupMember.status == "active",
-        )
-    )
-    return {row[0] for row in members.all()}
+    # Ученики урока: активные участники группы, у персонального — только его участники (personal.py)
+    return await lesson_student_ids(db, lesson)
 
 
 async def _upsert_mark(
@@ -1063,7 +1099,10 @@ async def get_lesson_marks(
             LessonMark,
             (LessonMark.lesson_id == lesson_id) & (LessonMark.student_id == User.id),
         )
-        .where(GroupMember.group_id == lesson.group_id, GroupMember.status == "active")
+        .where(
+            GroupMember.group_id == lesson.group_id, GroupMember.status == "active",
+            lesson_students_condition(lesson),  # персональный урок — только его участники
+        )
         .order_by(User.full_name)
     )
 
@@ -1314,7 +1353,27 @@ async def get_lesson(
     )).first()
     if group_row:
         out.group_name, out.group_video_url, out.group_telegram, out.group_whatsapp = group_row
+    if lesson.is_personal and current_user.role != "student":
+        out.participants = (await participant_names(db, [lesson.id])).get(lesson.id, [])
     return out
+
+
+# Состав участников персонального урока. Убрать ученика с отметкой или
+# решением ДЗ в этом уроке нельзя (personal.set_participants).
+@router.put("/{lesson_id}/participants", response_model=LessonOut)
+async def update_lesson_participants(
+    lesson_id: int,
+    data: ParticipantsIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    if not lesson.is_personal:
+        raise HTTPException(status_code=400, detail="Это не персональный урок")
+    await set_participants(db, lesson, data.student_ids)
+    await db.commit()
+    await db.refresh(lesson)
+    return (await with_unreviewed_flag(db, [lesson], current_user))[0]
 
 
 @router.patch("/{lesson_id}", response_model=LessonOut)
@@ -1362,6 +1421,7 @@ async def delete_lesson(
     await db.execute(delete(LessonMark).where(LessonMark.lesson_id == lesson_id))
     await db.execute(delete(LessonResource).where(LessonResource.lesson_id == lesson_id))
 
+    await db.execute(delete(LessonStudent).where(LessonStudent.lesson_id == lesson_id))  # участники персонального урока
     await db.delete(lesson)
     await db.commit()
     return {"ok": True}

@@ -186,7 +186,6 @@ async def list_students(
     group_id: Optional[int] = Query(None),
     teacher_id: Optional[int] = Query(None),  # фильтр «Препод» — учитывается только для admin
     mine: bool = Query(False),                # admin: считать только свои группы (кнопка «Моё»)
-    sort: str = Query("name"),                # name | score
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
@@ -241,10 +240,8 @@ async def list_students(
             **_stats_summary(stats[sid]),
         ))
 
-    if sort == "score":
-        out.sort(key=lambda s: (s.avg_score is None, -(s.avg_score or 0)))
-    else:
-        out.sort(key=lambda s: s.full_name.lower())
+    # По имени; любую другую сортировку делает таблица в браузере (клик по шапке столбца)
+    out.sort(key=lambda s: s.full_name.lower())
 
     return out
 

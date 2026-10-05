@@ -58,14 +58,6 @@ const ICONS = {
       <line x1="12" y1="15" x2="12" y2="17" />
     </svg>
   ),
-  // Обновить материалы — папка со стрелкой внутрь
-  materials: (
-    <svg {...svgProps}>
-      <path d="M3 5h6l2 3h10v12H3z" />
-      <line x1="12" y1="11" x2="12" y2="17" />
-      <polyline points="9.5,14.5 12,17 14.5,14.5" />
-    </svg>
-  ),
   // В архив — ящик
   archive: (
     <svg {...svgProps}>

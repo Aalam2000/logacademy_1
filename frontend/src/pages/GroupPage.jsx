@@ -11,6 +11,7 @@ import DurationSelect from '../components/DurationSelect';
 import { DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import Calendar from '../components/Calendar';
 import DateTimePicker from '../components/DateTimePicker';
+import { PersonalBadge, ParticipantsPicker } from '../components/PersonalLesson';
 import { getMyGroups, getCourses } from '../api/groups';
 import {
   getGroupLessons, createLesson, generateSchedule,
@@ -36,6 +37,9 @@ function GroupPage() {
   const [newLessonDate, setNewLessonDate] = useState(null); // Date | null
   const [newLessonDuration, setNewLessonDuration] = useState(DEFAULT_DURATION_MIN); // мин
   const [newLessonTitle, setNewLessonTitle] = useState(''); // пусто — стандартное «Урок» на языке сектора
+  // Персональный урок: только для выбранных учеников группы
+  const [newLessonPersonal, setNewLessonPersonal] = useState(false);
+  const [newLessonStudentIds, setNewLessonStudentIds] = useState([]);
   const [createError, setCreateError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -159,6 +163,8 @@ function GroupPage() {
   const openCreateModal = () => {
     setCreateError('');
     setNewLessonTitle('');
+    setNewLessonPersonal(false);
+    setNewLessonStudentIds([]);
     setNewLessonDate(null);
     setNewLessonDuration(group?.lesson_duration_min || DEFAULT_DURATION_MIN);
     setIsModalOpen(true);
@@ -176,6 +182,10 @@ function GroupPage() {
       setCreateError('Укажите дату и время начала урока');
       return;
     }
+    if (newLessonPersonal && newLessonStudentIds.length === 0) {
+      setCreateError('Выберите хотя бы одного ученика');
+      return;
+    }
 
     setIsCreating(true);
     setCreateError('');
@@ -186,6 +196,10 @@ function GroupPage() {
         duration_min: newLessonDuration,
       };
       if (newLessonTitle.trim()) payload.title = newLessonTitle.trim();
+      if (newLessonPersonal) {
+        payload.is_personal = true;
+        payload.student_ids = newLessonStudentIds;
+      }
       const created = await createLesson(payload);
       setLessons(prev => [...prev, created]);
       closeCreateModal();
@@ -200,7 +214,8 @@ function GroupPage() {
   // просто дозаполнить материалами (см. ответ Андрея в group-schedule-plan.md).
   const handleOpenScheduleFlow = () => {
     setGenError('');
-    const hasLessons = lessons.some(l => l.group_id === gid);
+    // Персональные уроки в расписание группы не входят
+    const hasLessons = lessons.some(l => l.group_id === gid && !l.is_personal);
     if (hasLessons) {
       setIsExistingLessonsDialogOpen(true);
     } else {
@@ -283,7 +298,7 @@ function GroupPage() {
   // «Обновить материалы» — источник (шаблон курса группы / другая группа),
   // диапазон уроков, режим Дополнить/Заменить. См. course-templates-plan.md.
   const openFillModal = () => {
-    const groupLessonsCount = lessons.filter(l => l.group_id === gid).length;
+    const groupLessonsCount = lessons.filter(l => l.group_id === gid && !l.is_personal).length;
     setFillSource('template');
     setFillGroupId('');
     setFillRangeFrom('1');
@@ -326,7 +341,7 @@ function GroupPage() {
   // «Открыть уроки» — по умолчанию с первого урока по последний, чья дата
   // уже наступила (сегодня включительно).
   const openOpenRangeModal = () => {
-    const groupLessons = lessons.filter(l => l.group_id === gid);
+    const groupLessons = lessons.filter(l => l.group_id === gid && !l.is_personal);
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
     const started = groupLessons.filter(l => l.date && new Date(l.date) <= endOfToday).map(l => l.order);
@@ -519,6 +534,7 @@ function GroupPage() {
                     </td>
                     <td>
                       {l.title}
+                      <PersonalBadge lesson={l} />
                       {l.has_unreviewed_homework && (
                         <span className="badge badge--homework-pending badge--inline" data-tip={'Есть непроверенные решения ДЗ'}>
                           {'ДЗ: проверить'}
@@ -531,6 +547,8 @@ function GroupPage() {
                       </span>
                     </td>
                     <td>
+                      {/* «Выходной» сдвигает расписание группы — персональных уроков не касается */}
+                      {!l.is_personal && (
                       <button
                         type="button"
                         className="btn btn--sm"
@@ -540,6 +558,7 @@ function GroupPage() {
                       >
                         {'🎉'}
                       </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -589,6 +608,18 @@ function GroupPage() {
                 />
               </div>
             </div>
+
+            <label className="check-list__item">
+              <input
+                type="checkbox"
+                checked={newLessonPersonal}
+                onChange={e => setNewLessonPersonal(e.target.checked)}
+              />
+              <span data-tip="Урок увидят только выбранные ученики; остальным пропуск не ставится">{'Персональный урок'}</span>
+            </label>
+            {newLessonPersonal && (
+              <ParticipantsPicker groupId={gid} value={newLessonStudentIds} onChange={setNewLessonStudentIds} />
+            )}
 
             {createError && <div className="form-field__error">{createError}</div>}
           </form>

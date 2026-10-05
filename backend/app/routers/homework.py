@@ -37,6 +37,7 @@ from ..models import (
     GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMessage, Material, User,
 )
 from ..resources import clean_filename, content_hash, find_duplicate_material, find_materials_by_name, conflict
+from ..personal import is_participant, lesson_students_condition
 from .lessons import (
     _safe_delete_object, delete_homework_tasks, get_lesson_for_student, get_lesson_for_teacher_or_admin,
 )
@@ -234,7 +235,10 @@ async def _active_students(db: AsyncSession, lesson: Lesson) -> list[tuple[int, 
     rows = (await db.execute(
         select(User.id, User.full_name, User.username)
         .join(GroupMember, GroupMember.student_id == User.id)
-        .where(GroupMember.group_id == lesson.group_id, GroupMember.status == "active")
+        .where(
+            GroupMember.group_id == lesson.group_id, GroupMember.status == "active",
+            lesson_students_condition(lesson),  # персональный урок — только его участники
+        )
         .order_by(User.full_name)
     )).all()
     return [(uid, fn or un) for uid, fn, un in rows]
@@ -245,7 +249,7 @@ async def _ensure_active_student(db: AsyncSession, lesson: Lesson, student_id: i
         GroupMember.group_id == lesson.group_id, GroupMember.student_id == student_id,
         GroupMember.status == "active",
     ))).first()
-    if not member:
+    if not member or not await is_participant(db, lesson, student_id):
         raise HTTPException(status_code=422, detail="Студент не состоит в группе этого урока")
 
 
