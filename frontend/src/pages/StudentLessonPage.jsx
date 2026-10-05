@@ -156,6 +156,8 @@ function StudentLessonPage() {
             <PersonalBadge lesson={lesson} />
           </span>
         </div>
+        {/* «Как тебе урок?» — три смайлика в строке с «Назад», появляются после начала урока */}
+        <LessonFeedback lessonId={lessonId} />
       </div>
 
       {error && <div className="error-text error-text--muted">{error}</div>}
@@ -185,9 +187,6 @@ function StudentLessonPage() {
           </table>
         </div>
       )}
-
-      {/* «Как тебе урок?» — три смайлика, появляются после начала урока */}
-      <LessonFeedback lessonId={lessonId} />
 
       <div className="lesson-tabs">
         {TABS.map(t => (

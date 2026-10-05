@@ -40,7 +40,7 @@ function LessonFeedback({ lessonId }) {
 
   return (
     <div className="lesson-feedback">
-      <span className="lesson-feedback__q">{state.rating ? 'Спасибо! Твоя оценка урока:' : 'Как тебе урок?'}</span>
+      <span className="lesson-feedback__q">{'Как тебе урок?'}</span>
       <span className="lesson-feedback__faces">
         {FACES.map(f => (
           <button
