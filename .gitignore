@@ -1,5 +1,8 @@
 tmp/
-translations/
+# autoi18n: словари (ru/az/en.json) лежат в git — переводятся на деве и едут на прод;
+# вне git только служебные файлы воркера и папка от запуска бэкенда вне Docker
+translations/_*
+backend/translations/
 node_modules/
 .idea/
 .junie/

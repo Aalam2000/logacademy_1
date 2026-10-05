@@ -62,20 +62,22 @@ export function buildQuizPrompt({ type, wish, count, time, lang, materials = [] 
 }
 
 // Разбор ответа ИИ: снимаем ``` обёртку, находим JSON в тексте, проверяем каждый вопрос.
+// Возвращает { quiz, errors }: errors — замечания, каждое показывается отдельной
+// строкой; если они есть, quiz не возвращается.
 export function parseQuizJson(text, type, defaultTime) {
   let raw = (text || '').trim().replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '');
   const start = raw.search(/[[{]/);
-  if (start < 0) throw new Error('В тексте не найден JSON');
+  if (start < 0) return { errors: ['В тексте не найден JSON'] };
   const end = Math.max(raw.lastIndexOf('}'), raw.lastIndexOf(']'));
   raw = raw.slice(start, end + 1);
   let data;
   try {
     data = JSON.parse(raw);
   } catch (e) {
-    throw new Error(`JSON не читается: ${e.message}`);
+    return { errors: [`JSON не читается: ${e.message}`] };
   }
   const list = Array.isArray(data) ? data : data.questions;
-  if (!Array.isArray(list) || list.length === 0) throw new Error('Нет списка вопросов ("questions")');
+  if (!Array.isArray(list) || list.length === 0) return { errors: ['Нет списка вопросов ("questions")'] };
 
   const errors = [];
   const questions = list.map((q, i) => {
@@ -95,11 +97,14 @@ export function parseQuizJson(text, type, defaultTime) {
     if (!answer) errors.push(`вопрос ${n}: нет ответа`);
     return { question, time, answer };
   });
-  if (errors.length) throw new Error(errors.join('; '));
+  if (errors.length) return { errors };
   return {
-    title: Array.isArray(data) ? '' : String(data.title ?? '').trim(),
-    topic: Array.isArray(data) ? '' : String(data.topic ?? '').trim(),
-    questions,
+    errors,
+    quiz: {
+      title: Array.isArray(data) ? '' : String(data.title ?? '').trim(),
+      topic: Array.isArray(data) ? '' : String(data.topic ?? '').trim(),
+      questions,
+    },
   };
 }
 
@@ -124,7 +129,8 @@ function QuizHelper({ templateType, lang, lessonId, onFill }) {
   const [prompt, setPrompt] = useState('');
   const [copied, setCopied] = useState(false);
   const [aiText, setAiText] = useState('');
-  const [error, setError] = useState('');
+  // Замечания пользователю — списком, каждое отдельной строкой
+  const [errors, setErrors] = useState([]);
   const [done, setDone] = useState('');
   // Файлы урока (квиз создаётся из урока): отмеченные попадут в промпт текстом
   const [lessonFiles, setLessonFiles] = useState([]);
@@ -143,7 +149,7 @@ function QuizHelper({ templateType, lang, lessonId, onFill }) {
   }, [lessonId]);
 
   const makePrompt = async () => {
-    setError('');
+    setErrors([]);
     setCopied(false);
     const chosen = lessonFiles.filter(f => picked[f.resource_id]);
     const materials = [];
@@ -157,11 +163,12 @@ function QuizHelper({ templateType, lang, lessonId, onFill }) {
           if (res.data.text.trim()) materials.push(res.data);
           else problems.push(`«${f.title}»: текста нет (картинки/скан)`);
         } catch (err) {
-          problems.push(`«${f.title}»: ${err?.response?.data?.detail || 'не прочитан'}`);
+          const detail = err?.response?.data?.detail;
+          problems.push(detail ? `«${f.title}»: ${detail}` : `«${f.title}»: не прочитан`);
         }
       }
       setBuilding(false);
-      if (problems.length) setError(`Не попали в промпт — ${problems.join('; ')}. Такой файл приложите к ИИ вручную.`);
+      if (problems.length) setErrors(['Не попали в промпт — такой файл приложите к ИИ вручную:', ...problems]);
     }
     setPrompt(buildQuizPrompt({ type: templateType, wish, count, time, lang: qLang, materials }));
   };
@@ -172,20 +179,20 @@ function QuizHelper({ templateType, lang, lessonId, onFill }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('Не удалось скопировать — выделите текст и скопируйте вручную');
+      setErrors(['Не удалось скопировать — выделите текст и скопируйте вручную']);
     }
   };
 
   const fill = () => {
-    setError('');
+    setErrors([]);
     setDone('');
-    try {
-      const result = parseQuizJson(aiText, templateType, time);
-      onFill(result);
-      setDone(`Готово: ${result.questions.length} вопросов. Проверьте и нажмите «Сохранить».`);
-    } catch (e) {
-      setError(e.message);
+    const { quiz, errors: found } = parseQuizJson(aiText, templateType, time);
+    if (found.length) {
+      setErrors(found);
+      return;
     }
+    onFill(quiz);
+    setDone(`Готово: ${quiz.questions.length} вопросов. Проверьте и нажмите «Сохранить».`);
   };
 
   return (
@@ -252,7 +259,11 @@ function QuizHelper({ templateType, lang, lessonId, onFill }) {
         </>
       )}
 
-      {error && <div className="error-text">{error}</div>}
+      {errors.length > 0 && (
+        <div className="error-text">
+          {errors.map((line, i) => <div key={i}>{line}</div>)}
+        </div>
+      )}
       {done && <div className="hint-text">{done}</div>}
     </div>
   );

@@ -105,7 +105,7 @@ function ActivityPage() {
                 <span className={`activity-online__dot${u.is_online ? ' activity-online__dot--online' : ''}`} />
                 {u.full_name} <RoleBadge role={u.role} />
                 <span className="activity-online__since">
-                  {u.is_online ? `${'с'} ${formatTime(u.first_seen)}` : `${'был до'} ${formatTime(u.last_seen)}`}
+                  {u.is_online ? `с ${formatTime(u.first_seen)}` : `был до ${formatTime(u.last_seen)}`}
                 </span>
               </span>
             ))}

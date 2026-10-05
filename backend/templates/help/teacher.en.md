@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=en sha1=008f32934d109899f94d733c022240be0b0ec0b2 -->
+<!-- autoi18n: source=teacher.md lang=en sha1=4cdba946ddb4d0a9dd57c8e6c0a8d415c9eccb1d -->
 # How to work on the platform
 
 ## My groups
@@ -9,20 +9,30 @@ Click on a group to open it.
 
 ## Group
 
-At the top of the group page:
+At the top of the group page are icons; the name of each is shown on hover:
 
-- **Group settings** — name, Telegram, WhatsApp, link to the video conference, and default lesson duration;
+- **Group settings** (gear) — name, Telegram, WhatsApp, link to the video conference, and default lesson duration;
 - **QR for registration** — link and QR code for students to register in the group themselves; you can also immediately add a student with a username and password;
-- **Students** — group composition: add a student through search, expel (with a reason) or return from the archive.
+- **Students** (people with a number) — group composition and phones: add a student through search, **change** their details and the parent's details, unenroll (with a reason) or return from the archive. A red dash in the “Phone” column means the phone is not filled in.
 
 ### Group lessons
 
-Lessons are visible as a **table** or a **calendar**. Filter — from today, from the beginning of the week, from the beginning of the month, or all.
+Lessons are visible as a **table** or a **calendar** — two icons on the left. Filter — from today, from the beginning of the week, from the beginning of the month, or all.
 
-- **+ Lesson** — create one lesson.
-- **Fill schedule** — create many lessons at once: date of the first lesson, time, duration, days of the week, number of lessons. Materials can be taken from the course template or from another group.
-- **Update materials** — pull lesson materials from the course template or another group: supplement with missing ones or replace.
+- **+ Lesson** — create one lesson: date, time, duration and, if needed, its own name.
+- **Schedule and materials** (calendar with a plus) — create many lessons at once: date of the first lesson, time, duration, days of the week, number of lessons. Materials can be taken from the course template or from another group. If the lessons already exist, you can keep the dates here and only pull in the materials.
+- **Open lessons** (lock) — open several lessons to students at once by their numbers.
 - **Mark as holiday** — no lesson is held on this date: it and all subsequent lessons are shifted in the schedule.
+
+### Personal lesson
+
+An extra class for one or several students of the group. In the **+ Lesson** window, tick **Personal lesson** and select the students.
+
+- Only the selected students see such a lesson. It is not shown to the others, and they are not marked absent.
+- In the lesson list and in the calendar it is marked with 👤 and the participants' names.
+- Materials, homework, grades and stars work as in a regular lesson.
+- The list of participants is changed on the lesson page — click the 👤 mark.
+- The lesson is created closed: open it on the lesson page. The “Open lessons”, “Schedule and materials” and “Mark as holiday” buttons do not affect personal lessons.
 
 A lesson with unchecked Homework answers is marked "Homework: check".
 
@@ -80,7 +90,15 @@ In the [Knowledge base](/dashboard/materials) — general files, links, and quiz
 
 ## Students
 
-In the [Students](/dashboard/students) section — all your students: group, average grades for lessons, Homework and exams, absences, tardiness, and contacts. You can sort by name or by performance.
+In the [Students](/dashboard/students) section — all your students: group, average grades for lessons, Homework and exams, stars, absences, late arrivals, date of last login, phone, parent and contacts. Click a column name — the table will be sorted by it; clicking again reverses the order.
+
+- **+ Student** — add a new student straight to your group: name, login, password, phone, parent details.
+- **Student and parent details** (pencil) — change the name, phone, email, messengers, and the parent's name and phone.
+- **Change password** (key) — if the student forgot the password.
+
+The student's phone is required and cannot be repeated for two users. If the child has no phone of their own, enter the parent's phone. The number can be entered as +994 50 123 45 67 or 050 123 45 67.
+
+Students rate each lesson with a smiley (green, yellow, red). You do not see who chose which smiley: this way children answer honestly.
 
 ## Profile
 

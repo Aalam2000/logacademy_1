@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=az sha1=08f6e415783cf0fb204692a50e7ca0684ebb33e4 -->
+<!-- autoi18n: source=admin.md lang=az sha1=9ebf4f7a4994dd8f19d773824716ef4288f1e365 -->
 # Platformada necə işləmək
 
 Administrator müəllimlərin gördüyü hər şeyi görür — lakin bütün qruplar və bütün müəllimlər üzrə — və əlavə olaraq istifadəçiləri, kursları və qrupları idarə edir.
@@ -45,11 +45,50 @@ Ad, kurs, sektor, müəllim, videokonfrans, Telegram.
 
 ## Tələbələr
 
-[Studentlər](/dashboard/students) bölməsində — platformanın bütün şagirdləri: qrup, müəllim, dərslər üzrə orta qiymətlər, Ev tapşırığı və imtahanlar, davamiyyət, gecikmələr, əlaqə məlumatları. Müəllim, kurs və qrup üzrə filtr. **Mənim** — yalnız sizin qruplarınız. Burada şagirdi silmək mümkündür.
+[Tələbələr](/dashboard/students) bölməsində — platformanın bütün şagirdləri: qrup, müəllim, dərslər üzrə orta qiymətlər, Ev tapşırığı və imtahanlar, ulduzlar, qayıblar, gecikmələr, son giriş tarixi, telefon, valideyn və əlaqə məlumatları. Müəllim, kurs və qrup üzrə filtr, **Mənim** — yalnız sizin qruplarınız. Sütunun adına klikləyin — cədvəl həmin sütun üzrə sıralanacaq.
+
+### Şagirdi necə əlavə etmək olar
+
+1. **+ Tələbə** düyməsini basın.
+2. Ad və soyadı, telefonu, login və şifrəni doldurun. Login və şifrəni sonra şagirdə vermək lazımdır.
+3. Valideynin adını və telefonunu yazın.
+4. Qrupu seçin və **Saxla** düyməsini basın. Şagird dərhal qrupda görünəcək və sistemə daxil ola biləcək.
+
+### Şagirdin məlumatlarını necə dəyişmək olar
+
+Şagirdin sətrindəki **qələm** nişanını basın. Pəncərədə adı, telefonu, email, Telegram, WhatsApp, valideynin adını və telefonunu dəyişmək olar. Logini dəyişmək olmaz.
+
+### Telefonlar üçün qaydalar
+
+- Şagirdin telefonu məcburidir. Siyahıda «Telefon» sütunundakı qırmızı tire onun doldurulmadığını bildirir; sistem belə şagirddən daxil olarkən telefonu göstərməyi xahiş edəcək.
+- Eyni telefon iki istifadəçidə ola bilməz. Sistem telefonun artıq mövcud olduğunu bildirirsə, deməli şagird artıq əlavə edilib — onu siyahıda tapın.
+- Uşağın öz telefonu yoxdursa, valideynin telefonunu hər iki xanaya yazın: «Tələbənin telefonu» və «Valideynin telefonu».
+- Valideynin telefonu təkrarlana bilər: qardaş və bacılarda o eynidir.
+- Nömrəni +994 50 123 45 67 və ya 050 123 45 67 şəklində daxil etmək olar; başqa ölkənin nömrəsi — plyus və ölkə kodu ilə.
+
+### Digər əməliyyatlar
+
+- **Şifrəni dəyiş** (açar) — şagird şifrəni unudubsa. Sistem yeni şifrəni ekranda göstərəcək, onu şagirdə bildirmək lazımdır.
+- **Sil** (səbət) — sistem şagirdlə bağlı olanları göstərəcək və təsdiq istəyəcək.
+- Şagirdi başqa qrupa keçirmək və ya xaric etmək — qrup səhifəsində, **Şagirdlər** nişanı.
 
 ## Müəllimlər
 
-[Muəllimlər](/dashboard/teachers) bölməsində — hər müəllim üzrə xülasə: neçə qrup və şagird, davamiyyət və orta bal.
+[Müəllimlər](/dashboard/teachers) bölməsində — hər müəllim üzrə xülasə: neçə qrup və şagird, keçirilmiş dərslər, davamiyyət və orta bal.
+
+### Müəllim üzrə hesabat
+
+Müəllimin üzərinə klikləyin — aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir.
+
+- **Bir cümlə ilə nəticə** — ayın necə işləndiyi və hansı göstəricilərin diqqət tələb etdiyi.
+- **İşin həcmi** — cədvəl üzrə keçirilmiş dərslər, fərdi dərslər, saatlar və keçirilməmiş dərslər. Ən azı bir şagirdin iştirak etdiyi açıq dərs keçirilmiş sayılır.
+- **İşin keyfiyyəti** — norması və rəngi olan səkkiz göstərici: davamiyyət, şagirdlərin qalıb-qalmaması, jurnalın vaxtında doldurulması, ev tapşırıqlarının verilməsi və tez yoxlanması, imtahan nəticələrinin artması, şagirdlərin platformadan istifadəsi və dərsləri smayliklərlə necə qiymətləndirməsi.
+- **Qruplar üzrə** — müəllimin hər qrupu üzrə eyni əsas rəqəmlər.
+- **Nəyə diqqət yetirmək lazımdır** — konkret hallar: yoxlanmamış işlər, ardıcıl üç qayıbı olan şagirdlər, getmiş şagirdlər və səbəbi, keçirilməmiş dərslər.
+
+Yaşıl rəng — norma yerinə yetirilib, sarı — kiçik kənarlaşma, qırmızı — normadan aşağı, boz — hələ məlumat yoxdur.
+
+Dərs qiymətləri və ulduzlar hesabata daxil deyil: onları müəllim özü qoyur, ona görə də onlara əsasən işinin keyfiyyəti barədə fikir yürütmək olmaz.
 
 ## Ziyarətlər
 

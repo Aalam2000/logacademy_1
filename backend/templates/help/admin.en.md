@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=en sha1=08f6e415783cf0fb204692a50e7ca0684ebb33e4 -->
+<!-- autoi18n: source=admin.md lang=en sha1=9ebf4f7a4994dd8f19d773824716ef4288f1e365 -->
 # How to work on the platform
 
 The administrator sees everything that the teacher sees — but for all groups and all teachers — and additionally manages users, courses, and groups.
@@ -45,11 +45,50 @@ In the [Knowledge base](/dashboard/materials), the administrator additionally ha
 
 ## Students
 
-In the [Students](/dashboard/students) section — all students of the platform: group, teacher, average grades for lessons, Homework and Exams, absences, tardiness, contacts. Filters by teacher, course, and group, **My** — only your groups. Here you can also delete a student.
+In the [Students](/dashboard/students) section — all students of the platform: group, teacher, average grades for lessons, Homework and Exams, stars, absences, late arrivals, date of last login, phone, parent and contacts. Filters by teacher, course, and group, **My** — only your groups. Click a column name — the table will be sorted by it.
+
+### How to add a student
+
+1. Click **+ Student**.
+2. Fill in the first and last name, phone, login and password. The login and password must then be given to the student.
+3. Enter the parent's name and phone.
+4. Select a group and click **Save**. The student will appear in the group right away and will be able to log in.
+
+### How to change a student's details
+
+Click the **pencil** icon in the student's row. In the window you can change the name, phone, email, Telegram, WhatsApp, and the parent's name and phone. The login cannot be changed.
+
+### Rules for phones
+
+- The student's phone is required. A red dash in the “Phone” column of the list means it is not filled in; the system will ask such a student to enter the phone at login.
+- The same phone cannot belong to two users. If the system says the phone already exists, the student has already been added — find them in the list.
+- If the child has no phone of their own, enter the parent's phone in both fields: “Student's phone” and “Parent's phone”.
+- The parent's phone may repeat: brothers and sisters share it.
+- The number can be entered as +994 50 123 45 67 or 050 123 45 67; a number from another country — with a plus and the country code.
+
+### Other actions
+
+- **Change password** (key) — if the student forgot the password. The system will show the new password on the screen; it must be passed on to the student.
+- **Delete** (trash can) — the system will show what is linked to the student and ask for confirmation.
+- To move a student to another group or unenroll them — on the group page, the **Students** icon.
 
 ## Teachers
 
-In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, attendance, and average grade.
+In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, lessons held, attendance, and average grade.
+
+### Teacher report
+
+Click on a teacher — the report for the month will open. The month is selected at the top of the page.
+
+- **One-sentence conclusion** — how the month went and which indicators need attention.
+- **Amount of work** — scheduled lessons held, personal lessons, hours, and lessons not held. A lesson counts as held if it is open and at least one student attended.
+- **Quality of work** — eight indicators with a target and a color: attendance, whether students stay, whether the journal is filled in on time, whether homework is assigned and checked quickly, whether exam results are growing, whether students use the platform, and how they rate lessons with smileys.
+- **By group** — the same key figures for each of the teacher's groups.
+- **What to pay attention to** — specific cases: unchecked works, students with three absences in a row, students who left and the reason, lessons not held.
+
+Green — the target is met, yellow — a small deviation, red — below target, gray — no data yet.
+
+Lesson grades and stars are not included in the report: the teacher assigns them, so they cannot be used to judge the quality of the teacher's work.
 
 ## Visits
 

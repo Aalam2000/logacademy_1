@@ -1,4 +1,4 @@
-<!-- autoi18n: source=student.md lang=en sha1=4da1e84f6db4d8efd04a5ed3d8e9eed1eae43d3f -->
+<!-- autoi18n: source=student.md lang=en sha1=cb478b214cf53675f5baf373fee31581cf002d57 -->
 # How to work on the platform
 
 ## Home — my lessons
@@ -20,7 +20,9 @@ Click on the lesson to open it.
 
 ## Lesson
 
-At the top — your mark for the lesson: attendance, grade, exam, grade for homework, and stars.
+When the lesson has started, the question **“How was the lesson?”** and three smileys appear at the top right: green — liked it, yellow — it was OK, red — didn't like it. Click one of them. The rating can be changed. The teacher does not see who chose which smiley.
+
+A lesson marked 👤 is a personal one: only you and those the teacher invited can see it.
 
 Below are three tabs: **Materials**, **Homework**, and **Dialogue**. The number on the tab indicates that something is waiting for you there.
 
@@ -48,7 +50,7 @@ Correspondence with the teacher about this lesson. Write a message and send it. 
 
 ## Performance
 
-In the [Performance](/dashboard/performance) section — all your grades for lessons, homework, and exams, as well as absences.
+In the [Performance](/dashboard/performance) section — all your grades for lessons, homework, and exams, as well as absences. Look for the marks for each lesson here — they are not shown on the lesson page itself.
 
 ## Profile
 

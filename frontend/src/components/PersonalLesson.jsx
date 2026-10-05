@@ -12,12 +12,11 @@ import { extractErrorMessage } from '../utils/errors';
 export function PersonalBadge({ lesson, onClick }) {
   if (!lesson?.is_personal) return null;
   const names = (lesson.participants || []).map(p => p.full_name).join(', ');
-  const tip = onClick ? 'Персональный урок — изменить участников' : 'Персональный урок';
   const className = `badge badge--personal badge--inline${onClick ? ' badge--clickable' : ''}`;
   const content = <>{'👤'}{names ? ` ${names}` : ''}</>;
   return onClick
-    ? <button type="button" className={className} data-tip={tip} onClick={onClick}>{content}</button>
-    : <span className={className} data-tip={tip}>{content}</span>;
+    ? <button type="button" className={className} data-tip="Персональный урок — изменить участников" onClick={onClick}>{content}</button>
+    : <span className={className} data-tip="Персональный урок">{content}</span>;
 }
 
 export function ParticipantsPicker({ groupId, value, onChange }) {

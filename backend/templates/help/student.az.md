@@ -1,4 +1,4 @@
-<!-- autoi18n: source=student.md lang=az sha1=4da1e84f6db4d8efd04a5ed3d8e9eed1eae43d3f -->
+<!-- autoi18n: source=student.md lang=az sha1=cb478b214cf53675f5baf373fee31581cf002d57 -->
 # Platformada necə işləmək
 
 ## Ana səhifə — mənim dərslərim
@@ -20,7 +20,9 @@ Dərsi açmaq üçün üzərinə klikləyin.
 
 ## Dərs
 
-Yuxarıda — dərs üçün qiymətiniz: davamiyyət, qiymət, imtahan, ev tapşırığı üçün qiymət və ulduzlar.
+Dərs başlayanda yuxarıda sağda **«Dərs necə idi?»** sualı və üç smaylik görünür: yaşıl — xoşuma gəldi, sarı — normal, qırmızı — xoşuma gəlmədi. Onlardan birini basın. Qiyməti dəyişmək olar. Müəllim kimin hansı smayliki qoyduğunu görmür.
+
+👤 nişanlı dərs — fərdi dərsdir: onu yalnız siz və müəllimin dəvət etdiyi şəxslər görür.
 
 Aşağıda üç sekme: **Materiallar**, **Ev tapşırığı** və **Dialoq**. Sekmedəki rəqəm orada sizi nəsə gözlədiyini bildirir.
 
@@ -46,9 +48,9 @@ Cavabın statusu:
 
 Müəllimlə bu dərs üzrə yazışma. Mesaj yazın və göndərin. Öz mesajınızı düzəldə bilərsiniz — **Dəyişdir** düyməsi.
 
-## Uğur
+## Mənimsəmə
 
-[Uğur](/dashboard/performance) bölməsində — dərslər, ev tapşırıqları və imtahanlar üzrə bütün qiymətləriniz, eləcə də davamiyyət.
+[Mənimsəmə](/dashboard/performance) bölməsində — dərslər, ev tapşırıqları və imtahanlar üzrə bütün qiymətləriniz, eləcə də qayıblar. Hər dərs üzrə qeydlərə burada baxın — dərsin öz səhifəsində onlar yoxdur.
 
 ## Profil
 

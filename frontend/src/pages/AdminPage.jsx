@@ -358,10 +358,7 @@ function AdminPage() {
   // Смена роли педагог ⇄ админ. Себе менять нельзя (кнопка неактивна, бэкенд тоже откажет).
   const changeRole = async (u, role) => {
     const name = u.full_name || u.username;
-    const question = role === 'admin'
-      ? `Сделать админом: ${name}?`
-      : `Перевести в педагоги: ${name}?`;
-    if (!window.confirm(question)) return;
+    if (!window.confirm(role === 'admin' ? `Сделать админом: ${name}?` : `Перевести в педагоги: ${name}?`)) return;
     try {
       await setUserRole(u.id, role);
       await Promise.all([loadTeachers(), loadAdmins()]);

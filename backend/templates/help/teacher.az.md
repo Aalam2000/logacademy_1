@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=az sha1=008f32934d109899f94d733c022240be0b0ec0b2 -->
+<!-- autoi18n: source=teacher.md lang=az sha1=4cdba946ddb4d0a9dd57c8e6c0a8d415c9eccb1d -->
 # Platformada necə işləmək
 
 ## Qruplarım
@@ -9,20 +9,30 @@ Qrupun üzərinə klikləyin, onu açmaq üçün.
 
 ## Qrup
 
-Qrup səhifəsinin yuxarı hissəsində:
+Qrup səhifəsinin yuxarı hissəsində — nişanlar, hər birinin adı üzərinə gətirəndə görünür:
 
-- **Qrup parametrləri** — ad, Telegram, WhatsApp, videokonfrans linki və dərsin standart müddəti;
+- **Qrup ayarları** (dişli çarx) — ad, Telegram, WhatsApp, videokonfrans linki və dərsin standart müddəti;
 - **Qeydiyyat üçün QR** — şagirdlərin qrupda özləri qeydiyyatdan keçməsi üçün link və QR-kod; orada həmçinin dərhal şagird əlavə etmək mümkündür, istifadəçi adı və şifrə ilə;
-- **Şagirdlər** — qrupun tərkibi: axtarışla şagird əlavə etmək, xaric etmək (səbəbini göstərməklə) və ya arxivdən qaytarmaq.
+- **Şagirdlər** (sayı olan adamcıqlar) — qrupun tərkibi və telefonlar: axtarışla şagird əlavə etmək, onun və valideynin məlumatlarını **dəyişmək**, xaric etmək (səbəbini göstərməklə) və ya arxivdən qaytarmaq. «Telefon» sütununda qırmızı tire — telefon doldurulmayıb.
 
 ### Qrupun Dərsləri
 
-Dərslər **cədvəl** və ya **təqvim** şəklində görünür. Filtr — bu gündən, həftənin əvvəlinə, ayın əvvəlinə və ya hamısı.
+Dərslər **cədvəl** və ya **təqvim** şəklində görünür — solda iki nişan. Filtr — bu gündən, həftənin əvvəlindən, ayın əvvəlindən və ya hamısı.
 
-- **+ Dərs** — bir dərs yaratmaq.
-- **Cədvəli doldur** — eyni anda çox sayda dərs yaratmaq: ilk dərsin tarixi, vaxtı, müddəti, həftənin günləri, dərs sayı. Materialları kurs şablonundan və ya digər qrupdan götürmək mümkündür.
-- **Materialları yeniləmək** — dərslərin materiallarını kurs şablonundan və ya digər qrupdan çəkmək: çatışmayanları əlavə etmək və ya əvəz etmək.
+- **+ Dərs** — bir dərs yaratmaq: tarix, vaxt, müddət və lazım olsa, öz adı.
+- **Cədvəl və materiallar** (plyuslu təqvim) — eyni anda çox sayda dərs yaratmaq: ilk dərsin tarixi, vaxtı, müddəti, həftənin günləri, dərs sayı. Materialları kurs şablonundan və ya digər qrupdan götürmək mümkündür. Dərslər artıq varsa, burada tarixləri saxlayıb yalnız materialları çəkmək olar.
+- **Dərsləri aç** (qıfıl) — nömrələr üzrə bir neçə dərsi şagirdlərə birdən açmaq.
 - **Bayram kimi qeyd etmək** — bu tarixdə dərs keçirilmir: o və bütün sonrakı dərslər cədvəldə irəliləyir.
+
+### Fərdi dərs
+
+Qrupun bir və ya bir neçə şagirdi üçün əlavə məşğələ. **+ Dərs** pəncərəsində **Fərdi dərs** qutusunu işarələyin və şagirdləri seçin.
+
+- Belə dərsi yalnız seçilmiş şagirdlər görür. Digərlərinə o göstərilmir və onlara qayıb yazılmır.
+- Dərslər siyahısında və təqvimdə o, iştirakçıların adları ilə 👤 nişanı ilə qeyd olunub.
+- Materiallar, ev tapşırıqları, qiymətlər və ulduzlar adi dərsdəki kimi işləyir.
+- İştirakçıların tərkibi dərs səhifəsində dəyişdirilir — 👤 nişanını basın.
+- Dərs bağlı yaradılır: onu dərs səhifəsində açın. «Dərsləri aç», «Cədvəl və materiallar» və «Bayram kimi qeyd etmək» düymələri fərdi dərslərə toxunmur.
 
 Yoxlanmamış Ev tapşırığına cavabları olan dərs "Ev tapşırığı: yoxlamaq" ilə qeyd olunur.
 
@@ -80,7 +90,15 @@ Təqdim etmə müddətini hamıya eyni anda və ya ayrı-ayrılıqda bir tələb
 
 ## Tələbələr
 
-[Tələbələr](/dashboard/students) bölməsində — bütün şagirdləriniz: qrup, dərslər üzrə orta qiymətlər, Ev tapşırıqları və imtahanlar, davamiyyət, gecikmələr və əlaqə məlumatları. Ad və ya akademik göstəricilər üzrə sıralamaq mümkündür.
+[Tələbələr](/dashboard/students) bölməsində — bütün şagirdləriniz: qrup, dərslər üzrə orta qiymətlər, Ev tapşırıqları və imtahanlar, ulduzlar, qayıblar, gecikmələr, son giriş tarixi, telefon, valideyn və əlaqə məlumatları. Sütunun adına klikləyin — cədvəl həmin sütun üzrə sıralanacaq; təkrar klik sıranı dəyişir.
+
+- **+ Tələbə** — yeni şagirdi birbaşa öz qrupunuza əlavə etmək: ad, login, şifrə, telefon, valideynin məlumatları.
+- **Tələbənin və valideynin məlumatları** (qələm) — adı, telefonu, email, messencerləri, valideynin adını və telefonunu dəyişmək.
+- **Şifrəni dəyiş** (açar) — şagird şifrəni unudubsa.
+
+Şagirdin telefonu məcburidir və iki istifadəçidə təkrarlana bilməz. Uşağın öz telefonu yoxdursa, valideynin telefonunu yazın. Nömrəni +994 50 123 45 67 və ya 050 123 45 67 şəklində daxil etmək olar.
+
+Şagirdlər hər dərsi smayliklə qiymətləndirir (yaşıl, sarı, qırmızı). Kimin hansı smayliki qoyduğunu siz görmürsünüz: beləcə uşaqlar düzünü cavablandırır.
 
 ## Profil
 

@@ -15,10 +15,16 @@ const currentMonth = () => {
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ru-RU') : '—');
 const withSign = (n) => (n > 0 ? `+${n}` : `${n}`);
 
-const STATUS_LABEL = { good: 'в норме', warn: 'внимание', bad: 'ниже нормы', none: 'нет данных' };
-
-function Dot({ status }) {
-  return <span className={`report__dot report__dot--${status}`} />;
+// ВАЖНО для перевода: autoi18n находит фразы только в JSX — текст, {'строка'},
+// тернарник в {...} и атрибуты. Строки в свойствах объектов ({ q: '...' }),
+// в словарях и после && он не видит, поэтому все фразы здесь обёрнуты в JSX.
+function Status({ status }) {
+  return (
+    <>
+      <span className={`report__dot report__dot--${status}`} />
+      {status === 'good' ? 'в норме' : status === 'warn' ? 'внимание' : status === 'bad' ? 'ниже нормы' : 'нет данных'}
+    </>
+  );
 }
 
 // Строки «Как отработано»: вопрос, пояснение, значение «сейчас» и норма
@@ -26,57 +32,57 @@ function indicatorRow(ind, norms) {
   switch (ind.key) {
     case 'attendance':
       return {
-        q: 'Ходят ли дети на уроки?',
-        hint: 'Доля посещённых уроков; пропуски по уважительной причине не считаются',
+        q: <>{'Ходят ли дети на уроки?'}</>,
+        hint: <>{'Доля посещённых уроков; пропуски по уважительной причине не считаются'}</>,
         value: ind.pct != null ? `${ind.pct}%` : '—',
         norm: <>{'от'} {norms.attendance}%</>,
       };
     case 'retention':
       return {
-        q: 'Остаются ли ученики?',
-        hint: 'Сколько учеников было в этом месяце и сколько осталось',
+        q: <>{'Остаются ли ученики?'}</>,
+        hint: <>{'Сколько учеников было в этом месяце и сколько осталось'}</>,
         value: ind.total ? <>{ind.stayed} {'из'} {ind.total}</> : '—',
-        norm: 'все остались',
+        norm: <>{'все остались'}</>,
       };
     case 'journal':
       return {
-        q: 'Заполняется ли журнал вовремя?',
-        hint: 'В скольких проведённых уроках посещаемость отмечена в день урока',
+        q: <>{'Заполняется ли журнал вовремя?'}</>,
+        hint: <>{'В скольких проведённых уроках посещаемость отмечена в день урока'}</>,
         value: ind.total ? <>{ind.done} {'из'} {ind.total}</> : '—',
         norm: <>{'от'} {norms.journal}%</>,
       };
     case 'hw_assigned':
       return {
-        q: 'Задаются ли домашние задания?',
-        hint: 'В скольких проведённых уроках было задание',
+        q: <>{'Задаются ли домашние задания?'}</>,
+        hint: <>{'В скольких проведённых уроках было задание'}</>,
         value: ind.total ? <>{ind.done} {'из'} {ind.total}</> : '—',
         norm: <>{'от'} {norms.hw_assigned}%</>,
       };
     case 'hw_review_days':
       return {
-        q: 'Быстро ли проверяются домашние задания?',
+        q: <>{'Быстро ли проверяются домашние задания?'}</>,
         hint: <>{'Среднее время от сдачи работы до проверки. Сейчас ждут проверки'}: {ind.queue}</>,
         value: ind.days != null ? <>{ind.days} {'дн.'}</> : '—',
         norm: <>{'до'} {norms.hw_review_days} {'дн.'}</>,
       };
     case 'exams':
       return {
-        q: 'Растут ли знания?',
+        q: <>{'Растут ли знания?'}</>,
         hint: <>{'Средний балл экзаменов в live-квизе, его считает система.'}{ind.prev != null && <> {'В прошлом месяце было'} {ind.prev}</>}</>,
         value: ind.avg != null ? <>{ind.avg}{ind.delta != null && <> ({withSign(ind.delta)})</>}</> : '—',
-        norm: 'не падает',
+        norm: <>{'не падает'}</>,
       };
     case 'platform':
       return {
-        q: 'Пользуются ли ученики платформой?',
-        hint: 'Сколько учеников заходили в платформу за последнюю неделю периода',
+        q: <>{'Пользуются ли ученики платформой?'}</>,
+        hint: <>{'Сколько учеников заходили в платформу за последнюю неделю периода'}</>,
         value: ind.total ? <>{ind.done} {'из'} {ind.total}</> : '—',
         norm: <>{'от'} {norms.platform}%</>,
       };
     case 'feedback':
       return {
-        q: 'Нравятся ли детям уроки?',
-        hint: 'Как ученики оценили уроки смайликами. Педагог отдельных оценок не видит',
+        q: <>{'Нравятся ли детям уроки?'}</>,
+        hint: <>{'Как ученики оценили уроки смайликами. Педагог отдельных оценок не видит'}</>,
         value: (ind.green + ind.yellow + ind.red) > 0 ? (
           <span className="report__faces">
             <span className="report__face report__face--good">{ind.green}</span>
@@ -154,10 +160,10 @@ function TeacherReportPage() {
               {/* Вывод одной фразой */}
               <div className={`report__verdict report__verdict--${report.level}`}>
                 <div className="report__verdict-title">
-                  {report.level === 'excellent' && 'Месяц отработан отлично'}
-                  {report.level === 'good' && 'Месяц отработан хорошо'}
-                  {report.level === 'problems' && 'Есть проблемы — нужен разговор с педагогом'}
-                  {report.level === 'none' && 'В этом месяце уроков ещё не было — оценивать нечего'}
+                  {report.level === 'excellent' ? 'Месяц отработан отлично'
+                    : report.level === 'good' ? 'Месяц отработан хорошо'
+                    : report.level === 'problems' ? 'Есть проблемы — нужен разговор с педагогом'
+                    : 'В этом месяце уроков ещё не было — оценивать нечего'}
                   {report.level !== 'none' && <>: {'в норме'} {report.good} {'из'} {report.rated}</>}
                 </div>
                 {report.level !== 'none' && weak.length > 0 && (
@@ -203,7 +209,7 @@ function TeacherReportPage() {
                           </td>
                           <td className="nowrap report__value">{row.value}</td>
                           <td className="nowrap report__norm">{row.norm}</td>
-                          <td className="nowrap"><Dot status={ind.status} />{STATUS_LABEL[ind.status]}</td>
+                          <td className="nowrap"><Status status={ind.status} /></td>
                         </tr>
                       );
                     })}
