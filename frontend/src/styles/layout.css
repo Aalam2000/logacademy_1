@@ -137,7 +137,14 @@
   flex-wrap: wrap;
 }
 .group-header__title {
-  margin: 0 0 var(--space-1) 0;
+  margin: 0;
+}
+/* Название группы и «Курс: …» в одну строку (по базовой линии текста) */
+.group-header__titleline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
 }
 .dashboard-page-content {
   flex: 1;

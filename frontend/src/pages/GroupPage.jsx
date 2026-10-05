@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 import IconButton from '../components/IconButton';
 import QRModal from '../components/QRModal';
 import StudentsModal from '../components/StudentsModal';
@@ -20,6 +21,8 @@ const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 function GroupPage() {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('admin');
   const { groupId } = useParams();
   const gid = parseInt(groupId);
 
@@ -404,12 +407,18 @@ function GroupPage() {
           <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
             {'Назад'}
           </button>
-          <div>
+          {/* Название и курс — в одну строку, чтобы шапка была ниже */}
+          <div className="group-header__titleline">
             <h2 className="group-header__title">{group.name}</h2>
             <div className="meta-row">
               <span>{'Курс'}: <b>{courseName}</b></span>
-              <span>·</span>
-              <span>{'Преподаватель'}: <b>{group.teacher_name || '—'}</b></span>
+              {/* Педагогу своё имя не показываем (оно в шапке) — только админу, который смотрит чужие группы */}
+              {isAdmin && (
+                <>
+                  <span>·</span>
+                  <span>{'Преподаватель'}: <b>{group.teacher_name || '—'}</b></span>
+                </>
+              )}
             </div>
           </div>
         </div>

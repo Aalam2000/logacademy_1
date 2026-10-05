@@ -44,7 +44,10 @@ function Dashboard() {
 
           <div className="dashboard-header-left">
             <h2>
-              {`Добро пожаловать, ${user?.username || ''}!`}
+              {/* На телефоне остаётся только имя и роль — приветствие скрыто (.greeting__text, media.css) */}
+              <span className="greeting__text">{'Добро пожаловать'}{', '}</span>
+              {user?.username || ''}
+              <span className="greeting__text">{'!'}</span>
               {user?.role && (
                 <span className={roleBadgeClass}>{user.role}</span>
               )}
