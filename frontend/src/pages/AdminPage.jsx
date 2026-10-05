@@ -634,7 +634,7 @@ function AdminPage() {
                     <td>
                       <div className="icon-row">
                         <IconButton
-                          icon="schedule"
+                          icon="calendarView"
                           tip="Расписание группы"
                           onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/groups/${g.id}`); }}
                         />

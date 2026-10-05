@@ -16,15 +16,38 @@ const svgProps = {
 };
 
 const ICONS = {
-  // Расписание — календарь с ячейками
+  // Заполнить расписание (действие) — календарь с плюсом. Нарочно не похож
+  // на значок вида «Календарь» (calendarView): там сетка дней, здесь «+».
   schedule: (
     <svg {...svgProps}>
       <rect x="3" y="5" width="18" height="16" />
       <line x1="3" y1="10" x2="21" y2="10" />
       <line x1="8" y1="3" x2="8" y2="7" />
       <line x1="16" y1="3" x2="16" y2="7" />
-      <rect x="7" y="13" width="3" height="3" />
-      <rect x="14" y="13" width="3" height="3" />
+      <line x1="12" y1="12.5" x2="12" y2="18.5" />
+      <line x1="9" y1="15.5" x2="15" y2="15.5" />
+    </svg>
+  ),
+  // Вид «Таблица» — строки списка
+  tableView: (
+    <svg {...svgProps}>
+      <rect x="3" y="4" width="18" height="16" />
+      <line x1="3" y1="9.5" x2="21" y2="9.5" />
+      <line x1="3" y1="14.5" x2="21" y2="14.5" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+    </svg>
+  ),
+  // Вид «Календарь» — месяц: сетка дней 3×2 под шапкой
+  calendarView: (
+    <svg {...svgProps}>
+      <rect x="3" y="4" width="18" height="17" />
+      <line x1="3" y1="8.5" x2="21" y2="8.5" />
+      <rect x="6" y="11" width="2.5" height="2.5" />
+      <rect x="10.75" y="11" width="2.5" height="2.5" />
+      <rect x="15.5" y="11" width="2.5" height="2.5" />
+      <rect x="6" y="15.5" width="2.5" height="2.5" />
+      <rect x="10.75" y="15.5" width="2.5" height="2.5" />
+      <rect x="15.5" y="15.5" width="2.5" height="2.5" />
     </svg>
   ),
   // Открыть уроки — раскрытый замок

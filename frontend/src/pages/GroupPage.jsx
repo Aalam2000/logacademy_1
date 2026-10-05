@@ -434,21 +434,10 @@ function GroupPage() {
 
       {/* Тулбар уроков: Таблица/Календарь — слева, действия с уроками — справа */}
       <div className="toolbar">
-        <div className="toolbar__filters">
-          <button
-            type="button"
-            className={`tab${viewMode === 'table' ? ' tab--active' : ''}`}
-            onClick={() => setViewMode('table')}
-          >
-            {'Таблица'}
-          </button>
-          <button
-            type="button"
-            className={`tab${viewMode === 'calendar' ? ' tab--active' : ''}`}
-            onClick={() => setViewMode('calendar')}
-          >
-            {'Календарь'}
-          </button>
+        {/* Переключатель вида: выбранный значок залит */}
+        <div className="icon-row">
+          <IconButton icon="tableView" tip={'Таблица'} active={viewMode === 'table'} onClick={() => setViewMode('table')} />
+          <IconButton icon="calendarView" tip={'Календарь'} active={viewMode === 'calendar'} onClick={() => setViewMode('calendar')} />
         </div>
         <div className="button-row">
           <button className="btn" onClick={openCreateModal}>
