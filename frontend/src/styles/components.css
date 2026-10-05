@@ -633,6 +633,211 @@
 .badge--today {
   background: var(--color-warning);
 }
+/* Заголовок раздела внутри формы (карточка ученика) */
+.form-section {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+/* Пустое обязательное значение в таблице (нет телефона) */
+.cell-missing {
+  color: var(--color-primary);
+}
+
+/* ===== Отчёт по педагогу (TeacherReportPage.jsx) ===== */
+.report {
+  max-width: 980px;
+  background: var(--color-white);
+  border: 2px solid var(--color-primary-border);
+  padding: var(--space-6);
+}
+.report__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  border-bottom: 2px solid var(--color-primary-border);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.report__name {
+  font-size: 1.4rem;
+  font-weight: var(--weight-bold);
+}
+.report__meta,
+.report__hint,
+.report__norm {
+  color: var(--color-muted);
+  font-size: var(--font-sm);
+}
+.report__verdict {
+  padding: var(--space-3) var(--space-4);
+  border-left: 6px solid var(--color-muted);
+  background: var(--color-bg-soft);
+}
+.report__verdict--excellent,
+.report__verdict--good {
+  border-left-color: var(--color-role-student);
+  background: color-mix(in srgb, var(--color-role-student) 14%, var(--color-white));
+}
+.report__verdict--problems {
+  border-left-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-white));
+}
+.report__verdict-title {
+  font-weight: var(--weight-bold);
+  font-size: var(--font-lg);
+}
+.report__h {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: var(--font-base);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.report__h small {
+  margin-left: var(--space-2);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: var(--font-sm);
+  color: var(--color-muted);
+}
+.report__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+.report__tile {
+  background: var(--color-bg-soft);
+  padding: var(--space-3);
+}
+.report__tile b {
+  display: block;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+.report__tile b small {
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-muted);
+}
+.report__tile span {
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+}
+.report__q,
+.report__value {
+  font-weight: var(--weight-bold);
+}
+.report__dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: -1px;
+  background: var(--color-bg-muted);
+}
+.report__dot--good { background: var(--color-role-student); }
+.report__dot--warn { background: var(--color-warning); }
+.report__dot--bad { background: var(--color-primary); }
+.report__faces {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+.report__face {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.report__face::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.report__face--good::before { background: var(--color-role-student); }
+.report__face--warn::before { background: var(--color-warning); }
+.report__face--bad::before { background: var(--color-primary); }
+.report__attention {
+  background: var(--color-warning-bg);
+  padding: var(--space-3) var(--space-4);
+}
+.report__attention ul {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+.report__attention li {
+  margin: var(--space-1) 0;
+}
+.report__foot {
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+}
+.report__foot p {
+  margin: var(--space-1) 0;
+}
+@media (max-width: 768px) {
+  .report {
+    padding: var(--space-4);
+  }
+  .report__tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* «Как тебе урок?» — три смайлика у ученика (LessonFeedback.jsx) */
+.lesson-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-white);
+  border: 1px solid var(--color-border-light);
+}
+.lesson-feedback__q {
+  font-weight: var(--weight-medium);
+}
+.lesson-feedback__faces {
+  display: inline-flex;
+  gap: var(--space-3);
+}
+.lesson-feedback__face {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.lesson-feedback__face svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.lesson-feedback__face:hover:not(:disabled),
+.lesson-feedback__face--active {
+  opacity: 1;
+  transform: scale(1.12);
+}
+.lesson-feedback__face--good { color: var(--color-role-student); }
+.lesson-feedback__face--ok { color: var(--color-warning); }
+.lesson-feedback__face--bad { color: var(--color-primary); }
+.lesson-feedback__face--active.lesson-feedback__face--good { background: color-mix(in srgb, var(--color-role-student) 18%, transparent); }
+.lesson-feedback__face--active.lesson-feedback__face--ok { background: color-mix(in srgb, var(--color-warning) 22%, transparent); }
+.lesson-feedback__face--active.lesson-feedback__face--bad { background: color-mix(in srgb, var(--color-primary) 16%, transparent); }
+
 /* Персональный урок: «👤 имена участников» (PersonalLesson.jsx) */
 .badge--personal {
   background: var(--color-info);

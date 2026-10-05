@@ -18,7 +18,7 @@ from ..database import get_db
 from .. import storage
 from ..models import (
     Lesson, Group, GroupMember, User, LessonMark, LessonResource, Material, Link, Quiz,
-    HomeworkTask, HomeworkAnswer, HomeworkAnswerFile, LessonMessage, LessonStudent,
+    HomeworkTask, HomeworkAnswer, HomeworkAnswerFile, LessonMessage, LessonStudent, LessonFeedback,
 )
 from ..dependencies import require_teacher, get_current_user
 from ..resources import RESOURCE_MODELS, RESOURCE_NOT_FOUND, fetch_resource_details, resource_exists
@@ -1163,6 +1163,66 @@ async def get_my_lesson_mark(
         comment=mark.comment if mark else None,
         marked_at=mark.marked_at if mark else None,
     )
+
+
+# «Как тебе урок?» — оценка урока учеником тремя смайликами: 3 зелёный,
+# 2 жёлтый, 1 красный. Оценить можно урок, который уже начался; оценку можно
+# поменять. Педагог отдельных оценок не видит — сводка идёт в отчёт по
+# педагогу у админа (app/teacher_report.py).
+class LessonFeedbackIn(BaseModel):
+    rating: int = Field(ge=1, le=3)
+
+
+class LessonFeedbackOut(BaseModel):
+    rating: Optional[int] = None   # None — ещё не оценил
+    can_rate: bool = False         # урок уже начался
+
+
+def _lesson_started(lesson: Lesson) -> bool:
+    if lesson.date is None:
+        return False
+    started = lesson.date if lesson.date.tzinfo else lesson.date.replace(tzinfo=dt_timezone.utc)
+    return started <= datetime.now(dt_timezone.utc)
+
+
+@router.get("/{lesson_id}/feedback/me", response_model=LessonFeedbackOut)
+async def get_my_lesson_feedback(
+    lesson_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+    lesson = await get_lesson_for_student(lesson_id, db, current_user)
+    rating = (await db.execute(select(LessonFeedback.rating).where(
+        LessonFeedback.lesson_id == lesson_id, LessonFeedback.student_id == current_user.id,
+    ))).scalar_one_or_none()
+    return LessonFeedbackOut(rating=rating, can_rate=_lesson_started(lesson))
+
+
+@router.put("/{lesson_id}/feedback/me", response_model=LessonFeedbackOut)
+async def save_my_lesson_feedback(
+    lesson_id: int,
+    data: LessonFeedbackIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+    lesson = await get_lesson_for_student(lesson_id, db, current_user)
+    if not _lesson_started(lesson):
+        raise HTTPException(status_code=400, detail="Оценить урок можно после его начала")
+    feedback = (await db.execute(select(LessonFeedback).where(
+        LessonFeedback.lesson_id == lesson_id, LessonFeedback.student_id == current_user.id,
+    ))).scalar_one_or_none()
+    now = datetime.now(dt_timezone.utc)
+    if feedback is None:
+        db.add(LessonFeedback(lesson_id=lesson_id, student_id=current_user.id, rating=data.rating, created_at=now, updated_at=now))
+    else:
+        feedback.rating = data.rating
+        feedback.updated_at = now
+    await db.commit()
+    return LessonFeedbackOut(rating=data.rating, can_rate=True)
 
 
 # Сохранить отметку одного студента (автосохранение по полю на фронте)

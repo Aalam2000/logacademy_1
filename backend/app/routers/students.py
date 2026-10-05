@@ -55,6 +55,10 @@ class StudentStatsOut(BaseModel):
     stars_total: int = 0                    # сумма звёзд за уроки
     unexcused_absences: int = 0
     late_count: int = 0
+    # Для колонок «Телефон» и «Родитель» в таблице «Студенты»
+    phone: Optional[str] = None
+    parent_name: Optional[str] = None
+    parent_phone: Optional[str] = None
     last_login_at: Optional[datetime] = None  # начало последней сессии (user_sessions)
     groups: list[StudentGroupOut] = []
 
@@ -209,12 +213,18 @@ async def list_students(
         return []
 
     users_result = await db.execute(
-        select(User.id, User.full_name, User.username, User.telegram_username, User.whatsapp)
+        select(
+            User.id, User.full_name, User.username, User.telegram_username, User.whatsapp,
+            User.phone, User.parent_name, User.parent_phone,
+        )
         .where(User.id.in_(student_ids))
     )
     users = {
-        uid: {"full_name": full_name or username, "telegram_username": telegram_username, "whatsapp": whatsapp}
-        for uid, full_name, username, telegram_username, whatsapp in users_result.all()
+        uid: {
+            "full_name": full_name or username, "telegram_username": telegram_username, "whatsapp": whatsapp,
+            "phone": phone, "parent_name": parent_name, "parent_phone": parent_phone,
+        }
+        for uid, full_name, username, telegram_username, whatsapp, phone, parent_name, parent_phone in users_result.all()
     }
 
     stats = await _compute_stats(db, student_ids, group_ids)
@@ -229,12 +239,15 @@ async def list_students(
 
     out = []
     for sid in student_ids:
-        u = users.get(sid, {"full_name": f"#{sid}", "telegram_username": None, "whatsapp": None})
+        u = users.get(sid, {"full_name": f"#{sid}"})
         out.append(StudentStatsOut(
             id=sid,
             full_name=u["full_name"],
-            telegram_username=u["telegram_username"],
-            whatsapp=u["whatsapp"],
+            telegram_username=u.get("telegram_username"),
+            whatsapp=u.get("whatsapp"),
+            phone=u.get("phone"),
+            parent_name=u.get("parent_name"),
+            parent_phone=u.get("parent_phone"),
             last_login_at=last_logins.get(sid),
             groups=[StudentGroupOut(**{k: v for k, v in g.items() if k in ("id", "name", "teacher_id", "teacher_name")}) for g in student_groups[sid]],
             **_stats_summary(stats[sid]),
@@ -393,6 +406,9 @@ async def set_student_password(
 class StudentProfile(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
+    telegram_username: Optional[str] = None
+    whatsapp: Optional[str] = None
     parent_name: Optional[str] = None
     parent_phone: Optional[str] = None
 
@@ -400,13 +416,82 @@ class StudentProfile(BaseModel):
 class StudentProfileOut(StudentProfile):
     id: int
     username: str
+    groups: list[str] = []  # названия активных групп ученика — только для показа
 
 
-def _profile_out(student: User) -> StudentProfileOut:
+class StudentCreate(StudentProfile):
+    username: str
+    password: str
+    group_id: int
+
+
+def _clean(value: Optional[str]) -> Optional[str]:
+    return (value or "").strip() or None
+
+
+def _parent_phone(raw: Optional[str]) -> Optional[str]:
+    # Телефон родителя: тот же формат, что у ученика, но повторяться может (братья и сёстры)
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    normalized = normalize_phone(raw)
+    if not normalized:
+        raise HTTPException(status_code=422, detail=PHONE_FORMAT_ERROR)
+    return normalized
+
+
+async def _profile_out(db: AsyncSession, student: User) -> StudentProfileOut:
+    group_names = [row[0] for row in (await db.execute(
+        select(Group.name).join(GroupMember, GroupMember.group_id == Group.id)
+        .where(GroupMember.student_id == student.id, GroupMember.status == "active")
+        .order_by(Group.name)
+    )).all()]
     return StudentProfileOut(
         id=student.id, username=student.username, full_name=student.full_name,
-        phone=student.phone, parent_name=student.parent_name, parent_phone=student.parent_phone,
+        phone=student.phone, email=student.email,
+        telegram_username=student.telegram_username, whatsapp=student.whatsapp,
+        parent_name=student.parent_name, parent_phone=student.parent_phone,
+        groups=group_names,
     )
+
+
+# Новый ученик сразу в группу — заводит админ (секретарь) или педагог в свою
+# группу. Те же правила, что при регистрации по QR: логин не занят, телефон
+# обязателен и в базе не повторяется (app/phones.py).
+@router.post("", response_model=StudentProfileOut)
+async def create_student(
+    data: StudentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    groups_by_id = await _scope_group_ids(db, current_user)
+    if data.group_id not in groups_by_id:
+        raise HTTPException(status_code=403, detail="Нет доступа к этой группе")
+    username = data.username.strip()
+    if not username or not data.password:
+        raise HTTPException(status_code=422, detail="Укажите логин и пароль")
+    if (await db.execute(select(User.id).where(User.username == username))).first():
+        raise HTTPException(status_code=400, detail="Пользователь с таким логином уже существует")
+
+    student = User(
+        username=username,
+        hashed_password=get_password_hash(data.password),
+        role="student",
+        full_name=_clean(data.full_name),
+        phone=await checked_student_phone(db, data.phone),
+        email=_clean(data.email),
+        telegram_username=_clean(data.telegram_username),
+        whatsapp=_clean(data.whatsapp),
+        parent_name=_clean(data.parent_name),
+        parent_phone=_parent_phone(data.parent_phone),
+        created_by=current_user.id,
+    )
+    db.add(student)
+    await db.flush()
+    db.add(GroupMember(group_id=data.group_id, student_id=student.id))
+    await db.commit()
+    await db.refresh(student)
+    return await _profile_out(db, student)
 
 
 @router.get("/{student_id}/profile", response_model=StudentProfileOut)
@@ -416,7 +501,7 @@ async def get_student_profile(
     current_user: User = Depends(require_teacher),
 ):
     student, _, _ = await _get_accessible_student(db, student_id, current_user)
-    return _profile_out(student)
+    return await _profile_out(db, student)
 
 
 @router.put("/{student_id}/profile", response_model=StudentProfileOut)
@@ -439,21 +524,15 @@ async def update_student_profile(
     elif (student.phone or "").strip():
         raise HTTPException(status_code=422, detail=PHONE_REQUIRED_ERROR)
 
-    student.parent_name = (data.parent_name or "").strip() or None
-
-    # Телефон родителя: тот же формат, но повторяться может (братья и сёстры)
-    parent_phone = (data.parent_phone or "").strip()
-    if parent_phone:
-        normalized = normalize_phone(parent_phone)
-        if not normalized:
-            raise HTTPException(status_code=422, detail=PHONE_FORMAT_ERROR)
-        student.parent_phone = normalized
-    else:
-        student.parent_phone = None
+    student.email = _clean(data.email)
+    student.telegram_username = _clean(data.telegram_username)
+    student.whatsapp = _clean(data.whatsapp)
+    student.parent_name = _clean(data.parent_name)
+    student.parent_phone = _parent_phone(data.parent_phone)
 
     await db.commit()
     await db.refresh(student)
-    return _profile_out(student)
+    return await _profile_out(db, student)
 
 
 # Удалить ученика — только admin. Общий контроль удаления (app/usages.py):

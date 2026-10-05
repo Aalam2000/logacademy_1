@@ -99,6 +99,20 @@ class LessonStudent(Base):
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 
 
+# Оценка урока учеником — три смайлика: 3 зелёный (понравилось), 2 жёлтый
+# (нормально), 1 красный (не понравилось). Одна запись на пару (урок, ученик).
+# Педагогу отдельные оценки не показываются — только сводка в отчёте по
+# педагогу у админа (app/teacher_report.py), иначе дети не будут честными.
+class LessonFeedback(Base):
+    __tablename__ = "lesson_feedback"
+    __table_args__ = (Index("ix_lesson_feedback_student_id", "student_id"),)
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), primary_key=True)
+    student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    rating = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # Посещаемость + оценка + звёзды за урок. Одна строка на пару (урок, студент).
 class LessonMark(Base):
     __tablename__ = "lesson_marks"

@@ -12,6 +12,10 @@ from ..core.security import get_password_hash
 from ..dependencies import require_admin
 from .academy import sector_exists
 from ..phones import ensure_phone_free
+from ..teacher_report import build_teacher_report
+import re
+from datetime import datetime
+from ..lesson_lock import BAKU_TZ
 import secrets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -201,6 +205,29 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
 
     out.sort(key=lambda t: t.full_name.lower())
     return out
+
+
+# Отчёт по педагогу за месяц (страница «Учителя» → клик по педагогу):
+# сколько отработано и как — показатели качества, которые педагог не
+# выставляет себе сам. Правила и нормы — app/teacher_report.py.
+# month=ГГГГ-ММ; не задан — текущий месяц (по Баку).
+@router.get("/teachers/{user_id}/report")
+async def get_teacher_report(
+    user_id: int,
+    month: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    if month is None:
+        month = datetime.now(BAKU_TZ).strftime("%Y-%m")
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise HTTPException(status_code=422, detail="Месяц должен быть в виде ГГГГ-ММ")
+    teacher = (await db.execute(
+        select(User).where(User.id == user_id, User.role.in_(["teacher", "admin"]))
+    )).scalar_one_or_none()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Педагог не найден")
+    return await build_teacher_report(db, teacher, month)
 
 
 # ── АДМИНЫ ──

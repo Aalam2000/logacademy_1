@@ -8,6 +8,7 @@ import DeleteButton from '../components/DeleteButton';
 import IconButton from '../components/IconButton';
 import PasswordModal from '../components/PasswordModal';
 import SortTh, { sortRows } from '../components/SortTh';
+import StudentCardModal from '../components/StudentCardModal';
 import { setStudentPassword } from '../api/students';
 
 // Последний вход: «05.10.2026 14:32», нет входов — «—»
@@ -28,6 +29,8 @@ function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [passwordStudent, setPasswordStudent] = useState(null); // ученик, которому меняют пароль
+  const [cardStudentId, setCardStudentId] = useState(null);     // карточка ученика: id — правка
+  const [isAddingStudent, setIsAddingStudent] = useState(false); // карточка нового ученика
 
   const [courseId, setCourseId] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -128,10 +131,10 @@ function StudentsPage() {
   // «Препод» показываем только пока admin смотрит сводно (не выбран ни
   // конкретный препод, ни «Моё») — иначе колонка избыточна, все и так его.
   const showTeacherColumn = isAdmin && !mine && !teacherId;
-  const columnCount = 11 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
+  const columnCount = 13 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
 
   // Значение ячейки для сортировки: текстовые колонки — строка, остальные — число (или null)
-  const TEXT_KEYS = ['name', 'group', 'teacher'];
+  const TEXT_KEYS = ['name', 'group', 'teacher', 'phone', 'parent_name'];
   const sortValue = (s, key) => {
     if (key === 'name') return s.full_name || '';
     if (key === 'group') return s.groups.map(g => g.name).join(', ');
@@ -192,6 +195,7 @@ function StudentsPage() {
               {'Моё'}
             </button>
           )}
+          <button type="button" className="btn" onClick={() => setIsAddingStudent(true)}>{'+ Ученик'}</button>
         </div>
       </div>
 
@@ -212,6 +216,8 @@ function StudentsPage() {
               {sortTh('unexcused_absences', 'Пропуски')}
               {sortTh('late_count', 'Опоздания')}
               {sortTh('last_login_at', 'Вход', 'Дата и время последнего входа в систему')}
+              {sortTh('phone', 'Телефон')}
+              {sortTh('parent_name', 'Родитель')}
               <th>{'Контакты'}</th>
               <th></th>
             </tr>
@@ -240,12 +246,19 @@ function StudentsPage() {
                   <td>{s.unexcused_absences}</td>
                   <td>{s.late_count}</td>
                   <td className="nowrap">{formatLogin(s.last_login_at)}</td>
+                  <td className={`nowrap${s.phone ? '' : ' cell-missing'}`}>{s.phone || '—'}</td>
+                  <td className="nowrap">
+                    {s.parent_name || s.parent_phone ? (
+                      <>{s.parent_name}{s.parent_name && s.parent_phone && <br />}{s.parent_phone}</>
+                    ) : '—'}
+                  </td>
                   <td>
                     <StudentContactIcons telegram={s.telegram_username} whatsapp={s.whatsapp} />
                   </td>
                   <td>
                     <div className="icon-row">
                       {/* Ученик забыл пароль — педагог (своим ученикам) или админ задаёт новый */}
+                      <IconButton icon="edit" tip="Данные ученика и родителя" onClick={() => setCardStudentId(s.id)} />
                       <IconButton icon="key" tip="Сменить пароль" onClick={() => setPasswordStudent(s)} />
                       {/* Общая кнопка удаления с контролем использования (app/usages.py) */}
                       {isAdmin && (
@@ -269,6 +282,21 @@ function StudentsPage() {
         </table>
       </div>
 
+      {cardStudentId && (
+        <StudentCardModal
+          studentId={cardStudentId}
+          onClose={() => setCardStudentId(null)}
+          onSaved={() => { setCardStudentId(null); loadStudents(); }}
+        />
+      )}
+      {isAddingStudent && (
+        <StudentCardModal
+          groups={groups.filter(g => !g.status || g.status === 'active')}
+          defaultGroupId={groupId}
+          onClose={() => setIsAddingStudent(false)}
+          onSaved={() => { setIsAddingStudent(false); loadStudents(); }}
+        />
+      )}
       {passwordStudent && (
         <PasswordModal
           user={passwordStudent}

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/auth';
 import { getGroupStudents, searchAvailableStudents, addGroupMember, expelGroupMember, restoreGroupMember } from '../api/groups';
-import { getStudentProfile, updateStudentProfile } from '../api/students';
-import { PHONE_PLACEHOLDER } from '../utils/phone';
+import StudentCardModal from './StudentCardModal';
 
 function StudentsModal({ groupId, groupName, onClose }) {
   const [tab, setTab] = useState('active'); // active | archived
@@ -20,11 +19,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
   const [expelReason, setExpelReason] = useState('');
   const [busyId, setBusyId] = useState(null);
 
-  // Правка данных ученика: имя, телефон, родитель, телефон родителя
-  const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState(null); // null — ещё загружается
-  const [editError, setEditError] = useState('');
-  const [editSaving, setEditSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null); // открыта карточка ученика (StudentCardModal)
 
   const load = async () => {
     setLoading(true);
@@ -89,54 +84,8 @@ function StudentsModal({ groupId, groupName, onClose }) {
     }
   };
 
-  const openEdit = async (studentId) => {
-    setExpellingId(null);
-    setEditingId(studentId);
-    setEditDraft(null);
-    setEditError('');
-    try {
-      const p = await getStudentProfile(studentId);
-      setEditDraft({
-        full_name: p.full_name || '',
-        phone: p.phone || '',
-        parent_name: p.parent_name || '',
-        parent_phone: p.parent_phone || '',
-      });
-    } catch (err) {
-      setEditError(err?.response?.data?.detail || 'Не удалось загрузить данные ученика');
-    }
-  };
-
-  const closeEdit = () => { setEditingId(null); setEditDraft(null); setEditError(''); };
-
-  const handleEditSave = async (studentId) => {
-    setEditSaving(true);
-    setEditError('');
-    try {
-      await updateStudentProfile(studentId, editDraft);
-      closeEdit();
-      await load();
-    } catch (err) {
-      const status = err?.response?.status;
-      setEditError(status === 409
-        ? 'Этот телефон ученика уже есть у другого пользователя'
-        : (err?.response?.data?.detail || 'Не удалось сохранить'));
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
-  const editField = (key, label, placeholder) => (
-    <label style={s.editLabel}>
-      {label}
-      <input
-        style={s.addInput}
-        value={editDraft[key]}
-        placeholder={placeholder}
-        onChange={e => setEditDraft({ ...editDraft, [key]: e.target.value })}
-      />
-    </label>
-  );
+  const openEdit = (studentId) => { setExpellingId(null); setEditingId(studentId); };
+  const closeEdit = () => setEditingId(null);
 
   const handleRestore = async (studentId) => {
     setBusyId(studentId);
@@ -246,7 +195,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
                       <td>{st.expelled_at ? new Date(st.expelled_at).toLocaleDateString('ru-RU') : '—'}</td>
                     )}
                     <td>
-                      {tab === 'active' && expellingId !== st.id && editingId !== st.id && (
+                      {tab === 'active' && expellingId !== st.id && (
                         <span style={s.rowActions}>
                           <button style={s.linkBtn} onClick={() => openEdit(st.id)}>
                             {'Изменить'}
@@ -270,34 +219,6 @@ function StudentsModal({ groupId, groupName, onClose }) {
                       )}
                     </td>
                   </tr>
-                  {tab === 'active' && editingId === st.id && (
-                    <tr>
-                      <td colSpan={6} style={s.expelCell}>
-                        <div style={s.editBox}>
-                          {!editDraft && !editError && <p style={s.info}>{'Загрузка...'}</p>}
-                          {editDraft && (
-                            <div style={s.editGrid}>
-                              {editField('full_name', 'Имя и фамилия')}
-                              {editField('phone', 'Телефон ученика', PHONE_PLACEHOLDER)}
-                              {editField('parent_name', 'Родитель')}
-                              {editField('parent_phone', 'Телефон родителя', PHONE_PLACEHOLDER)}
-                            </div>
-                          )}
-                          {editError && <p style={s.error}>{editError}</p>}
-                          <div style={s.expelActions}>
-                            <button className="btn btn--secondary btn--compact" onClick={closeEdit}>{'Отмена'}</button>
-                            <button
-                              className="btn btn--compact"
-                              disabled={!editDraft || editSaving}
-                              onClick={() => handleEditSave(st.id)}
-                            >
-                              {editSaving ? '...' : 'Сохранить'}
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                   {tab === 'active' && expellingId === st.id && (
                     <tr>
                       <td colSpan={6} style={s.expelCell}>
@@ -335,6 +256,14 @@ function StudentsModal({ groupId, groupName, onClose }) {
           </div>
         )}
 
+        {editingId && (
+          <StudentCardModal
+            studentId={editingId}
+            onClose={closeEdit}
+            onSaved={() => { closeEdit(); load(); }}
+          />
+        )}
+
         <div style={s.actions}>
           <button className="btn btn--secondary" onClick={onClose}>
             {'Закрыть'}
@@ -358,9 +287,6 @@ const s = {
   error: { color: '#B91C1C', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' },
   rowActions: { display: 'inline-flex', gap: '12px', whiteSpace: 'nowrap' },
   linkBtn: { background: 'none', border: 'none', color: '#111827', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', padding: 0 },
-  editBox: { background: '#f9fafb', borderRadius: '8px', padding: '10px' },
-  editGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' },
-  editLabel: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', color: '#4B5563' },
   dangerLinkBtn: { background: 'none', border: 'none', color: '#B91C1C', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', padding: 0 },
   expelCell: { padding: '0 10px 10px 10px', borderBottom: '1px solid #e8f4f0' },
   expelBox: { background: '#FEF2F2', borderRadius: '8px', padding: '10px' },

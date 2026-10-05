@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/auth';
 
 function TeachersDirectoryPage() {
+  const navigate = useNavigate();
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,8 +44,13 @@ function TeachersDirectoryPage() {
               <tr><td colSpan={6} className="table__empty">{'Преподов не найдено'}</td></tr>
             ) : (
               teachers.map(t => (
-                <tr key={t.id}>
-                  <td>{t.full_name}</td>
+                <tr
+                  key={t.id}
+                  className="table__row--clickable"
+                  data-tip="Открыть отчёт по педагогу"
+                  onClick={() => navigate(`/dashboard/teachers/${t.id}/report`)}
+                >
+                  <td><span className="link">{t.full_name}</span></td>
                   <td>{t.group_count}</td>
                   <td>{t.student_count}</td>
                   <td>{t.lessons_held ?? 0}</td>
