@@ -207,6 +207,7 @@ class GroupMemberOut(BaseModel):
     id: int  # id ученика (User.id) — как и раньше, фронт ждёт это поле
     full_name: Optional[str] = None
     username: str
+    phone: Optional[str] = None  # телефон ученика — колонка в окне «Ученики»
     created_at: datetime
     membership_id: int  # id самой записи group_members — нужен для expel/restore
     status: str
@@ -249,6 +250,7 @@ async def get_group_students(
             id=user.id,
             full_name=user.full_name,
             username=user.username,
+            phone=user.phone,
             created_at=user.created_at,
             membership_id=member.id,
             status=member.status,

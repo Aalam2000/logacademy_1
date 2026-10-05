@@ -215,6 +215,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
               <tr>
                 <th style={s.th}>{'Имя'}</th>
                 <th style={s.th}>{'Логин'}</th>
+                <th style={s.th}>{'Телефон'}</th>
                 {tab === 'active' && <th style={s.th}>{'Дата регистрации'}</th>}
                 {tab === 'archived' && <th style={s.th}>{'Причина'}</th>}
                 {tab === 'archived' && <th style={s.th}>{'Дата отчисления'}</th>}
@@ -224,7 +225,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
             <tbody>
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
                     {tab === 'active' ? 'Учеников пока нет' : 'Архив пуст'}
                   </td>
                 </tr>
@@ -234,6 +235,8 @@ function StudentsModal({ groupId, groupName, onClose }) {
                   <tr style={s.row}>
                     <td style={s.td}>{st.full_name || '—'}</td>
                     <td style={s.td}>{st.username}</td>
+                    {/* нет телефона — красный прочерк, чтобы пропуск было видно сразу */}
+                    <td style={{ ...s.td, whiteSpace: 'nowrap', color: st.phone ? undefined : '#B91C1C' }}>{st.phone || '—'}</td>
                     {tab === 'active' && (
                       <td style={s.td}>{st.created_at ? new Date(st.created_at).toLocaleDateString('ru-RU') : '—'}</td>
                     )}
@@ -268,7 +271,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
                   </tr>
                   {tab === 'active' && editingId === st.id && (
                     <tr>
-                      <td colSpan={4} style={s.expelCell}>
+                      <td colSpan={6} style={s.expelCell}>
                         <div style={s.editBox}>
                           {!editDraft && !editError && <p style={s.info}>{'Загрузка...'}</p>}
                           {editDraft && (
@@ -296,7 +299,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
                   )}
                   {tab === 'active' && expellingId === st.id && (
                     <tr>
-                      <td colSpan={4} style={s.expelCell}>
+                      <td colSpan={6} style={s.expelCell}>
                         <div style={s.expelBox}>
                           <textarea
                             style={s.expelTextarea}
@@ -342,7 +345,7 @@ function StudentsModal({ groupId, groupName, onClose }) {
 
 const s = {
   backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { width: '100%', maxWidth: '640px', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 12px 32px rgba(0,0,0,0.2)', maxHeight: '85vh', overflowY: 'auto' },
+  modal: { width: '100%', maxWidth: '760px', background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 12px 32px rgba(0,0,0,0.2)', maxHeight: '85vh', overflowY: 'auto' },
   title: { margin: '0 0 1rem 0' },
   tabs: { display: 'flex', gap: '8px', marginBottom: '1rem', alignItems: 'center' },
   tab: { padding: '6px 14px', background: '#f3f4f6', color: '#4B5563', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem' },
