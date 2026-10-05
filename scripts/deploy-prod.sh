@@ -58,7 +58,13 @@ export APP_UID="$(id -u)"
 export APP_GID="$(id -g)"
 echo "[deploy] backend runs as uid=$APP_UID gid=$APP_GID ($(id -un))"
 
-docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+# Без «метки происхождения» (provenance) сборка без изменений даёт тот же
+# образ. С ней каждая сборка создавала новую обёртку образа: имя
+# quiz-backend:latest переезжало на неё, а работающий контейнер оставался на
+# прежней — в списке контейнеров вместо имени образа показывался sha256:….
+export BUILDX_NO_DEFAULT_ATTESTATIONS=1
+
+$COMPOSE up -d --build --remove-orphans
 
 # Ждём, пока бэкенд реально поднимется: миграции + старт uvicorn. «Up» в
 # списке контейнеров значит только «процесс запущен», а не «сервер отвечает».
@@ -83,7 +89,7 @@ wait_ok 20 check_via_nginx /               || deploy_failed "nginx → frontend 
 echo "[deploy] site is up"
 
 echo "[deploy] running containers"
-docker compose -f docker-compose.prod.yml ps
+$COMPOSE ps
 
 echo "[deploy] current revision"
 git rev-parse --short HEAD
