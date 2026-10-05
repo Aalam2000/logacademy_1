@@ -10,6 +10,13 @@ import PasswordModal from '../components/PasswordModal';
 import SortTh, { sortRows } from '../components/SortTh';
 import { setStudentPassword } from '../api/students';
 
+// Последний вход: «05.10.2026 14:32», нет входов — «—»
+const formatLogin = (value) => {
+  if (!value) return '—';
+  const d = new Date(value);
+  return `${d.toLocaleDateString('ru-RU')} ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 function StudentsPage() {
   const { user, hasRole } = useAuth();
   const { lang } = useLang();
@@ -121,7 +128,7 @@ function StudentsPage() {
   // «Препод» показываем только пока admin смотрит сводно (не выбран ни
   // конкретный препод, ни «Моё») — иначе колонка избыточна, все и так его.
   const showTeacherColumn = isAdmin && !mine && !teacherId;
-  const columnCount = 10 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
+  const columnCount = 11 + (showTeacherColumn ? 1 : 0); // последняя колонка — действия
 
   // Значение ячейки для сортировки: текстовые колонки — строка, остальные — число (или null)
   const TEXT_KEYS = ['name', 'group', 'teacher'];
@@ -129,6 +136,7 @@ function StudentsPage() {
     if (key === 'name') return s.full_name || '';
     if (key === 'group') return s.groups.map(g => g.name).join(', ');
     if (key === 'teacher') return [...new Set(s.groups.map(g => g.teacher_name).filter(Boolean))].join(', ');
+    if (key === 'last_login_at') return s.last_login_at ? new Date(s.last_login_at).getTime() : null;
     return s[key];
   };
 
@@ -203,6 +211,7 @@ function StudentsPage() {
               {sortTh('stars_total', <span className="table__th-star">★</span>, 'Звёзды', true)}
               {sortTh('unexcused_absences', 'Пропуски')}
               {sortTh('late_count', 'Опоздания')}
+              {sortTh('last_login_at', 'Вход', 'Дата и время последнего входа в систему')}
               <th>{'Контакты'}</th>
               <th></th>
             </tr>
@@ -230,6 +239,7 @@ function StudentsPage() {
                   <td className="table__cell--center">{s.stars_total ?? 0}</td>
                   <td>{s.unexcused_absences}</td>
                   <td>{s.late_count}</td>
+                  <td className="nowrap">{formatLogin(s.last_login_at)}</td>
                   <td>
                     <StudentContactIcons telegram={s.telegram_username} whatsapp={s.whatsapp} />
                   </td>

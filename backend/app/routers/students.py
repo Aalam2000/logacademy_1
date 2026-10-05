@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from xhtml2pdf import pisa
 from xhtml2pdf.config.resources import ResourceAccessPolicy
@@ -19,7 +19,7 @@ from ..schemas import NewPasswordIn
 from ..dependencies import require_admin, require_teacher
 from ..models import (
     Course, Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMark,
-    LessonMessage, User,
+    LessonMessage, User, UserSession,
 )
 from .i18n import translator
 from .academy import academy_name
@@ -54,6 +54,7 @@ class StudentStatsOut(BaseModel):
     stars_total: int = 0                    # сумма звёзд за уроки
     unexcused_absences: int = 0
     late_count: int = 0
+    last_login_at: Optional[datetime] = None  # начало последней сессии (user_sessions)
     groups: list[StudentGroupOut] = []
 
 
@@ -218,6 +219,14 @@ async def list_students(
 
     stats = await _compute_stats(db, student_ids, group_ids)
 
+    # Последний вход — начало самой свежей сессии ученика (app/presence.py)
+    logins_result = await db.execute(
+        select(UserSession.user_id, func.max(UserSession.started_at))
+        .where(UserSession.user_id.in_(student_ids))
+        .group_by(UserSession.user_id)
+    )
+    last_logins = {uid: started for uid, started in logins_result.all()}
+
     out = []
     for sid in student_ids:
         u = users.get(sid, {"full_name": f"#{sid}", "telegram_username": None, "whatsapp": None})
@@ -226,6 +235,7 @@ async def list_students(
             full_name=u["full_name"],
             telegram_username=u["telegram_username"],
             whatsapp=u["whatsapp"],
+            last_login_at=last_logins.get(sid),
             groups=[StudentGroupOut(**{k: v for k, v in g.items() if k in ("id", "name", "teacher_id", "teacher_name")}) for g in student_groups[sid]],
             **_stats_summary(stats[sid]),
         ))
