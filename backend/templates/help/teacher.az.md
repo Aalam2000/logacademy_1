@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=az sha1=a2f53ae2202b283cf97f5319dc8e690c82d34095 -->
+<!-- autoi18n: source=teacher.md lang=az sha1=a98d9a3a7daf6b1423474b5a314160f297c0a588 -->
 # Platformada necə işləmək
 
 ## Qruplarım
@@ -34,6 +34,7 @@ Qrupun bir və ya bir neçə şagirdi üçün əlavə məşğələ. **+ Dərs** 
 - Dərslər siyahısında və təqvimdə o, iştirakçıların adları ilə 👤 nişanı ilə qeyd olunub.
 - Materiallar, ev tapşırıqları, qiymətlər və ulduzlar adi dərsdəki kimi işləyir.
 - İştirakçıların tərkibi dərs səhifəsində dəyişdirilir — 👤 nişanını basın.
+- Belə dərsin səhifəsindəki **Dərsdən** düyməsi qrupun istənilən keçmiş dərsinin bütün materiallarını ona əlavə edir: fayllar, keçidlər və quizlər. Şagirdin buraxdığı dərslər siyahıda rənglə seçilir.
 - Dərs bağlı yaradılır: onu dərs səhifəsində açın. «Dərsləri aç», «Cədvəl və materiallar» və «Bayram kimi qeyd etmək» düymələri fərdi dərslərə toxunmur.
 
 Yoxlanmamış Ev tapşırığına cavabları olan dərs "Ev tapşırığı: yoxlamaq" ilə qeyd olunur.

@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=en sha1=a2f53ae2202b283cf97f5319dc8e690c82d34095 -->
+<!-- autoi18n: source=teacher.md lang=en sha1=a98d9a3a7daf6b1423474b5a314160f297c0a588 -->
 # How to work on the platform
 
 ## My groups
@@ -34,6 +34,7 @@ An extra class for one or several students of the group. In the **+ Lesson** win
 - In the lesson list and in the calendar it is marked with 👤 and the participants' names.
 - Materials, homework, grades and stars work as in a regular lesson.
 - The list of participants is changed on the lesson page — click the 👤 mark.
+- The **From a lesson** button on such a lesson's page adds all materials of any past lesson of the group: files, links and quizzes. Lessons the student missed are highlighted in the list.
 - The lesson is created closed: open it on the lesson page. The “Open lessons”, “Schedule and materials” and “Mark as holiday” buttons do not affect personal lessons.
 
 A lesson with unchecked Homework answers is marked "Homework: check".

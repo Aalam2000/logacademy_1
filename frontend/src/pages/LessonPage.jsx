@@ -4,6 +4,7 @@ import api from '../api/auth';
 import DateTimePicker, { formatDateTime } from '../components/DateTimePicker';
 import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import LibraryPickerModal from '../components/LibraryPickerModal';
+import LessonSourcesModal from '../components/LessonSourcesModal';
 import TrashIcon from '../components/TrashIcon';
 import IconButton from '../components/IconButton';
 import { PersonalBadge, ParticipantsModal } from '../components/PersonalLesson';
@@ -65,6 +66,7 @@ function LessonPage() {
   const [itemsError, setItemsError] = useState('');
   const [lessonItems, setLessonItems] = useState([]);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [showSourcesModal, setShowSourcesModal] = useState(false); // «Из урока» — материалы другого урока
   const [detachingKey, setDetachingKey] = useState(null);
   const [openingKey, setOpeningKey] = useState(null);
 
@@ -636,6 +638,12 @@ function LessonPage() {
             <button type="button" className="btn btn--outline" onClick={() => setShowLibraryModal(true)}>
               {'Добавить из базы'}
             </button>
+            {/* Дополнительный урок: взять материалы урока, который ученик пропустил */}
+            {lesson.is_personal && (
+              <button type="button" className="btn btn--outline" onClick={() => setShowSourcesModal(true)}>
+                {'Из урока'}
+              </button>
+            )}
             <input
               type="file"
               ref={materialInputRef}
@@ -682,6 +690,18 @@ function LessonPage() {
                 {isAddingLink ? 'Добавление...' : 'Сохранить'}
               </button>
             </div>
+          )}
+
+          {showSourcesModal && (
+            <LessonSourcesModal
+              lessonId={lessonId}
+              onClose={() => setShowSourcesModal(false)}
+              onCopied={(result) => {
+                setShowSourcesModal(false);
+                setItemsNotice(result.attached > 0 ? `Добавлено материалов: ${result.attached}` : 'Все материалы этого урока уже добавлены');
+                loadItems();
+              }}
+            />
           )}
 
           {showLibraryModal && (

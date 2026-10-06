@@ -73,6 +73,17 @@ export function deleteLesson(id) {
   return api.delete(`/lessons/${id}`).then(res => res.data);
 }
 
+// «Из урока»: уроки группы до сегодняшнего дня — [{id, title, date, items_count, missed_by: [имена]}],
+// missed_by — кто из учеников этого урока пропустил тот урок
+export function getLessonSources(lessonId) {
+  return api.get(`/lessons/${lessonId}/sources`).then(res => res.data);
+}
+
+// Подтянуть в урок все материалы другого урока группы → {attached, total}
+export function copyLessonItems(lessonId, sourceId) {
+  return api.post(`/lessons/${lessonId}/items/copy-from/${sourceId}`).then(res => res.data);
+}
+
 export function getLessonMarks(lessonId) {
   return api.get(`/lessons/${lessonId}/marks`).then(res => res.data);
 }

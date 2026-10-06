@@ -10,6 +10,7 @@ from ..schemas import DURATION_MIN, DURATION_MAX
 from .academy import lesson_word
 from ..lesson_lock import BAKU_TZ, is_date_locked
 from ..attendance import PRESENT, attendance_slots
+from ..lesson_lock import aware
 from ..homework_status import awaiting_review
 from ..personal import (
     is_participant, lesson_student_ids, lesson_students_condition, participant_names,
@@ -308,6 +309,30 @@ async def _collect_template_positions(
     return positions
 
 
+async def _attach_resource(
+    db: AsyncSession, lesson_id: int, resource_type: str, resource_id: int, current_user: User,
+) -> bool:
+    """Привязывает ресурс (файл / квиз / ссылка) к уроку, без commit.
+    False — он уже был привязан."""
+    existing = await db.execute(
+        select(LessonResource).where(
+            LessonResource.lesson_id == lesson_id,
+            LessonResource.resource_type == resource_type,
+            LessonResource.resource_id == resource_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        return False
+    db.add(LessonResource(
+        lesson_id=lesson_id,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        added_by=current_user.id,
+        added_at=datetime.now(dt_timezone.utc),
+    ))
+    return True
+
+
 # Раскладывает подобранные по позиции ресурсы по конкретным урокам.
 # mode="replace" — сперва отвязывает всё текущее у этих уроков (Заменить),
 # mode="add" — просто добавляет недостающее, существующее не трогает
@@ -325,23 +350,7 @@ async def _apply_positions_to_lessons(
         if mode == "replace":
             await db.execute(delete(LessonResource).where(LessonResource.lesson_id == lesson.id))
         for resource_type, resource_id in items:
-            existing = await db.execute(
-                select(LessonResource).where(
-                    LessonResource.lesson_id == lesson.id,
-                    LessonResource.resource_type == resource_type,
-                    LessonResource.resource_id == resource_id,
-                )
-            )
-            if existing.scalar_one_or_none():
-                continue
-            db.add(LessonResource(
-                lesson_id=lesson.id,
-                resource_type=resource_type,
-                resource_id=resource_id,
-                added_by=current_user.id,
-                added_at=datetime.now(dt_timezone.utc),
-            ))
-            attached += 1
+            attached += await _attach_resource(db, lesson.id, resource_type, resource_id, current_user)
     return attached
 
 
@@ -1296,25 +1305,90 @@ async def attach_lesson_item(
     if not await resource_exists(db, data.resource_type, data.resource_id):
         raise HTTPException(status_code=404, detail=RESOURCE_NOT_FOUND[data.resource_type])
 
-    existing = await db.execute(
-        select(LessonResource).where(
-            LessonResource.lesson_id == lesson_id,
-            LessonResource.resource_type == data.resource_type,
-            LessonResource.resource_id == data.resource_id,
-        )
-    )
-    if existing.scalar_one_or_none():
-        return {"ok": True}
-
-    db.add(LessonResource(
-        lesson_id=lesson_id,
-        resource_type=data.resource_type,
-        resource_id=data.resource_id,
-        added_by=current_user.id,
-        added_at=datetime.now(dt_timezone.utc),
-    ))
-    await db.commit()
+    if await _attach_resource(db, lesson_id, data.resource_type, data.resource_id, current_user):
+        await db.commit()
     return {"ok": True}
+
+
+# «Из урока»: подтянуть в урок материалы другого урока той же группы — нужно
+# для дополнительного (персонального) урока, на котором проходят пропущенное.
+# Список: обычные уроки группы до сегодняшнего дня включительно; у каждого —
+# сколько в нём материалов и кто из учеников ЭТОГО урока его пропустил
+# (пропуск или уважительная причина, по общему правилу посещаемости).
+@router.get("/{lesson_id}/sources")
+async def get_lesson_sources(
+    lesson_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    now = datetime.now(dt_timezone.utc)
+    sources = [
+        l for l in (await db.execute(
+            select(Lesson)
+            .where(
+                Lesson.group_id == lesson.group_id, Lesson.id != lesson.id,
+                Lesson.is_personal == False, Lesson.date.isnot(None),  # noqa: E712
+            )
+            .order_by(Lesson.date.desc(), Lesson.id.desc())
+        )).scalars().all()
+        if aware(l.date) <= now
+    ]
+    if not sources:
+        return []
+    source_ids = [l.id for l in sources]
+
+    counts = dict((await db.execute(
+        select(LessonResource.lesson_id, func.count(LessonResource.id))
+        .where(LessonResource.lesson_id.in_(source_ids))
+        .group_by(LessonResource.lesson_id)
+    )).all())
+
+    student_ids = await lesson_student_ids(db, lesson)
+    names = {}
+    if student_ids:
+        names = {uid: (full_name or username) for uid, full_name, username in (await db.execute(
+            select(User.id, User.full_name, User.username).where(User.id.in_(student_ids))
+        )).all()}
+    missed: dict[int, list[str]] = {}
+    for slot in await attendance_slots(db, [lesson.group_id], student_ids, source_ids):
+        if slot.status not in PRESENT:
+            missed.setdefault(slot.lesson_id, []).append(names.get(slot.student_id, f"#{slot.student_id}"))
+
+    return [
+        {
+            "id": l.id, "title": l.title, "date": l.date,
+            "items_count": counts.get(l.id, 0),
+            "missed_by": sorted(missed.get(l.id, []), key=str.lower),
+        }
+        for l in sources
+    ]
+
+
+@router.post("/{lesson_id}/items/copy-from/{source_id}")
+async def copy_lesson_items(
+    lesson_id: int,
+    source_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    source = (await db.execute(
+        select(Lesson).where(Lesson.id == source_id, Lesson.group_id == lesson.group_id, Lesson.id != lesson.id)
+    )).scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Урок-источник не найден в этой группе")
+
+    rows = (await db.execute(
+        select(LessonResource.resource_type, LessonResource.resource_id)
+        .where(LessonResource.lesson_id == source.id)
+        .order_by(LessonResource.added_at, LessonResource.id)
+    )).all()
+    attached = 0
+    for resource_type, resource_id in rows:
+        attached += await _attach_resource(db, lesson.id, resource_type, resource_id, current_user)
+    await db.commit()
+    return {"ok": True, "attached": attached, "total": len(rows)}
 
 
 # Отвязать ресурс от урока (сам ресурс остаётся в библиотеке)
