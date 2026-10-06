@@ -155,6 +155,7 @@ function LessonPage() {
         full_name: s.full_name,
         telegram_username: s.telegram_username,
         whatsapp: s.whatsapp,
+        phone: s.phone,
         attendance_status: s.attendance_status || '',
         is_late: !!s.is_late,
         score: s.score === null || s.score === undefined ? '' : s.score,
@@ -941,7 +942,7 @@ function LessonPage() {
                               )}
                             </td>
                             <td>
-                              <StudentContactIcons telegram={row.telegram_username} whatsapp={row.whatsapp} />
+                              <StudentContactIcons telegram={row.telegram_username} whatsapp={row.whatsapp} phone={row.phone} />
                             </td>
                           </tr>
                         );

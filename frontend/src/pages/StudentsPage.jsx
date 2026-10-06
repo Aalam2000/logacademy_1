@@ -233,7 +233,7 @@ function StudentsPage() {
                     ) : '—'}
                   </td>
                   <td>
-                    <StudentContactIcons telegram={s.telegram_username} whatsapp={s.whatsapp} />
+                    <StudentContactIcons telegram={s.telegram_username} whatsapp={s.whatsapp} phone={s.phone} />
                   </td>
                   <td>
                     <div className="icon-row">

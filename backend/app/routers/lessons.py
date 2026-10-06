@@ -104,6 +104,7 @@ class LessonMarkOut(BaseModel):
     full_name: Optional[str]
     telegram_username: Optional[str] = None
     whatsapp: Optional[str] = None
+    phone: Optional[str] = None   # значок WhatsApp ученика открывается по телефону
     attendance_status: Optional[str]
     is_late: bool
     score: Optional[int]
@@ -1095,6 +1096,7 @@ async def get_lesson_marks(
             full_name=user.full_name or user.username,
             telegram_username=user.telegram_username,
             whatsapp=user.whatsapp,
+            phone=user.phone,
             attendance_status=mark.attendance_status if mark else None,
             is_late=mark.is_late if mark else False,
             score=mark.score if mark else None,

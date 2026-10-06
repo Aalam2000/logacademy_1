@@ -20,7 +20,12 @@ export function whatsappHref(value) {
   if (!v) return null;
   if (/^https?:\/\//i.test(v)) return v;
   if (/^(chat\.whatsapp\.com|wa\.me|api\.whatsapp\.com)\//i.test(v)) return `https://${v}`;
-  const digits = v.replace(/\D/g, '');
+  let digits = v.replace(/\D/g, '');
+  // wa.me нужен номер с кодом страны. Старые записи могли сохраниться в местном
+  // виде — приводим так же, как бэкенд (backend/app/phones.py): 0XXXXXXXXX →
+  // Азербайджан (+994), 8XXXXXXXXXX → Россия (+7).
+  if (/^0\d{9}$/.test(digits)) digits = `994${digits.slice(1)}`;
+  else if (/^8\d{10}$/.test(digits)) digits = `7${digits.slice(1)}`;
   return digits ? `https://wa.me/${digits}` : null;
 }
 
@@ -107,12 +112,14 @@ export function GroupContactIcons({ video, telegram, whatsapp }) {
 }
 
 // Готовая пара иконок Telegram/WhatsApp для строки таблицы студента —
-// value передаются как есть, ContactIcon сам решает кликабельно или нет.
-export function StudentContactIcons({ telegram, whatsapp }) {
+// ContactIcon сам решает кликабельно или нет.
+// WhatsApp ученика — по его телефону: телефон обязателен, значит WhatsApp есть
+// у каждого. Отдельное поле «WhatsApp» важнее, если оно заполнено (другой номер).
+export function StudentContactIcons({ telegram, whatsapp, phone }) {
   return (
     <div className="table__icons">
       <ContactIcon type="telegram" value={telegram} />
-      <ContactIcon type="whatsapp" value={whatsapp} />
+      <ContactIcon type="whatsapp" value={whatsapp || phone} />
     </div>
   );
 }
