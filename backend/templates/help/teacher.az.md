@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=az sha1=40d22170434ae2be17b9b3751be9d1c34ce144dd -->
+<!-- autoi18n: source=teacher.md lang=az sha1=a2f53ae2202b283cf97f5319dc8e690c82d34095 -->
 # Platformada necə işləmək
 
 ## Qruplarım
@@ -6,6 +6,8 @@
 [Əsas səhifə](/dashboard) — sizin qruplar: ad, kurs, şagird sayı və əlaqə məlumatları. Qrupları **cədvəl** və ya **təqvim** şəklində bütün qrupların dərslərini bir anda görmək mümkündür. Orada həmçinin **arxiv** bağlanmış qruplar var.
 
 Qrupun üzərinə klikləyin, onu açmaq üçün.
+
+Şagirdlər ev tapşırıqlarına cavab göndəribsə, qrup rənglə seçilir və cavabların sayı ilə **Ev tapşırığı: yoxla** nişanı alır. Başlıqda **Ev tapşırığını yoxla** düyməsi görünür — o, ən köhnə yoxlanmamış cavabı olan dərsi açır.
 
 ## Qrup
 
@@ -40,7 +42,7 @@ Yoxlanmamış Ev tapşırığına cavabları olan dərs "Ev tapşırığı: yoxl
 
 Dərsin yuxarı hissəsində:
 
-- **Aç / Bağla** — şagirdlərin dərsə giriş imkanı. Bağlı dərsi şagirdlər görmür.
+- **Aç / Bağla** — şagirdlərin dərsə giriş imkanı. Bağlı dərsi şagirdlər görmür. Gələn ilk şagirdi qeyd edən kimi dərs özü açılır.
 - 📅 — dərsin tarixini, vaxtını və müddətini dəyişmək.
 - Dərsin silinməsi.
 

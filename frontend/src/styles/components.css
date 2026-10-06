@@ -1449,6 +1449,25 @@ a.row-icon:hover {
 .badge--homework-pending {
   background: var(--color-warning);
 }
+/* Число внутри метки: «ДЗ: проверить 3» */
+.badge__count {
+  margin-left: 6px;
+  font-weight: var(--weight-bold);
+}
+/* Строка, требующая действия (группа с непроверенными ДЗ) — залита целиком */
+.table tbody tr.table__row--attention {
+  --row-tint: var(--color-warning-bg);
+}
+/* Кнопка-флаг «Проверь ДЗ» в шапке педагога */
+.btn--attention {
+  padding: 0 14px;
+  background: var(--color-warning);
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+}
+.btn--attention .btn__count {
+  background: var(--color-text);
+}
 
 /* ===== Кнопка-значок «HUD-контур» (IconButton.jsx) ===== */
 .icon-btn {

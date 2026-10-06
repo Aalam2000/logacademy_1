@@ -9,6 +9,7 @@ from ..database import get_db
 from ..models import Group, GroupMember, User, Course
 from ..schemas import GroupOut, CourseOut, GroupInviteOut, clean_video_url, DURATION_MIN, DURATION_MAX
 from ..dependencies import require_teacher, get_current_user
+from ..homework_status import oldest_lesson_to_review, to_review_by_group
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -161,14 +162,34 @@ async def get_my_groups(
         select(User.id, User.full_name, User.username).where(User.id.in_(teacher_ids))
     )
     teachers = {uid: (full_name or username) for uid, full_name, username in teachers_result.all()}
+    to_review = await to_review_by_group(db, group_ids)
 
     out = []
     for g in groups:
         item = GroupOut.model_validate(g)
         item.student_count = counts.get(g.id, 0)
         item.teacher_name = teachers.get(g.teacher_id)
+        item.homework_to_review = to_review.get(g.id, 0)
         out.append(item)
     return out
+
+
+# Флаг «Проверь ДЗ» в шапке педагога: сколько ответов ждут проверки в его
+# активных группах и с какого урока начать (самый давний ответ). У админа —
+# только по группам, где он сам педагог.
+@router.get("/homework-to-review")
+async def get_homework_to_review(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_teacher),
+):
+    group_ids = [row[0] for row in (await db.execute(
+        select(Group.id).where(Group.teacher_id == current_user.id, Group.status == "active")
+    )).all()]
+    counts = await to_review_by_group(db, group_ids)
+    return {
+        "count": sum(counts.values()),
+        "lesson_id": await oldest_lesson_to_review(db, list(counts)),
+    }
 
 # Данные одной группы (teacher — только свою, admin — любую)
 @router.get("/{group_id}", response_model=GroupOut)

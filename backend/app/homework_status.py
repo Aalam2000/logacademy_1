@@ -12,10 +12,10 @@
 from datetime import datetime, timezone
 from typing import Iterable, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import HomeworkAnswer, HomeworkAnswerFile, HomeworkTask
+from .models import HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson
 
 
 def expired(deadline: Optional[datetime]) -> bool:
@@ -52,6 +52,47 @@ def answer_status(tasks: list[HomeworkTask], answer: Optional[HomeworkAnswer], h
     if has_files:
         return "submitted"
     return "expired" if expired(effective_deadline(tasks)) else "pending"
+
+
+def awaiting_review() -> tuple:
+    """Условия на HomeworkAnswer: ответ прислан (есть файл) и ждёт проверки —
+    оценки нет, «принято» нет, на доработку не возвращён. По ним подсвечиваются
+    урок, группа и флаг «Проверь ДЗ» у педагога, считается очередь в отчёте."""
+    return (
+        HomeworkAnswer.grade.is_(None),
+        HomeworkAnswer.accepted == False,  # noqa: E712
+        HomeworkAnswer.reviewed_at.is_(None),
+        select(HomeworkAnswerFile.id).where(HomeworkAnswerFile.answer_id == HomeworkAnswer.id).exists(),
+    )
+
+
+async def to_review_by_group(db: AsyncSession, group_ids: Iterable[int]) -> dict[int, int]:
+    """group_id → сколько ответов на ДЗ ждут проверки (группы без таких ответов не попадают)."""
+    group_ids = list(group_ids)
+    if not group_ids:
+        return {}
+    rows = await db.execute(
+        select(Lesson.group_id, func.count(HomeworkAnswer.id))
+        .join(Lesson, Lesson.id == HomeworkAnswer.lesson_id)
+        .where(Lesson.group_id.in_(group_ids), *awaiting_review())
+        .group_by(Lesson.group_id)
+    )
+    return {gid: count for gid, count in rows.all()}
+
+
+async def oldest_lesson_to_review(db: AsyncSession, group_ids: Iterable[int]) -> Optional[int]:
+    """Урок с самым давним ответом, который ждёт проверки, — с него начинать."""
+    group_ids = list(group_ids)
+    if not group_ids:
+        return None
+    row = (await db.execute(
+        select(HomeworkAnswer.lesson_id)
+        .join(Lesson, Lesson.id == HomeworkAnswer.lesson_id)
+        .where(Lesson.group_id.in_(group_ids), *awaiting_review())
+        .order_by(HomeworkAnswer.updated_at, HomeworkAnswer.id)
+        .limit(1)
+    )).first()
+    return row[0] if row else None
 
 
 async def student_homework(db: AsyncSession, lesson_ids: Iterable[int], student_id: int) -> dict[int, dict]:

@@ -182,6 +182,11 @@ function GroupsPage() {
               >
                 <span className="la-calendar__legend-dot" style={{ '--la-event-color': groupColorMap[g.id] }} />
                 {g.name}
+                {g.homework_to_review > 0 && (
+                  <span className="badge badge--homework-pending badge--inline" data-tip={'Есть непроверенные решения ДЗ'}>
+                    {'ДЗ: проверить'}<span className="badge__count">{g.homework_to_review}</span>
+                  </span>
+                )}
               </button>
             ))}
             <span className="la-calendar__legend-item">
@@ -213,10 +218,17 @@ function GroupsPage() {
               {groups.map(g => (
                 <tr
                   key={g.id}
-                  className="table__row--clickable"
+                  className={`table__row--clickable${g.homework_to_review > 0 ? ' table__row--homework-pending table__row--attention' : ''}`}
                   onClick={() => navigate(`/dashboard/groups/${g.id}`)}
                 >
-                  <td>{g.name}</td>
+                  <td>
+                    {g.name}
+                    {g.homework_to_review > 0 && (
+                      <span className="badge badge--homework-pending badge--inline" data-tip={'Есть непроверенные решения ДЗ'}>
+                        {'ДЗ: проверить'}<span className="badge__count">{g.homework_to_review}</span>
+                      </span>
+                    )}
+                  </td>
                   <td>{courseName(g.course_id)}</td>
                   {isAdmin && !mine && !teacherId && <td>{g.teacher_name || `#${g.teacher_id}`}</td>}
                   <td>{g.student_count ?? 0}</td>

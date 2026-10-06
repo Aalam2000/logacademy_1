@@ -108,6 +108,7 @@ class GroupOut(BaseModel):
     created_at: datetime
     student_count: int = 0
     teacher_name: Optional[str] = None
+    homework_to_review: int = 0   # ответов на ДЗ ждут проверки (подсветка группы у педагога)
 
     model_config = ConfigDict(from_attributes=True)
 

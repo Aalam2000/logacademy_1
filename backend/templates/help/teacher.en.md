@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=en sha1=40d22170434ae2be17b9b3751be9d1c34ce144dd -->
+<!-- autoi18n: source=teacher.md lang=en sha1=a2f53ae2202b283cf97f5319dc8e690c82d34095 -->
 # How to work on the platform
 
 ## My groups
@@ -6,6 +6,8 @@
 On the [Main](/dashboard) — your groups: name, course, number of students, and contacts. Groups can be viewed as a **table** or a **calendar** of all groups' lessons at once. There is also an **archive** of closed groups.
 
 Click on a group to open it.
+
+If students have submitted homework answers, the group is highlighted and marked **Homework: check** with the number of answers. A **Check homework** button appears in the header — it opens the lesson with the oldest unchecked answer.
 
 ## Group
 
@@ -40,7 +42,7 @@ A lesson with unchecked Homework answers is marked "Homework: check".
 
 At the top of the lesson:
 
-- **Open / Close** — students' access to the lesson. Closed lessons are not visible to students.
+- **Open / Close** — students' access to the lesson. Closed lessons are not visible to students. The lesson opens by itself as soon as you mark the first student as present.
 - 📅 — change the date, time, and duration of the lesson.
 - Deleting the lesson.
 

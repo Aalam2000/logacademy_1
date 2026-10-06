@@ -356,13 +356,20 @@ function LessonPage() {
     comment: row.comment || null,
   });
 
+  // Закрытый урок открывается сам при первой отметке «пришёл» (бэкенд,
+  // _open_on_arrival) — показываем это на кнопке «Открыть / Закрыть»
+  const syncLessonOpen = (isOpen) => {
+    setLesson(prev => (prev && prev.is_open !== isOpen ? { ...prev, is_open: isOpen } : prev));
+  };
+
   const saveRow = async (studentId, rowOverride) => {
     const row = rowOverride || marksRowsRef.current.find(r => r.student_id === studentId);
     if (!row) return;
 
     setRowErrors(prev => ({ ...prev, [studentId]: '' }));
     try {
-      await api.put(`/lessons/${lessonId}/marks/${studentId}`, buildPayload(row));
+      const res = await api.put(`/lessons/${lessonId}/marks/${studentId}`, buildPayload(row));
+      syncLessonOpen(res.data.is_open);
     } catch (err) {
       setRowErrors(prev => ({ ...prev, [studentId]: extractErrorMessage(err, 'Не удалось сохранить') }));
       if (err?.response?.status === 403) {
@@ -440,7 +447,8 @@ function LessonPage() {
     setMarksError('');
     try {
       const items = rows.map(r => ({ student_id: r.student_id, ...buildPayload(r) }));
-      await api.put(`/lessons/${lessonId}/marks`, items);
+      const res = await api.put(`/lessons/${lessonId}/marks`, items);
+      syncLessonOpen(res.data.is_open);
       setRowErrors({});
     } catch (err) {
       setMarksError(extractErrorMessage(err, 'Не удалось сохранить таблицу'));

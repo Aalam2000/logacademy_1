@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from ..schemas import DURATION_MIN, DURATION_MAX
 from .academy import lesson_word
 from ..lesson_lock import BAKU_TZ, is_date_locked
-from ..attendance import attendance_slots
+from ..attendance import PRESENT, attendance_slots
+from ..homework_status import awaiting_review
 from ..personal import (
     is_participant, lesson_student_ids, lesson_students_condition, participant_names,
     set_participants, visible_to_student,
@@ -381,11 +382,6 @@ def _safe_delete_object(object_key: str) -> None:
         pass
 
 
-def answer_is_submitted():
-    """Ответ «пришёл», если в нём есть хотя бы один файл."""
-    return select(HomeworkAnswerFile.id).where(HomeworkAnswerFile.answer_id == HomeworkAnswer.id).exists()
-
-
 async def delete_homework_tasks(db: AsyncSession, task_ids: list[int]) -> None:
     """Задания + их персональные файлы (если больше нигде не используются).
     Ответы студентов привязаны к уроку, а не к заданию, — их не трогаем."""
@@ -436,13 +432,7 @@ async def with_unreviewed_flag(db: AsyncSession, lessons: list[Lesson], user: Op
         return out
     rows = await db.execute(
         select(HomeworkAnswer.lesson_id)
-        .where(
-            HomeworkAnswer.lesson_id.in_([l.id for l in out]),
-            HomeworkAnswer.grade.is_(None),
-            HomeworkAnswer.accepted == False,
-            HomeworkAnswer.reviewed_at.is_(None),  # не «вернули на доработку»
-            answer_is_submitted(),
-        )
+        .where(HomeworkAnswer.lesson_id.in_([l.id for l in out]), *awaiting_review())
         .distinct()
     )
     flagged = {row[0] for row in rows.all()}
@@ -1035,7 +1025,9 @@ async def _upsert_mark(
     data: LessonMarkIn,
     current_user: User,
     locked: bool = False,
-) -> LessonMark:
+) -> tuple[LessonMark, bool]:
+    """Сохраняет отметку. Второе значение — ученик только что отмечен пришедшим
+    (был «не пришёл» или без отметки, стал «очно» / «онлайн»)."""
     validate_attendance_status(data.attendance_status)
 
     result = await db.execute(
@@ -1050,6 +1042,7 @@ async def _upsert_mark(
     if not mark:
         mark = LessonMark(lesson_id=lesson_id, student_id=student_id)
         db.add(mark)
+    arrived = data.attendance_status in PRESENT and mark.attendance_status not in PRESENT
 
     mark.attendance_status = data.attendance_status
     mark.is_late = data.is_late
@@ -1059,7 +1052,16 @@ async def _upsert_mark(
     mark.comment = data.comment
     mark.marked_by = current_user.id
     mark.marked_at = datetime.now(dt_timezone.utc)
-    return mark
+    return mark, arrived
+
+
+def _open_on_arrival(lesson: Lesson, arrived: bool) -> None:
+    """Закрытый урок открывается сам, когда в нём отмечают пришедшего ученика:
+    урок начался — ученики должны его видеть. Срабатывает только на новую
+    отметку «пришёл»; если педагог потом закрыл урок вручную, правка оценок
+    или звёзд его снова не откроет."""
+    if arrived and not lesson.is_open:
+        lesson.is_open = True
 
 
 # Табличка урока: посещаемость/оценка/звёзды по всем студентам группы
@@ -1183,10 +1185,11 @@ async def save_lesson_mark(
     if student_id not in active_ids:
         raise HTTPException(status_code=404, detail="Студент не найден в группе урока")
 
-    mark = await _upsert_mark(db, lesson_id, student_id, data, current_user, locked=lesson_locked_for(lesson, current_user))
+    mark, arrived = await _upsert_mark(db, lesson_id, student_id, data, current_user, locked=lesson_locked_for(lesson, current_user))
+    _open_on_arrival(lesson, arrived)
     await db.commit()
     await db.refresh(mark)
-    return {"ok": True, "marked_at": mark.marked_at}
+    return {"ok": True, "marked_at": mark.marked_at, "is_open": lesson.is_open}
 
 
 # Сохранить всю табличку разом («Сохранить» — подстраховка к автосохранению)
@@ -1206,10 +1209,11 @@ async def save_lesson_marks_bulk(
         raise HTTPException(status_code=404, detail=f"Студенты не найдены в группе урока: {unknown}")
 
     for item in data:
-        await _upsert_mark(db, lesson_id, item.student_id, item, current_user, locked=locked)
+        _, arrived = await _upsert_mark(db, lesson_id, item.student_id, item, current_user, locked=locked)
+        _open_on_arrival(lesson, arrived)
 
     await db.commit()
-    return {"ok": True, "saved": len(data)}
+    return {"ok": True, "saved": len(data), "is_open": lesson.is_open}
 
 
 # Материалы урока: всё привязанное (файл/квиз/ссылка) из общей «Базы

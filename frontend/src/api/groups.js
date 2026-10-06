@@ -5,6 +5,11 @@ export function getMyGroups() {
   return api.get('/groups/my').then(res => res.data);
 }
 
+// Флаг «Проверь ДЗ» у педагога: {count — ответов ждут проверки, lesson_id — с какого урока начать}
+export function getHomeworkToReview() {
+  return api.get('/groups/homework-to-review').then(res => res.data);
+}
+
 // Список курсов для регистрации/создания группы — отдельный эндпоинт
 // /groups/courses, не путать с admin.getCourses() (/admin/courses).
 export function getCourses() {

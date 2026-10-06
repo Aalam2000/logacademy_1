@@ -18,10 +18,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .attendance import PRESENT, ABSENT, attendance_slots, summarize
+from .homework_status import awaiting_review
 from .lesson_lock import BAKU_TZ, aware, baku_day
 from .report_common import avg as _avg, month_bounds, pct as _pct, status_max, status_min, summarize_indicators
 from .models import (
-    Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonFeedback,
+    Group, GroupMember, HomeworkAnswer, HomeworkTask, Lesson, LessonFeedback,
     LessonMark, User, UserSession,
 )
 
@@ -147,12 +148,7 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
     queue = (await db.execute(
         select(HomeworkAnswer.updated_at, Lesson.group_id)
         .join(Lesson, Lesson.id == HomeworkAnswer.lesson_id)
-        .where(
-            Lesson.group_id.in_(gids),
-            HomeworkAnswer.grade.is_(None), HomeworkAnswer.accepted == False,  # noqa: E712
-            HomeworkAnswer.reviewed_at.is_(None),
-            select(HomeworkAnswerFile.id).where(HomeworkAnswerFile.answer_id == HomeworkAnswer.id).exists(),
-        )
+        .where(Lesson.group_id.in_(gids), *awaiting_review())
         .order_by(HomeworkAnswer.updated_at)
     )).all()
     hw_queue = {"count": len(queue), "oldest_days": None, "group": None}
