@@ -488,7 +488,7 @@ async def get_board(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, write=False)
     tasks = await _lesson_tasks(db, lesson_id)
     tasks_out = await _task_out(db, tasks)
 
@@ -653,7 +653,7 @@ async def download_answer_file(
             raise HTTPException(status_code=403, detail="Нет доступа к файлу")
         await get_lesson_for_student(lesson_id, db, current_user)
     else:
-        await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+        await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, write=False)
 
     media_type = f.content_type or "application/octet-stream"
     disposition = "attachment"
@@ -672,13 +672,13 @@ async def download_answer_file(
 
 # ---------- Диалог педагог ↔ студент в строке студента ----------
 
-async def _thread_access(db: AsyncSession, lesson_id: int, student_id: int, user: User) -> None:
+async def _thread_access(db: AsyncSession, lesson_id: int, student_id: int, user: User, write: bool = True) -> None:
     if user.role == "student":
         if student_id != user.id:
             raise HTTPException(status_code=403, detail="Нет доступа")
         await get_lesson_for_student(lesson_id, db, user)
     else:
-        lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, user)
+        lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, user, write=write)
         await _ensure_active_student(db, lesson, student_id)
 
 
@@ -712,7 +712,7 @@ async def get_messages(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await _thread_access(db, lesson_id, student_id, current_user)
+    await _thread_access(db, lesson_id, student_id, current_user, write=False)
     return await _thread_out(db, await _thread(db, lesson_id, student_id), student_id, current_user)
 
 

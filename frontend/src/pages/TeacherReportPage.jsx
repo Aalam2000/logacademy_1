@@ -1,4 +1,4 @@
-// Отчёт по педагогу за месяц — для руководителя (админ: «Учителя» → педагог).
+// Отчёт по педагогу за период — для руководителя (админ: «Учителя» → педагог).
 // Сколько отработано (уроки, часы) и как — показатели, которые педагог не
 // выставляет себе сам. Цифры, статусы и нормы считает бэкенд
 // (backend/app/teacher_report.py), формулировки — здесь.
@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { extractErrorMessage } from '../utils/errors';
 import {
-  ReportPeriod, ReportToolbar, Status, currentMonth, formatDate, withSign,
+  ReportPeriod, ReportToolbar, Status, defaultPeriod, formatDate, periodParams, withSign,
 } from '../components/ReportParts';
 
 // Строки «Как отработано»: вопрос, пояснение, значение «сейчас» и норма
@@ -23,7 +23,7 @@ function indicatorRow(ind, norms) {
     case 'retention':
       return {
         q: <>{'Остаются ли ученики?'}</>,
-        hint: <>{'Сколько учеников было в этом месяце и сколько осталось'}</>,
+        hint: <>{'Сколько учеников было за период и сколько осталось'}</>,
         value: ind.total ? <>{ind.stayed} {'из'} {ind.total}</> : '—',
         norm: <>{'все остались'}</>,
       };
@@ -83,7 +83,7 @@ function indicatorRow(ind, norms) {
 function TeacherReportPage() {
   const { teacherId } = useParams();
   const navigate = useNavigate();
-  const [month, setMonth] = useState(currentMonth());
+  const [period, setPeriod] = useState(defaultPeriod);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -92,13 +92,14 @@ function TeacherReportPage() {
     let alive = true;
     setLoading(true);
     setError('');
-    api.get(`/admin/teachers/${teacherId}/report`, { params: { month } })
+    api.get(`/admin/teachers/${teacherId}/report`, { params: periodParams(period) })
       .then(r => { if (alive) setReport(r.data); })
       .catch(err => { if (alive) setError(extractErrorMessage(err, 'Не удалось построить отчёт')); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [teacherId, month]);
+  }, [teacherId, period]);
 
+  const isMonth = report?.period?.kind === 'month'; // у месячного отчёта свои формулировки вывода
   const attention = report?.attention;
   const hasAttention = attention && (
     attention.hw_queue.count > 0 || attention.at_risk.length > 0 || attention.left.length > 0 || attention.not_held.length > 0
@@ -109,8 +110,9 @@ function TeacherReportPage() {
     <div className="page">
       <ReportToolbar
         onBack={() => navigate('/dashboard/teachers')}
-        month={month}
-        onMonth={setMonth}
+        period={period}
+        onPeriod={setPeriod}
+        allLabel={'С начала преподавания'}
         canPrint={!loading && !!report}
       />
 
@@ -129,7 +131,7 @@ function TeacherReportPage() {
               )}
             </div>
             <div className="report__meta">
-              <ReportPeriod month={month} />
+              <ReportPeriod period={report.period} />
               {report.is_current_month && <div>{'Месяц ещё идёт — данные на сегодня'}</div>}
             </div>
           </div>
@@ -141,10 +143,10 @@ function TeacherReportPage() {
               {/* Вывод одной фразой */}
               <div className={`report__verdict report__verdict--${report.level}`}>
                 <div className="report__verdict-title">
-                  {report.level === 'excellent' ? 'Месяц отработан отлично'
-                    : report.level === 'good' ? 'Месяц отработан хорошо'
+                  {report.level === 'excellent' ? (isMonth ? 'Месяц отработан отлично' : 'Период отработан отлично')
+                    : report.level === 'good' ? (isMonth ? 'Месяц отработан хорошо' : 'Период отработан хорошо')
                     : report.level === 'problems' ? 'Есть проблемы — нужен разговор с педагогом'
-                    : 'В этом месяце уроков ещё не было — оценивать нечего'}
+                    : 'За этот период уроков не было — оценивать нечего'}
                   {report.level !== 'none' && <>: {'в норме'} {report.good} {'из'} {report.rated}</>}
                 </div>
                 {report.level !== 'none' && weak.length > 0 && (

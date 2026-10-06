@@ -87,6 +87,9 @@ class Lesson(Base):
     comment = Column(Text, nullable=True)  # заметки педагога по уроку в целом (не по студенту)
     # Персональный урок: виден и учитывается только у участников (lesson_students) — app/personal.py
     is_personal = Column(Boolean, nullable=False, default=False, server_default="false")
+    # Кто ведёт урок: по умолчанию основной педагог группы, админ может назначить
+    # другого (замена, передача группы). Правила и доступ — app/lesson_teacher.py
+    teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

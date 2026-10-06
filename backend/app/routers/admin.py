@@ -13,7 +13,8 @@ from ..dependencies import require_admin
 from .academy import sector_exists
 from ..phones import ensure_phone_free
 from ..teacher_report import build_teacher_report
-from ..report_common import resolve_month
+from ..report_common import resolve_period
+from ..lesson_teacher import assign_teacher
 import secrets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -119,10 +120,12 @@ class TeacherStatsOut(BaseModel):
 
 
 # Справочник преподов: по каждому — кол-во активных групп, уникальных
-# активных студентов, % посещаемости и средний балл по всем его ученикам.
-# Считаются все, кто фигурирует как teacher_id хотя бы одной активной
-# группы (это может быть и admin — модель это разрешает), а не только
-# пользователи с role="teacher".
+# активных студентов, % посещаемости и средний балл.
+# Группы и студенты — по группам, где он основной педагог; проведённые уроки,
+# посещаемость и балл — по урокам, которые вёл он сам (Lesson.teacher_id,
+# app/lesson_teacher.py): уроки замены и уроки до передачи группы считаются
+# тому, кто их вёл. В список попадают все, кто основной педагог хотя бы одной
+# активной группы или вёл в ней урок (это может быть и admin).
 @router.get("/teachers/directory", response_model=list[TeacherStatsOut])
 async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
     groups_result = await db.execute(
@@ -137,7 +140,10 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
     if not groups_by_teacher:
         return []
 
-    teacher_ids = list(groups_by_teacher.keys())
+    lesson_teacher = dict((await db.execute(
+        select(Lesson.id, Lesson.teacher_id).where(Lesson.group_id.in_(all_group_ids))
+    )).all())
+    teacher_ids = list(set(groups_by_teacher) | set(lesson_teacher.values()))
     users_result = await db.execute(
         select(User.id, User.full_name, User.username).where(User.id.in_(teacher_ids))
     )
@@ -152,53 +158,51 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
         students_by_group.setdefault(gid, set()).add(sid)
 
     marks_result = await db.execute(
-        select(Lesson.group_id, LessonMark.score)
+        select(Lesson.teacher_id, LessonMark.score)
         .join(Lesson, Lesson.id == LessonMark.lesson_id)
         .where(Lesson.group_id.in_(all_group_ids), LessonMark.score.isnot(None))
     )
-    scores_by_group: dict[int, list[int]] = {}
-    for gid, score in marks_result.all():
-        scores_by_group.setdefault(gid, []).append(score)
+    scores_by_teacher: dict[int, list[int]] = {}
+    for tid, score in marks_result.all():
+        scores_by_teacher.setdefault(tid, []).append(score)
 
     # Проведённый урок — открыт педагогом и на нём отмечен хотя бы один
     # присутствовавший студент (очно или онлайн). Считается по активным
-    # группам преподавателя, как и остальные колонки справочника.
+    # группам, как и остальные колонки справочника.
     held_result = await db.execute(
-        select(Lesson.group_id, func.count(func.distinct(Lesson.id)))
+        select(Lesson.teacher_id, func.count(func.distinct(Lesson.id)))
         .join(LessonMark, LessonMark.lesson_id == Lesson.id)
         .where(
             Lesson.group_id.in_(all_group_ids),
             Lesson.is_open == True,
             LessonMark.attendance_status.in_(PRESENT),
         )
-        .group_by(Lesson.group_id)
+        .group_by(Lesson.teacher_id)
     )
-    held_by_group = {gid: cnt for gid, cnt in held_result.all()}
+    held_by_teacher = {tid: cnt for tid, cnt in held_result.all()}
 
     # Посещаемость — по общему правилу (attendance.py): пропуск = урок
     # заблокирован, ученик был в группе, а «был/онлайн/уважительная» нет.
-    slots_by_group: dict[int, list] = {}
+    slots_by_teacher: dict[int, list] = {}
     for slot in await attendance_slots(db, all_group_ids):
-        slots_by_group.setdefault(slot.group_id, []).append(slot)
+        slots_by_teacher.setdefault(lesson_teacher.get(slot.lesson_id), []).append(slot)
 
     out = []
-    for tid, gids in groups_by_teacher.items():
+    for tid in teacher_ids:
+        gids = groups_by_teacher.get(tid, [])
         student_ids: set[int] = set()
-        scores: list[int] = []
-        teacher_slots = []
         for gid in gids:
             student_ids |= students_by_group.get(gid, set())
-            scores += scores_by_group.get(gid, [])
-            teacher_slots += slots_by_group.get(gid, [])
+        scores = scores_by_teacher.get(tid, [])
 
         out.append(TeacherStatsOut(
             id=tid,
             full_name=names.get(tid, f"#{tid}"),
             group_count=len(gids),
             student_count=len(student_ids),
-            attendance_pct=summarize(teacher_slots).pct,
+            attendance_pct=summarize(slots_by_teacher.get(tid, [])).pct,
             avg_score=round(sum(scores) / len(scores), 1) if scores else None,
-            lessons_held=sum(held_by_group.get(gid, 0) for gid in gids),
+            lessons_held=held_by_teacher.get(tid, 0),
         ))
 
     out.sort(key=lambda t: t.full_name.lower())
@@ -208,21 +212,25 @@ async def get_teachers_directory(db: AsyncSession = Depends(get_db), admin: User
 # Отчёт по педагогу за месяц (страница «Учителя» → клик по педагогу):
 # сколько отработано и как — показатели качества, которые педагог не
 # выставляет себе сам. Правила и нормы — app/teacher_report.py.
-# month=ГГГГ-ММ; не задан — текущий месяц (по Баку).
+# Период — report_common.resolve_period: period=month (по умолчанию; month=ГГГГ-ММ,
+# не задан — текущий) | year | all | custom (date_from, date_to — ГГГГ-ММ-ДД).
 @router.get("/teachers/{user_id}/report")
 async def get_teacher_report(
     user_id: int,
+    period: Optional[str] = None,
     month: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    month = resolve_month(month)
+    report_period = resolve_period(period, month, date_from, date_to)
     teacher = (await db.execute(
         select(User).where(User.id == user_id, User.role.in_(["teacher", "admin"]))
     )).scalar_one_or_none()
     if not teacher:
         raise HTTPException(status_code=404, detail="Педагог не найден")
-    return await build_teacher_report(db, teacher, month)
+    return await build_teacher_report(db, teacher, report_period)
 
 
 # ── АДМИНЫ ──
@@ -470,7 +478,10 @@ async def update_group(
         raise HTTPException(status_code=400, detail="Сектор группы изменить нельзя")
 
     group.name = data.name
-    group.teacher_id = data.teacher_id
+    # Смена педагога в карточке группы — передача с сегодняшнего дня: прошедшие
+    # уроки остаются за тем, кто их вёл (app/lesson_teacher.py)
+    if data.teacher_id != group.teacher_id:
+        await assign_teacher(db, group, data.teacher_id)
     group.telegram_chat_id = data.telegram_chat_id
     group.whatsapp = data.whatsapp
     group.video_url = data.video_url
@@ -479,6 +490,31 @@ async def update_group(
     await db.commit()
     await db.refresh(group)
     return group
+
+# Педагог уроков группы: замена на один урок, передача группы с такого-то
+# урока, указание прежнего педагога. Отрезок — с урока по урок включительно;
+# to_lesson_id не задан — до конца, и педагог становится основным в группе.
+# Правила — app/lesson_teacher.py.
+class AssignTeacherIn(BaseModel):
+    teacher_id: int
+    from_lesson_id: int
+    to_lesson_id: Optional[int] = None
+
+
+@router.post("/groups/{group_id}/assign-teacher")
+async def assign_group_teacher(
+    group_id: int,
+    data: AssignTeacherIn,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    group = (await db.execute(select(Group).where(Group.id == group_id))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Группа не найдена")
+    changed = await assign_teacher(db, group, data.teacher_id, data.from_lesson_id, data.to_lesson_id)
+    await db.commit()
+    return {"changed": changed, "teacher_id": group.teacher_id}
+
 
 # Архив группы: активную группу нельзя удалить — только отправить в архив.
 # Группа в архиве видна только по кнопке «Архив» (фильтр на фронте по status).

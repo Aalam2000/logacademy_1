@@ -14,7 +14,7 @@ from ..database import get_db
 from ..schemas import NewPasswordIn
 from ..dependencies import require_admin, require_teacher
 from ..phones import checked_student_phone, normalize_phone, PHONE_FORMAT_ERROR, PHONE_REQUIRED_ERROR
-from ..report_common import resolve_month
+from ..report_common import resolve_period
 from ..student_report import build_student_report
 from ..models import (
     Course, Group, GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson, LessonMark,
@@ -276,19 +276,55 @@ async def _get_accessible_student(
     return student, matched_group_ids, groups_by_id
 
 
-# Отчёт по ученику за месяц — для родителей (правила и нормы — app/student_report.py).
-# teacher — только по ученику своих групп и только по своим группам, admin — по любому.
-# month=ГГГГ-ММ; не задан — текущий месяц (по Баку).
+# Отчёт по ученику за период — для родителей (правила и нормы — app/student_report.py).
+# admin — по любому ученику; teacher — по ученику своих групп и только по ним.
+# Педагог, который в группе не основной (вёл в ней уроки — app/lesson_teacher.py),
+# получает отчёт только по своим урокам с этим учеником.
+# Период — report_common.resolve_period: period=month (по умолчанию; month=ГГГГ-ММ,
+# не задан — текущий) | year | all | custom (date_from, date_to — ГГГГ-ММ-ДД).
 @router.get("/{student_id}/report")
 async def get_student_report(
     student_id: int,
+    period: Optional[str] = None,
     month: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
-    month = resolve_month(month)
-    student, matched_group_ids, groups_by_id = await _get_accessible_student(db, student_id, current_user)
-    return await build_student_report(db, student, [groups_by_id[gid] for gid in matched_group_ids], month)
+    report_period = resolve_period(period, month, date_from, date_to)
+    student = (await db.execute(
+        select(User).where(User.id == student_id, User.role == "student")
+    )).scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="Студент не найден")
+
+    groups_by_id = await _scope_group_ids(db, current_user)
+    member_group_ids = {row[0] for row in (await db.execute(
+        select(GroupMember.group_id)
+        .where(GroupMember.student_id == student_id, GroupMember.status == "active")
+    )).all()}
+    groups = [groups_by_id[gid] for gid in member_group_ids if gid in groups_by_id]
+
+    own_lessons_of: dict[int, int] = {}
+    if current_user.role != "admin" and member_group_ids:
+        for gid, name, course_title in (await db.execute(
+            select(Group.id, Group.name, Course.title)
+            .join(Course, Course.id == Group.course_id)
+            .where(
+                Group.id.in_(member_group_ids), Group.teacher_id != current_user.id,
+                Group.id.in_(select(Lesson.group_id).where(Lesson.teacher_id == current_user.id)),
+            )
+        )).all():
+            # в отчёте педагогом записан он сам: это отчёт по его урокам
+            groups.append({
+                "id": gid, "name": name, "course_title": course_title, "teacher_id": current_user.id,
+                "teacher_name": current_user.full_name or current_user.username,
+            })
+            own_lessons_of[gid] = current_user.id
+    if current_user.role != "admin" and not groups:
+        raise HTTPException(status_code=403, detail="Этот студент не в ваших группах")
+    return await build_student_report(db, student, groups, report_period, own_lessons_of)
 
 
 # Смена пароля ученика педагогом (ученик забыл пароль): без старого пароля.

@@ -1,8 +1,9 @@
 // Роутер /groups (backend/app/routers/groups.py)
 import api from './auth';
 
-export function getMyGroups() {
-  return api.get('/groups/my').then(res => res.data);
+// params.with_guest — ещё и группы, где педагог не основной, но ведёт или вёл уроки (is_main: false)
+export function getMyGroups(params) {
+  return api.get('/groups/my', { params }).then(res => res.data);
 }
 
 // Флаг «Проверь ДЗ» у педагога: {count — ответов ждут проверки, lesson_id — с какого урока начать}

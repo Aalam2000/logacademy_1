@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from ..database import get_db
-from ..models import Group, GroupMember, User, Course
+from ..models import Group, GroupMember, Lesson, User, Course
 from ..schemas import GroupOut, CourseOut, GroupInviteOut, clean_video_url, DURATION_MIN, DURATION_MAX
 from ..dependencies import require_teacher, get_current_user
 from ..homework_status import oldest_lesson_to_review, to_review_by_group
@@ -29,6 +29,22 @@ async def _get_owned_group(db: AsyncSession, group_id: int, current_user: User) 
     return group
 
 
+def _guest_group_ids(user_id: int):
+    """Группы, где педагог не основной, но ведёт или вёл уроки (lesson_teacher.py)."""
+    return select(Lesson.group_id).where(Lesson.teacher_id == user_id).distinct()
+
+
+def _guest_group_out(group: Group, teacher_name: Optional[str]) -> GroupOut:
+    """Группа глазами не основного педагога: только то, что нужно для списка
+    его уроков, — без контактов, кода приглашения и учеников."""
+    return GroupOut(
+        id=group.id, name=group.name, course_id=group.course_id, teacher_id=group.teacher_id,
+        telegram_chat_id=None, lesson_duration_min=group.lesson_duration_min, sector=group.sector,
+        status=group.status, invite_code="", created_at=group.created_at,
+        teacher_name=teacher_name, is_main=False,
+    )
+
+
 # Список курсов, read-only: педагогу — только курсы его групп (чужие курсы
 # ему не отдаём вообще), админу — все. Отдельно от /admin/courses, который
 # остаётся только для admin.
@@ -39,7 +55,9 @@ async def get_courses_for_teacher(
 ):
     query = select(Course)
     if current_user.role != "admin":
-        query = query.where(Course.id.in_(select(Group.course_id).where(Group.teacher_id == current_user.id)))
+        query = query.where(Course.id.in_(select(Group.course_id).where(
+            (Group.teacher_id == current_user.id) | Group.id.in_(_guest_group_ids(current_user.id))
+        )))
     result = await db.execute(query.order_by(Course.title))
     return result.scalars().all()
 
@@ -130,10 +148,14 @@ async def update_group_settings(
 # смысл, что и в /students — см. _scope_group_ids в students.py):
 # teacher_id=<id> — группы конкретного препода, mine=true — только свои,
 # ни то ни другое — вообще все группы.
+# with_guest=true — ещё и группы, где педагог не основной, но ведёт или вёл
+# отдельные уроки (is_main=False, без контактов и учеников): нужны страницам
+# «Мои группы» и «Группа», остальным потребителям списка — нет.
 @router.get("/my", response_model=list[GroupOut])
 async def get_my_groups(
     teacher_id: Optional[int] = None,
     mine: bool = False,
+    with_guest: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
@@ -147,7 +169,14 @@ async def get_my_groups(
 
     result = await db.execute(query)
     groups = result.scalars().all()
-    if not groups:
+
+    # admin видит любую группу целиком и так — «гостевой» вид только у педагога
+    guest_groups = []
+    if with_guest and current_user.role != "admin":
+        guest_groups = (await db.execute(
+            select(Group).where(Group.id.in_(_guest_group_ids(current_user.id)), Group.teacher_id != current_user.id)
+        )).scalars().all()
+    if not groups and not guest_groups:
         return []
 
     group_ids = [g.id for g in groups]
@@ -161,7 +190,7 @@ async def get_my_groups(
     counts = {gid: cnt for gid, cnt in counts_result.all()}
 
     # Имена преподавателей
-    teacher_ids = list({g.teacher_id for g in groups})
+    teacher_ids = list({g.teacher_id for g in [*groups, *guest_groups]})
     teachers_result = await db.execute(
         select(User.id, User.full_name, User.username).where(User.id.in_(teacher_ids))
     )
@@ -175,6 +204,7 @@ async def get_my_groups(
         item.teacher_name = teachers.get(g.teacher_id)
         item.homework_to_review = to_review.get(g.id, 0)
         out.append(item)
+    out += [_guest_group_out(g, teachers.get(g.teacher_id)) for g in guest_groups]
     return out
 
 

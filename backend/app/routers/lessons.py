@@ -12,6 +12,7 @@ from ..lesson_lock import BAKU_TZ, is_date_locked
 from ..attendance import PRESENT, attendance_slots
 from ..lesson_lock import aware
 from ..homework_status import awaiting_review
+from ..lesson_teacher import can_edit_lesson, can_view_lesson, is_group_teacher
 from ..personal import (
     is_participant, lesson_student_ids, lesson_students_condition, participant_names,
     set_participants, visible_to_student,
@@ -83,6 +84,11 @@ class LessonOut(BaseModel):
     group_video_url: Optional[str] = None
     group_telegram: Optional[str] = None
     group_whatsapp: Optional[str] = None
+    # Педагог урока (app/lesson_teacher.py) — только педагогу/админу.
+    teacher_id: Optional[int] = None
+    teacher_name: Optional[str] = None   # заполняется, если урок ведёт не основной педагог группы
+    can_edit: bool = True                # False — урок доступен только для просмотра
+    can_manage: bool = True              # расписание и состав урока: основной педагог группы и админ
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -229,23 +235,35 @@ _STATUS_LABELS = {
 }
 
 
+VIEW_ONLY_DETAIL = "Урок доступен только для просмотра"
+MANAGE_DETAIL = "Это может сделать только основной педагог группы"
+
+
 async def get_lesson_for_teacher_or_admin(
     lesson_id: int,
     db: AsyncSession,
-    current_user: User
+    current_user: User,
+    write: bool = True,
+    manage: bool = False,
 ):
+    """Урок для педагога/админа. write=True (по умолчанию) — для любых
+    изменений в уроке; write=False — только чтение; manage=True — расписание
+    и состав урока (удалить, перенести, участники): основной педагог группы
+    и админ. Кто что может — lesson_teacher.py."""
     result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
     lesson = result.scalar_one_or_none()
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
 
-    group_query = select(Group).where(Group.id == lesson.group_id)
-    if current_user.role != "admin":
-        group_query = group_query.where(Group.teacher_id == current_user.id)
-
-    group = await db.execute(group_query)
-    if not group.scalar_one_or_none():
+    group_teacher_id = (await db.execute(
+        select(Group.teacher_id).where(Group.id == lesson.group_id)
+    )).scalar_one_or_none()
+    if group_teacher_id is None or not can_view_lesson(lesson, group_teacher_id, current_user):
         raise HTTPException(status_code=403, detail="Нет доступа")
+    if manage and not is_group_teacher(group_teacher_id, current_user):
+        raise HTTPException(status_code=403, detail=MANAGE_DETAIL)
+    if write and not can_edit_lesson(lesson, group_teacher_id, current_user):
+        raise HTTPException(status_code=403, detail=VIEW_ONLY_DETAIL)
 
     return lesson
 
@@ -450,7 +468,32 @@ async def with_unreviewed_flag(db: AsyncSession, lessons: list[Lesson], user: Op
     for item in out:
         item.has_unreviewed_homework = item.id in flagged
         item.participants = names.get(item.id, [])
+    if user and user.role != "student":
+        await _fill_teacher_info(db, out, lessons, user)
     return out
+
+
+async def _fill_teacher_info(db: AsyncSession, out: list[LessonOut], lessons: list[Lesson], user: User) -> None:
+    """Педагог урока и право правки. ДЗ проверяет основной педагог группы —
+    у остальных подсветка «проверить ДЗ» не показывается."""
+    group_teachers = dict((await db.execute(
+        select(Group.id, Group.teacher_id).where(Group.id.in_({l.group_id for l in lessons}))
+    )).all())
+    other_ids = {l.teacher_id for l in lessons if l.teacher_id != group_teachers.get(l.group_id)}
+    names = {}
+    if other_ids:
+        names = {
+            uid: (full_name or username) for uid, full_name, username in (await db.execute(
+                select(User.id, User.full_name, User.username).where(User.id.in_(other_ids))
+            )).all()
+        }
+    for item, lesson in zip(out, lessons):
+        group_teacher_id = group_teachers.get(lesson.group_id)
+        item.teacher_name = names.get(lesson.teacher_id) if lesson.teacher_id != group_teacher_id else None
+        item.can_edit = can_edit_lesson(lesson, group_teacher_id, user)
+        item.can_manage = is_group_teacher(group_teacher_id, user)
+        if not is_group_teacher(group_teacher_id, user):
+            item.has_unreviewed_homework = False
 
 
 # Уроки группы
@@ -460,19 +503,16 @@ async def get_group_lessons(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    # Для admin доступ к любой группе, для teacher — только к своей
-    group_query = select(Group).where(Group.id == group_id)
-    if current_user.role != "admin":
-        group_query = group_query.where(Group.teacher_id == current_user.id)
-
-    group = await db.execute(group_query)
-    if not group.scalar_one_or_none():
+    # admin и основной педагог группы — все уроки; педагог, который вёл или
+    # ведёт в группе отдельные уроки, — только их (lesson_teacher.py)
+    group = (await db.execute(select(Group).where(Group.id == group_id))).scalar_one_or_none()
+    query = select(Lesson).where(Lesson.group_id == group_id).order_by(Lesson.order)
+    if group and not is_group_teacher(group.teacher_id, current_user):
+        query = query.where(Lesson.teacher_id == current_user.id)
+    lessons = (await db.execute(query)).scalars().all() if group else []
+    if not group or (not lessons and not is_group_teacher(group.teacher_id, current_user)):
         raise HTTPException(status_code=403, detail="Нет доступа к этой группе")
-
-    result = await db.execute(
-        select(Lesson).where(Lesson.group_id == group_id).order_by(Lesson.order)
-    )
-    return await with_unreviewed_flag(db, result.scalars().all(), current_user)
+    return await with_unreviewed_flag(db, lessons, current_user)
 
 
 # Создать урок
@@ -499,6 +539,7 @@ async def create_lesson(
         source=data.source,
         is_open=False,
         is_personal=data.is_personal,
+        teacher_id=group.teacher_id,
     )
     db.add(lesson)
     if data.is_personal:
@@ -578,6 +619,7 @@ async def generate_schedule(
             duration_min=data.duration_min or group.lesson_duration_min,
             source="academy",
             is_open=False,
+            teacher_id=group.teacher_id,
         )
         db.add(lesson)
         lessons_by_order[i] = lesson
@@ -736,23 +778,18 @@ async def get_my_lessons(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    groups_query = select(Group)
-    if current_user.role != "admin":
-        groups_query = groups_query.where(Group.teacher_id == current_user.id)
-    elif mine:
-        groups_query = groups_query.where(Group.teacher_id == current_user.id)
-    elif teacher_id is not None:
-        groups_query = groups_query.where(Group.teacher_id == teacher_id)
-
-    groups_result = await db.execute(groups_query)
-    group_ids = [g.id for g in groups_result.scalars().all()]
-    if not group_ids:
-        return []
-    result = await db.execute(
-        select(Lesson)
-        .where(Lesson.group_id.in_(group_ids))
-        .order_by(Lesson.date)
-    )
+    # Уроки педагога = все уроки групп, где он основной, + уроки других
+    # групп, которые ведёт он сам (замены, уроки до передачи группы).
+    scope_teacher_id = teacher_id
+    if current_user.role != "admin" or mine:
+        scope_teacher_id = current_user.id
+    query = select(Lesson).order_by(Lesson.date)
+    if scope_teacher_id is not None:
+        query = query.where(
+            Lesson.group_id.in_(select(Group.id).where(Group.teacher_id == scope_teacher_id))
+            | (Lesson.teacher_id == scope_teacher_id)
+        )
+    result = await db.execute(query)
     return await with_unreviewed_flag(db, result.scalars().all(), current_user)
 
 
@@ -992,7 +1029,7 @@ async def mark_lesson_as_holiday(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, manage=True)
     if lesson.date is None:
         raise HTTPException(status_code=400, detail="У урока не задана дата")
     if lesson_locked_for(lesson, current_user):
@@ -1082,7 +1119,9 @@ async def get_lesson_marks(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, write=False)
+    group_teacher_id = (await db.execute(select(Group.teacher_id).where(Group.id == lesson.group_id))).scalar_one()
+    can_edit = can_edit_lesson(lesson, group_teacher_id, current_user)
 
     rows = await db.execute(
         select(User, LessonMark)
@@ -1103,9 +1142,10 @@ async def get_lesson_marks(
         students.append(LessonMarkOut(
             student_id=user.id,
             full_name=user.full_name or user.username,
-            telegram_username=user.telegram_username,
-            whatsapp=user.whatsapp,
-            phone=user.phone,
+            # контакты учеников — только тому, кто сейчас работает в уроке
+            telegram_username=user.telegram_username if can_edit else None,
+            whatsapp=user.whatsapp if can_edit else None,
+            phone=user.phone if can_edit else None,
             attendance_status=mark.attendance_status if mark else None,
             is_late=mark.is_late if mark else False,
             score=mark.score if mark else None,
@@ -1117,6 +1157,7 @@ async def get_lesson_marks(
 
     return {
         "locked": is_lesson_locked(lesson) and current_user.role != "admin",
+        "can_edit": can_edit,
         "students": students,
     }
 
@@ -1242,7 +1283,7 @@ async def get_lesson_items(
     if current_user.role == "student":
         await get_lesson_for_student(lesson_id, db, current_user)
     else:
-        await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+        await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, write=False)
 
     rows = await db.execute(
         select(LessonResource, User.full_name, User.username)
@@ -1427,7 +1468,7 @@ async def get_lesson(
     if current_user.role == "student":
         lesson = await get_lesson_for_student(lesson_id, db, current_user)
     else:
-        lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+        lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, write=False)
     out = LessonOut.model_validate(lesson)
     out.is_locked = lesson_locked_for(lesson, current_user)
     group_row = (await db.execute(
@@ -1436,8 +1477,13 @@ async def get_lesson(
     )).first()
     if group_row:
         out.group_name, out.group_video_url, out.group_telegram, out.group_whatsapp = group_row
-    if lesson.is_personal and current_user.role != "student":
-        out.participants = (await participant_names(db, [lesson.id])).get(lesson.id, [])
+    if current_user.role != "student":
+        if lesson.is_personal:
+            out.participants = (await participant_names(db, [lesson.id])).get(lesson.id, [])
+        await _fill_teacher_info(db, [out], [lesson], current_user)
+        if not out.can_edit:
+            # только просмотр — без входа в конференцию и чатов группы
+            out.group_video_url = out.group_telegram = out.group_whatsapp = None
     return out
 
 
@@ -1450,7 +1496,7 @@ async def update_lesson_participants(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, manage=True)
     if not lesson.is_personal:
         raise HTTPException(status_code=400, detail="Это не персональный урок")
     await set_participants(db, lesson, data.student_ids)
@@ -1466,9 +1512,11 @@ async def update_lesson(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
-
     update_data = data.model_dump(exclude_unset=True)
+    # Заметки по уроку пишет тот, кто его ведёт; название, дата и длительность — расписание группы
+    lesson = await get_lesson_for_teacher_or_admin(
+        lesson_id, db, current_user, manage=bool(set(update_data) - {"comment"}),
+    )
     if update_data.get("duration_min", 0) is None:
         del update_data["duration_min"]  # колонка NOT NULL — null не пишем
     if "date" in update_data and update_data["date"] != lesson.date and lesson_locked_for(lesson, current_user):
@@ -1480,6 +1528,7 @@ async def update_lesson(
     await db.refresh(lesson)
     out = LessonOut.model_validate(lesson)
     out.is_locked = lesson_locked_for(lesson, current_user)
+    await _fill_teacher_info(db, [out], [lesson], current_user)
     return out
 
 
@@ -1489,7 +1538,7 @@ async def delete_lesson(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user)
+    lesson = await get_lesson_for_teacher_or_admin(lesson_id, db, current_user, manage=True)
     if lesson_locked_for(lesson, current_user):
         raise HTTPException(status_code=403, detail="Прошла полночь по Баку — урок удалить нельзя")
 
@@ -1528,8 +1577,8 @@ async def copy_lesson(
     if current_user.role != "admin":
         group_query = group_query.where(Group.teacher_id == current_user.id)
 
-    group = await db.execute(group_query)
-    if not group.scalar_one_or_none():
+    group = (await db.execute(group_query)).scalar_one_or_none()
+    if not group:
         raise HTTPException(status_code=403, detail="Нет доступа к целевой группе")
 
     new_lesson = Lesson(
@@ -1539,7 +1588,8 @@ async def copy_lesson(
         date=None,  # дату копируем пустой — педагог назначит
         duration_min=lesson.duration_min,
         source=lesson.source,
-        is_open=False
+        is_open=False,
+        teacher_id=group.teacher_id,
     )
     db.add(new_lesson)
     await db.commit()

@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=en sha1=bf50bf1e3193db0654d6112e75d1c7899f74a091 -->
+<!-- autoi18n: source=admin.md lang=en sha1=3facc5c5d48557a8e070b3d2b9c80b3e73e83117 -->
 # How to work on the platform
 
 The administrator sees everything that the teacher sees — but for all groups and all teachers — and additionally manages users, courses, and groups.
@@ -8,6 +8,16 @@ The administrator sees everything that the teacher sees — but for all groups a
 On the [Main](/dashboard) — all groups of the platform. Filter by teacher or **My** — only the groups where you are a teacher. Groups can be viewed as a **table** or **calendar** of lessons, and there is also an **archive**.
 
 Click on a group — its page will open: settings, QR for student registration, composition, schedule, and lessons. Working with a group and lessons is the same as for a teacher: lessons, journal, homework, quizzes, dialogue with students.
+
+### Lesson teacher
+
+A group has a main teacher, and each lesson has its own: usually the same person, but another teacher can be assigned to one or several lessons. On the group page click **Lesson teacher** and choose the teacher, the first lesson and the last one.
+
+- **Substitution** — choose one or several lessons. The group's main teacher stays the same. The substitute sees only these lessons and works in each one until midnight of the lesson day; after that the lesson stays view-only for them.
+- **Group handover** — choose the lesson from which the group passes on and “to the end”. The teacher becomes the main teacher: gets the whole group and all its lessons, and new lessons are created under them. The previous teacher sees only the lessons they taught and cannot change anything in them.
+- **Who taught before** — if the group has already been handed over, assign the previous teacher to the lessons they taught.
+
+Only the group's main teacher can delete or move a lesson and change its participants. They also check the homework. In reports and in the “Teachers” section a lesson is counted for the teacher recorded on it.
 
 ## Admin
 
@@ -30,7 +40,7 @@ Course name and description. **+ Add course**, edit by clicking on the row, dele
 Name, course, sector, teacher, video conference, Telegram.
 
 - **+ Add group** — new group with a course and teacher.
-- Click on the row — data can be changed.
+- Click on the row — data can be changed. Changing the teacher in the row takes effect from today: past lessons stay with whoever taught them.
 - **Group schedule** — open the group page.
 - **Send to archive** — the group is no longer active; it can be **returned** or **deleted permanently** from the archive.
 
@@ -74,25 +84,25 @@ Click the **pencil** icon in the student's row. In the window you can change the
 
 ### Student report
 
-Click the student's name — the monthly report for parents will open. The month is selected at the top of the page; the **Print** button prints the report on one sheet.
+Click the student's name — the report for parents will open. The period is selected at the top of the page: **Month** (with paging), **Since start of year** — from September 1, **Since start of studies** — from the student's first lesson, **Period** — any two dates. The **Print** button prints the report. Comparison with the previous month is available only in the monthly report.
 
-- **One-sentence conclusion** — how the month went and what is worth paying attention to.
-- **The month in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
+- **One-sentence conclusion** — how the period went and what is worth paying attention to.
+- **The month (period) in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
 - **How things are going** — six color-coded indicators: whether the student attends lessons, arrives on time, how they work in class, whether homework is submitted and how well it is done, and how exams are going.
-- **Highlights of the month** — what to be proud of and what to pay attention to.
-- **Lessons of the month** — for each lesson: attendance, grade, homework, and stars.
+- **Highlights of the period** — what to be proud of and what to pay attention to.
+- **Lessons of the period** — for each lesson: attendance, grade, homework, and stars.
 
 Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet.
 
 ## Teachers
 
-In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, lessons held, attendance, and average grade.
+In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, lessons held, attendance, and average grade. Groups and students are counted by the groups where they are the main teacher; lessons, attendance and grade — by the lessons they taught themselves, including substitutions.
 
 ### Teacher report
 
-Click on a teacher — the report for the month will open. The month is selected at the top of the page; the **Print** button prints the report.
+Click on a teacher — the report will open. The period is selected at the top of the page: **Month** (with paging), **Since start of year** — from September 1, **Since start of teaching** — from the teacher's first lesson, **Period** — any two dates. The **Print** button prints the report. Comparison with the previous month is available only in the monthly report.
 
-- **One-sentence conclusion** — how the month went and which indicators need attention.
+- **One-sentence conclusion** — how the period went and which indicators need attention.
 - **Amount of work** — scheduled lessons held, personal lessons, hours, and lessons not held. A lesson counts as held if it is open and at least one student attended.
 - **Quality of work** — eight indicators with a target and a color: attendance, whether students stay, whether the journal is filled in on time, whether homework is assigned and checked quickly, whether exam results are growing, whether students use the platform, and how they rate lessons with smileys.
 - **By group** — the same key figures for each of the teacher's groups.

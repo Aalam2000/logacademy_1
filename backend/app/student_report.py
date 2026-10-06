@@ -1,7 +1,9 @@
-"""Отчёт по ученику за месяц — для родителей («Студенты» → имя ученика).
+"""Отчёт по ученику за период — для родителей («Студенты» → имя ученика).
+Периоды — report_common.Period: месяц, с начала учебного года, с начала
+обучения, произвольный.
 
 Построен так же, как отчёт по педагогу (teacher_report.py): общий вывод,
-показатели с оценкой по норме и список уроков месяца. Берутся только данные,
+показатели с оценкой по норме и список уроков периода. Берутся только данные,
 которые уже есть в платформе: журнал урока (посещение, опоздание, оценка,
 экзамен, звёзды) и домашние задания.
 
@@ -9,7 +11,8 @@
 формулировки на фронте (StudentReportPage.jsx), чтобы их переводил autoi18n.
 Нормы — в NORMS ниже, одно место на весь отчёт.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +22,7 @@ from .homework_status import student_homework
 from .lesson_lock import BAKU_TZ, aware, baku_day
 from .models import GroupMember, Lesson, LessonMark, User
 from .personal import visible_to_student
-from .report_common import avg, month_bounds, status_max, status_min, summarize_indicators
+from .report_common import Period, avg, status_max, status_min, summarize_indicators
 
 # Нормы показателей: (норма, граница «жёлтого»). Что хуже жёлтой границы — «красный».
 NORMS = {
@@ -33,13 +36,26 @@ NORMS = {
 HW_DONE = {"graded", "accepted", "submitted"}   # ответ прислан
 
 
-async def build_student_report(db: AsyncSession, student: User, groups: list[dict], month: str) -> dict:
+async def build_student_report(
+    db: AsyncSession, student: User, groups: list[dict], period: Period,
+    own_lessons_of: Optional[dict[int, int]] = None,
+) -> dict:
     """groups — группы ученика в области видимости того, кто смотрит отчёт:
-    [{id, name, teacher_id, teacher_name, course_title}] (students._scope_group_ids)."""
-    start, end = month_bounds(month)
-    prev_start, _ = month_bounds((start - timedelta(days=1)).strftime("%Y-%m"))
+    [{id, name, teacher_id, teacher_name, course_title}] (students._scope_group_ids).
+    own_lessons_of — {группа: педагог}: в этих группах берутся только уроки
+    этого педагога (он в группе не основной и видит лишь свои уроки,
+    app/lesson_teacher.py)."""
+    start, end = period.start, period.end
     now = datetime.now(BAKU_TZ)
     gids = [g["id"] for g in groups]
+    own_lessons_of = own_lessons_of or {}
+
+    def lesson_scope():
+        """Уроки ученика в его группах в области видимости смотрящего."""
+        conditions = [Lesson.group_id.in_(gids), visible_to_student(student.id)]
+        for gid, teacher_id in own_lessons_of.items():
+            conditions.append((Lesson.group_id != gid) | (Lesson.teacher_id == teacher_id))
+        return conditions
 
     teachers = {}
     if groups:
@@ -48,8 +64,9 @@ async def build_student_report(db: AsyncSession, student: User, groups: list[dic
         )).scalars().all()}
     base = {
         "student": {"id": student.id, "full_name": student.full_name or student.username},
-        "month": month,
-        "is_current_month": end > now,
+        "month": period.month,
+        "period": period.out(),
+        "is_current_month": period.kind == "month" and end > now,
         "norms": {k: v[0] for k, v in NORMS.items()},
         "groups": [
             {
@@ -62,7 +79,7 @@ async def build_student_report(db: AsyncSession, student: User, groups: list[dic
     if not gids:
         return {**base, "empty": True}
 
-    # ---------- Уроки ученика за месяц (уже прошедшие) ----------
+    # ---------- Уроки ученика за период (уже прошедшие) ----------
     joined = {
         gid: (joined_at, expelled_at) for gid, joined_at, expelled_at in (await db.execute(
             select(GroupMember.group_id, GroupMember.joined_at, GroupMember.expelled_at)
@@ -79,15 +96,16 @@ async def build_student_report(db: AsyncSession, student: User, groups: list[dic
             return False
         return not (expelled_at and aware(lesson.date) >= aware(expelled_at))
 
+    query = select(Lesson).where(*lesson_scope(), Lesson.date < end).order_by(Lesson.date, Lesson.id)
+    if start is not None:
+        query = query.where(Lesson.date >= start)
     lessons = [
-        l for l in (await db.execute(
-            select(Lesson)
-            .where(Lesson.group_id.in_(gids), Lesson.date >= start, Lesson.date < end, visible_to_student(student.id))
-            .order_by(Lesson.date, Lesson.id)
-        )).scalars().all()
+        l for l in (await db.execute(query)).scalars().all()
         if aware(l.date) <= now and in_membership(l)
     ]
     lesson_ids = [l.id for l in lessons]
+    if start is None and lessons:
+        base["period"] = period.out(aware(lessons[0].date))   # «с начала обучения» — с первого урока
 
     marks = {}
     locked = {}
@@ -138,14 +156,18 @@ async def build_student_report(db: AsyncSession, student: User, groups: list[dic
 
     exams = [r["exam_score"] for r in rows if r["exam_score"] is not None]
     exam_avg = avg(exams)
-    exam_prev = avg([score for (score,) in (await db.execute(
-        select(LessonMark.exam_score)
-        .join(Lesson, Lesson.id == LessonMark.lesson_id)
-        .where(
-            Lesson.group_id.in_(gids), Lesson.date >= prev_start, Lesson.date < start,
-            LessonMark.student_id == student.id, LessonMark.exam_score.isnot(None),
-        )
-    )).all()])
+    # Сравнение с прошлым месяцем — только у месячного отчёта
+    exam_prev = None
+    previous = period.previous_month()
+    if previous:
+        exam_prev = avg([score for (score,) in (await db.execute(
+            select(LessonMark.exam_score)
+            .join(Lesson, Lesson.id == LessonMark.lesson_id)
+            .where(
+                *lesson_scope(), Lesson.date >= previous[0], Lesson.date < previous[1],
+                LessonMark.student_id == student.id, LessonMark.exam_score.isnot(None),
+            )
+        )).all()])
     exam_delta = round(exam_avg - exam_prev, 1) if (exam_avg is not None and exam_prev is not None) else None
 
     indicators = [

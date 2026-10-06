@@ -12,6 +12,7 @@ import { DEFAULT_DURATION_MIN } from '../utils/lessonTime';
 import Calendar from '../components/Calendar';
 import DateTimePicker from '../components/DateTimePicker';
 import { PersonalBadge, ParticipantsPicker } from '../components/PersonalLesson';
+import LessonTeacherModal from '../components/LessonTeacherModal';
 import { getMyGroups, getCourses } from '../api/groups';
 import {
   getGroupLessons, createLesson, generateSchedule,
@@ -89,6 +90,9 @@ function GroupPage() {
   const [fillError, setFillError] = useState('');
 
   const [markingHolidayId, setMarkingHolidayId] = useState(null);
+  // «Педагог уроков» (только админ): после назначения данные группы перечитываются
+  const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -97,7 +101,7 @@ function GroupPage() {
       try {
         const [lessonsRes, groupsRes, coursesRes] = await Promise.all([
           getGroupLessons(gid),
-          getMyGroups(),
+          getMyGroups({ with_guest: true }),
           getCourses(),
         ]);
         setLessons(lessonsRes);
@@ -111,9 +115,11 @@ function GroupPage() {
     };
     load();
     // eslint-disable-next-line
-  }, [gid]);
+  }, [gid, reloadKey]);
 
   const group = groups.find(g => g.id === gid);
+  // Педагог в группе не основной: видит только свои уроки, без управления группой
+  const isGuest = group?.is_main === false;
   const courseName = courses.find(c => c.id === group?.course_id)?.title || '—';
 
   // Уроки только этой группы. По умолчанию — с сегодня и далее; кнопками
@@ -427,8 +433,9 @@ function GroupPage() {
             <h2 className="group-header__title">{group.name}</h2>
             <div className="meta-row">
               <span>{'Курс'}: <b>{courseName}</b></span>
-              {/* Педагогу своё имя не показываем (оно в шапке) — только админу, который смотрит чужие группы */}
-              {isAdmin && (
+              {/* Педагогу своё имя не показываем (оно в шапке) — только админу, который смотрит чужие группы,
+                  и педагогу, который в группе не основной */}
+              {(isAdmin || isGuest) && (
                 <>
                   <span>·</span>
                   <span>{'Преподаватель'}: <b>{group.teacher_name || '—'}</b></span>
@@ -437,13 +444,28 @@ function GroupPage() {
             </div>
           </div>
         </div>
-        <div className="icon-row">
-          <GroupContactIcons video={group.video_url} telegram={group.telegram_chat_id} whatsapp={group.whatsapp} />
-          <IconButton icon="settings" tip={'Настройки группы'} onClick={() => setIsSettingsOpen(true)} />
-          <IconButton icon="qr" tip={'QR для регистрации'} onClick={() => setIsQRModalOpen(true)} />
-          <IconButton icon="students" tip={'Ученики'} label={group.student_count ?? 0} onClick={() => setIsStudentsModalOpen(true)} />
-        </div>
+        {!isGuest && (
+          <div className="icon-row">
+            <GroupContactIcons video={group.video_url} telegram={group.telegram_chat_id} whatsapp={group.whatsapp} />
+            <IconButton icon="settings" tip={'Настройки группы'} onClick={() => setIsSettingsOpen(true)} />
+            <IconButton icon="qr" tip={'QR для регистрации'} onClick={() => setIsQRModalOpen(true)} />
+            <IconButton icon="students" tip={'Ученики'} label={group.student_count ?? 0} onClick={() => setIsStudentsModalOpen(true)} />
+          </div>
+        )}
       </div>
+
+      {isGuest && (
+        <p className="hint-text">{'Здесь только уроки, которые ведёте или вели вы. Работать в уроке можно до полуночи дня урока, потом он остаётся для просмотра.'}</p>
+      )}
+
+      {isTeacherModalOpen && (
+        <LessonTeacherModal
+          group={group}
+          lessons={groupLessons}
+          onClose={() => setIsTeacherModalOpen(false)}
+          onSaved={() => { setIsTeacherModalOpen(false); setReloadKey(k => k + 1); }}
+        />
+      )}
 
       {isSettingsOpen && (
         <GroupSettingsModal
@@ -463,14 +485,22 @@ function GroupPage() {
           <IconButton icon="tableView" tip={'Таблица'} active={viewMode === 'table'} onClick={() => setViewMode('table')} />
           <IconButton icon="calendarView" tip={'Календарь'} active={viewMode === 'calendar'} onClick={() => setViewMode('calendar')} />
         </div>
-        <div className="button-row">
-          <button className="btn" onClick={openCreateModal}>
-            {'+ Урок'}
-          </button>
-          <IconButton icon="unlock" tip={'Открыть уроки'} onClick={openOpenRangeModal} />
-          {/* Материалы заполняются здесь же: «Оставить даты — дозаполнить материалами» */}
-          <IconButton icon="schedule" tip={'Расписание и материалы'} onClick={handleOpenScheduleFlow} />
-        </div>
+        {!isGuest && (
+          <div className="button-row">
+            {/* Замена на урок, передача группы с такого-то урока — назначает только админ */}
+            {isAdmin && (
+              <button type="button" className="btn btn--outline" onClick={() => setIsTeacherModalOpen(true)}>
+                {'Педагог уроков'}
+              </button>
+            )}
+            <button className="btn" onClick={openCreateModal}>
+              {'+ Урок'}
+            </button>
+            <IconButton icon="unlock" tip={'Открыть уроки'} onClick={openOpenRangeModal} />
+            {/* Материалы заполняются здесь же: «Оставить даты — дозаполнить материалами» */}
+            <IconButton icon="schedule" tip={'Расписание и материалы'} onClick={handleOpenScheduleFlow} />
+          </div>
+        )}
       </div>
 
       {viewMode === 'table' && (
@@ -535,6 +565,10 @@ function GroupPage() {
                     <td>
                       {l.title}
                       <PersonalBadge lesson={l} />
+                      {/* Урок ведёт не основной педагог группы: замена или прежний педагог */}
+                      {l.teacher_name && (
+                        <span className="badge badge--teacher badge--inline" data-tip={'Урок ведёт этот педагог'}>{l.teacher_name}</span>
+                      )}
                       {l.has_unreviewed_homework && (
                         <span className="badge badge--homework-pending badge--inline" data-tip={'Есть непроверенные решения ДЗ'}>
                           {'ДЗ: проверить'}
@@ -548,7 +582,7 @@ function GroupPage() {
                     </td>
                     <td>
                       {/* «Выходной» сдвигает расписание группы — персональных уроков не касается */}
-                      {!l.is_personal && (
+                      {!l.is_personal && !isGuest && (
                       <button
                         type="button"
                         className="btn btn--sm"

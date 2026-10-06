@@ -20,6 +20,9 @@ function GroupsPage() {
     () => allMyGroups.filter(g => (g.status === 'archived') === showArchived),
     [allMyGroups, showArchived],
   );
+  // Свои группы и группы, где педагог только ведёт или вёл отдельные уроки (is_main: false)
+  const mainGroups = useMemo(() => groups.filter(g => g.is_main !== false), [groups]);
+  const guestGroups = useMemo(() => groups.filter(g => g.is_main === false), [groups]);
   const [courses, setCourses] = useState([]);
   const [allGroups, setAllGroups] = useState([]); // только у admin — для списка «Препод»
   const [lessons, setLessons] = useState([]); // для календаря — уроки всех видимых групп
@@ -71,7 +74,7 @@ function GroupsPage() {
       if (isAdmin && mine) params.mine = true;
       if (isAdmin && !mine && teacherId) params.teacher_id = teacherId;
       const [groupsRes, lessonsRes] = await Promise.all([
-        api.get('/groups/my', { params }),
+        api.get('/groups/my', { params: { ...params, with_guest: true } }),
         getMyLessons(params),
       ]);
       setGroups(groupsRes.data);
@@ -182,6 +185,7 @@ function GroupsPage() {
               >
                 <span className="la-calendar__legend-dot" style={{ '--la-event-color': groupColorMap[g.id] }} />
                 {g.name}
+                {g.is_main === false && <span className="badge badge--teacher badge--inline">{'мои уроки'}</span>}
                 {g.homework_to_review > 0 && (
                   <span className="badge badge--homework-pending badge--inline" data-tip={'Есть непроверенные решения ДЗ'}>
                     {'ДЗ: проверить'}<span className="badge__count">{g.homework_to_review}</span>
@@ -208,14 +212,14 @@ function GroupsPage() {
               </tr>
             </thead>
             <tbody>
-              {groups.length === 0 && (
+              {mainGroups.length === 0 && (
                 <tr>
                   <td colSpan={isAdmin && !mine && !teacherId ? 5 : 4} className="table__empty">
                     {showArchived ? 'Архив пуст' : 'Групп пока нет'}
                   </td>
                 </tr>
               )}
-              {groups.map(g => (
+              {mainGroups.map(g => (
                 <tr
                   key={g.id}
                   className={`table__row--clickable${g.homework_to_review > 0 ? ' table__row--homework-pending table__row--attention' : ''}`}
@@ -240,6 +244,37 @@ function GroupsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Группы, где педагог не основной: замены и уроки до передачи группы — только эти уроки */}
+      {viewMode === 'table' && guestGroups.length > 0 && (
+        <>
+          <div className="toolbar toolbar--inline">
+            <h2 className="toolbar__title">{'Мои уроки в других группах'}</h2>
+          </div>
+          <div className="table-scroll">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{'Название группы'}</th>
+                  <th>{'Курс'}</th>
+                  <th>{'Основной педагог'}</th>
+                  <th>{'Моих уроков'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {guestGroups.map(g => (
+                  <tr key={g.id} className="table__row--clickable" onClick={() => navigate(`/dashboard/groups/${g.id}`)}>
+                    <td>{g.name}</td>
+                    <td>{courseName(g.course_id)}</td>
+                    <td>{g.teacher_name || '—'}</td>
+                    <td>{lessons.filter(l => l.group_id === g.id).length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

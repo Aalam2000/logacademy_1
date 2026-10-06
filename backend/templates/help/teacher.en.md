@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=en sha1=a98d9a3a7daf6b1423474b5a314160f297c0a588 -->
+<!-- autoi18n: source=teacher.md lang=en sha1=1cdd93fd1524f40fa73ba9bf51d6d62697d54db4 -->
 # How to work on the platform
 
 ## My groups
@@ -6,6 +6,8 @@
 On the [Main](/dashboard) — your groups: name, course, number of students, and contacts. Groups can be viewed as a **table** or a **calendar** of all groups' lessons at once. There is also an **archive** of closed groups.
 
 Click on a group to open it.
+
+If you substituted for another teacher or taught a group before it was handed over, there is a **My lessons in other groups** block below: in such a group you see only your own lessons. You can work in a lesson until midnight of the lesson day; after that it stays view-only. If a lesson is taught by someone other than the group's main teacher, the teacher's name is shown in the list and the calendar.
 
 If students have submitted homework answers, the group is highlighted and marked **Homework: check** with the number of answers. A **Check homework** button appears in the header — it opens the lesson with the oldest unchecked answer.
 
@@ -105,15 +107,15 @@ Students rate each lesson with a smiley (green, yellow, red). You do not see who
 
 ### Student report
 
-Click the student's name — the monthly report for parents will open. The month is selected at the top of the page; the **Print** button prints the report on one sheet.
+Click the student's name — the report for parents will open. The period is selected at the top of the page: **Month** (with paging), **Since start of year** — from September 1, **Since start of studies** — from the student's first lesson, **Period** — any two dates. The **Print** button prints the report. Comparison with the previous month is available only in the monthly report.
 
-- **One-sentence conclusion** — how the month went and what is worth paying attention to.
-- **The month in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
+- **One-sentence conclusion** — how the period went and what is worth paying attention to.
+- **The month (period) in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
 - **How things are going** — six color-coded indicators: whether the student attends lessons, arrives on time, how they work in class, whether homework is submitted and how well it is done, and how exams are going.
-- **Highlights of the month** — what to be proud of and what to pay attention to.
-- **Lessons of the month** — for each lesson: attendance, grade, homework, and stars.
+- **Highlights of the period** — what to be proud of and what to pay attention to.
+- **Lessons of the period** — for each lesson: attendance, grade, homework, and stars.
 
-Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet. The report includes only the lessons of your groups.
+Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet. The report includes only the lessons of your groups. The report can also be opened from the lesson journal — by clicking the student's name. If you are not the main teacher of the group, the report contains only the lessons you taught.
 
 ## Profile
 

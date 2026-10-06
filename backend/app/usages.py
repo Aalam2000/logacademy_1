@@ -73,6 +73,15 @@ async def _user_usages(db: AsyncSession, user_id: int) -> list[Usage]:
     for q in (await db.execute(select(Quiz).where(Quiz.created_by == user_id).order_by(Quiz.title))).scalars().all():
         usages.append({"kind": "Созданные квизы", "title": q.title, "url": "/dashboard/materials"})
 
+    # Уроки, которые он ведёт или вёл в чужих группах (в своих — уже есть «Группы педагога»)
+    for lesson_id, title, group_name in (await db.execute(
+        select(Lesson.id, Lesson.title, Group.name)
+        .join(Group, Group.id == Lesson.group_id)
+        .where(Lesson.teacher_id == user_id, Group.teacher_id != user_id)
+        .order_by(Group.name, Lesson.order)
+    )).all():
+        usages.append({"kind": "Уроки педагога в других группах", "title": f"{group_name}: {title}", "url": f"/dashboard/lessons/{lesson_id}"})
+
     # Действия в уроках — по одному пункту на урок
     async def lessons_where(kind: str, lesson_ids_query):
         rows = (await db.execute(

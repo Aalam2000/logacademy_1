@@ -662,6 +662,12 @@
 }
 
 /* ===== Выбор месяца «‹ Сентябрь 2026 ›» (MonthPicker.jsx) ===== */
+/* Выбор периода отчёта (ReportParts.jsx): вкладки периодов, месяц или две даты */
+.report-periods {
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
 .month-picker {
   display: inline-flex;
   align-items: center;
@@ -2403,4 +2409,12 @@ a.row-icon:hover {
   .student-stars__icon {
     animation: none;
   }
+}
+
+/* Область «только просмотр»: <fieldset disabled> отключает все поля и кнопки внутри разом */
+.fieldset-plain {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }

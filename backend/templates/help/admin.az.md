@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=az sha1=bf50bf1e3193db0654d6112e75d1c7899f74a091 -->
+<!-- autoi18n: source=admin.md lang=az sha1=3facc5c5d48557a8e070b3d2b9c80b3e73e83117 -->
 # Platformada necə işləmək
 
 Administrator müəllimlərin gördüyü hər şeyi görür — lakin bütün qruplar və bütün müəllimlər üzrə — və əlavə olaraq istifadəçiləri, kursları və qrupları idarə edir.
@@ -8,6 +8,16 @@ Administrator müəllimlərin gördüyü hər şeyi görür — lakin bütün qr
 [Əsas səhifədə](/dashboard) — platformanın bütün qrupları. Müəllimə görə filtr və ya **Mənim** — yalnız sizin müəllim olduğunuz qruplar. Qrupları **cədvəl** və ya **dərs təqvimi** ilə baxmaq mümkündür, orada **arxiv** də var.
 
 Qrupa klikləyin — onun səhifəsi açılacaq: parametrlər, şagirdlərin qeydiyyatı üçün QR, tərkibi, cədvəl və dərslər. Qrupla və dərslərlə iş — müəllimlə eynidir: dərslər, jurnal, ev tapşırıqları, quizlər, şagirdlərlə dialoq.
+
+### Dərslərin müəllimi
+
+Qrupun əsas müəllimi var, hər dərsin isə öz müəllimi: adətən eyni müəllimdir, amma bir və ya bir neçə dərsə başqasını təyin etmək olar. Qrup səhifəsində **Dərslərin müəllimi** düyməsini basın və müəllimi, hansı dərsdən hansı dərsədək olduğunu seçin.
+
+- **Əvəzetmə** — bir və ya bir neçə dərs seçin. Qrupun əsas müəllimi dəyişmir. Əvəz edən müəllim yalnız bu dərsləri görür və hər birində dərs gününün gecə yarısına qədər işləyir, sonra dərs onun üçün yalnız baxış üçün qalır.
+- **Qrupun təhvili** — qrupun keçdiyi dərsi və «sona qədər» seçin. Müəllim əsas müəllim olur: bütün qrupu və onun bütün dərslərini alır, yeni dərslər onun adına yaradılır. Əvvəlki müəllim yalnız özünün apardığı dərsləri görür və onlarda heç nə dəyişmir.
+- **Əvvəl kim aparıb** — qrup artıq təhvil verilibsə, əvvəlki müəllimi onun apardığı dərslərə təyin edin.
+
+Dərsi silmək və ya köçürmək, iştirakçılarını dəyişmək yalnız qrupun əsas müəlliminə icazəlidir. Ev tapşırıqlarını da o yoxlayır. Hesabatlarda və «Müəllimlər» bölməsində dərs onun müəllimi kimi yazılmış şəxsə sayılır.
 
 ## Admin
 
@@ -30,7 +40,7 @@ Kursun adı və təsviri. **+ Kurs əlavə et**, sətirə klikləməklə dəyiş
 Ad, kurs, sektor, müəllim, videokonfrans, Telegram.
 
 - **+ Qrup əlavə et** — kurs və müəllim ilə yeni qrup.
-- Sətirə klikləyin — məlumatları dəyişmək mümkündür.
+- Sətirə klikləyin — məlumatları dəyişmək mümkündür. Sətirdə müəllimin dəyişdirilməsi bu gündən qüvvəyə minir: keçmiş dərslər onları aparan müəllimdə qalır.
 - **Qrup cədvəli** — qrup səhifəsini açın.
 - **Arxivə göndər** — qrup artıq aktiv deyil; arxivdən onu **geri qaytarmaq** və ya **tamamilə silmək** mümkündür.
 
@@ -74,25 +84,25 @@ Ad, kurs, sektor, müəllim, videokonfrans, Telegram.
 
 ### Tələbə üzrə hesabat
 
-Şagirdin adına klikləyin — valideynlər üçün aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir, **Çap et** düyməsi hesabatı bir vərəqdə çap edir.
+Şagirdin adına klikləyin — valideynlər üçün hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (vərəqləmə ilə), **İlin əvvəlindən** — 1 sentyabrdan, **Təhsilin əvvəlindən** — şagirdin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap et** düyməsi hesabatı kağıza çıxarır. Keçən ayla müqayisə yalnız aylıq hesabatda var.
 
-- **Bir cümlə ilə nəticə** — ayın necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
-- **Ay rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
+- **Bir cümlə ilə nəticə** — dövrün necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
+- **Ay (dövr) rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
 - **İşlər necə gedir** — rəngli altı göstərici: dərslərə gəlirmi, vaxtında gəlirmi, dərsdə necə işləyir, ev tapşırıqlarını təslim edirmi və necə yerinə yetirir, imtahanları necə verir.
-- **Ayın əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
-- **Ayın dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+- **Dövrün əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
+- **Dövrün dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
 
 Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik kənarlaşma, qırmızı — valideynlərin köməyi lazımdır, boz — hələ məlumat yoxdur.
 
 ## Müəllimlər
 
-[Müəllimlər](/dashboard/teachers) bölməsində — hər müəllim üzrə xülasə: neçə qrup və şagird, keçirilmiş dərslər, davamiyyət və orta bal.
+[Müəllimlər](/dashboard/teachers) bölməsində — hər müəllim üzrə xülasə: neçə qrup və şagird, keçirilmiş dərslər, davamiyyət və orta bal. Qruplar və şagirdlər onun əsas müəllim olduğu qruplar üzrə sayılır; dərslər, davamiyyət və bal — əvəzetmələr daxil olmaqla, özünün apardığı dərslər üzrə.
 
 ### Müəllim üzrə hesabat
 
-Müəllimin üzərinə klikləyin — aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir, **Çap et** düyməsi hesabatı kağıza çıxarır.
+Müəllimin üzərinə klikləyin — hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (vərəqləmə ilə), **İlin əvvəlindən** — 1 sentyabrdan, **Tədrisin əvvəlindən** — müəllimin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap et** düyməsi hesabatı kağıza çıxarır. Keçən ayla müqayisə yalnız aylıq hesabatda var.
 
-- **Bir cümlə ilə nəticə** — ayın necə işləndiyi və hansı göstəricilərin diqqət tələb etdiyi.
+- **Bir cümlə ilə nəticə** — dövrün necə işləndiyi və hansı göstəricilərin diqqət tələb etdiyi.
 - **İşin həcmi** — cədvəl üzrə keçirilmiş dərslər, fərdi dərslər, saatlar və keçirilməmiş dərslər. Ən azı bir şagirdin iştirak etdiyi açıq dərs keçirilmiş sayılır.
 - **İşin keyfiyyəti** — norması və rəngi olan səkkiz göstərici: davamiyyət, şagirdlərin qalıb-qalmaması, jurnalın vaxtında doldurulması, ev tapşırıqlarının verilməsi və tez yoxlanması, imtahan nəticələrinin artması, şagirdlərin platformadan istifadəsi və dərsləri smayliklərlə necə qiymətləndirməsi.
 - **Qruplar üzrə** — müəllimin hər qrupu üzrə eyni əsas rəqəmlər.

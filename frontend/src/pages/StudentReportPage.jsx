@@ -1,12 +1,12 @@
-// Отчёт по ученику за месяц — для родителей («Студенты» → имя ученика).
-// Устроен как отчёт по педагогу: вывод одной фразой, месяц в цифрах,
-// показатели с оценкой, главное за месяц и уроки месяца. Цифры, статусы и
+// Отчёт по ученику за период — для родителей («Студенты» → имя ученика;
+// из урока — имя ученика в журнале). Устроен как отчёт по педагогу: вывод одной
+// фразой, период в цифрах, показатели с оценкой, главное и уроки. Цифры, статусы и
 // нормы считает бэкенд (backend/app/student_report.py), формулировки — здесь.
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { extractErrorMessage } from '../utils/errors';
-import { ReportPeriod, ReportToolbar, Status, currentMonth, withSign } from '../components/ReportParts';
+import { ReportPeriod, ReportToolbar, Status, defaultPeriod, periodParams, withSign } from '../components/ReportParts';
 
 const pad = (n) => String(n).padStart(2, '0');
 // «05.09» — день и месяц урока
@@ -33,7 +33,7 @@ function indicatorRow(ind, norms, lessons) {
     case 'late':
       return {
         q: 'Приходит ли вовремя?',
-        hint: 'Сколько раз за месяц опоздал',
+        hint: 'Сколько раз за период опоздал',
         value: ind.status === 'none' ? '—' : ind.count > 0 ? <>{'опозданий'}: {ind.count}</> : 'опозданий нет',
         norm: 'без опозданий',
       };
@@ -68,7 +68,7 @@ function indicatorRow(ind, norms, lessons) {
     case 'exam':
       return {
         q: 'Как сдаёт экзамены?',
-        hint: <>{'Средний балл экзаменов за месяц.'}{ind.prev != null && <> {'В прошлом месяце было'} {ind.prev}</>}</>,
+        hint: <>{'Средний балл экзаменов за период.'}{ind.prev != null && <> {'В прошлом месяце было'} {ind.prev}</>}</>,
         value: ind.avg != null ? <>{ind.avg}{ind.delta != null && <> ({withSign(ind.delta)})</>}</> : '—',
         norm: <>{'от'} {norms.exam}</>,
       };
@@ -107,7 +107,9 @@ function Homework({ lesson }) {
 function StudentReportPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const [month, setMonth] = useState(currentMonth());
+  // Откуда пришли (журнал урока передаёт свой адрес) — туда и «Назад»
+  const backTo = useLocation().state?.from || '/dashboard/students';
+  const [period, setPeriod] = useState(defaultPeriod);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -116,19 +118,20 @@ function StudentReportPage() {
     let alive = true;
     setLoading(true);
     setError('');
-    api.get(`/students/${studentId}/report`, { params: { month } })
+    api.get(`/students/${studentId}/report`, { params: periodParams(period) })
       .then(r => { if (alive) setReport(r.data); })
       .catch(err => { if (alive) setError(extractErrorMessage(err, 'Не удалось построить отчёт')); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [studentId, month]);
+  }, [studentId, period]);
 
+  const isMonth = report?.period?.kind === 'month'; // у месячного отчёта свои формулировки
   const lessons = report?.lessons || [];
   const byKey = Object.fromEntries((report?.indicators || []).map(i => [i.key, i]));
   const weak = (report?.indicators || []).filter(i => i.status === 'warn' || i.status === 'bad');
   const hasExams = lessons.some(l => l.exam_score != null);
 
-  // Главное за месяц — собирается из тех же данных, что и таблицы
+  // Главное за период — собирается из тех же данных, что и таблицы
   const threeStars = lessons.filter(l => l.stars === 3);
   const absent = lessons.filter(l => l.attendance === 'absent');
   const hwExpired = lessons.filter(l => l.hw_status === 'expired');
@@ -144,9 +147,10 @@ function StudentReportPage() {
   return (
     <div className="page">
       <ReportToolbar
-        onBack={() => navigate('/dashboard/students')}
-        month={month}
-        onMonth={setMonth}
+        onBack={() => navigate(backTo)}
+        period={period}
+        onPeriod={setPeriod}
+        allLabel={'С начала обучения'}
         canPrint={!loading && !!report}
       />
 
@@ -165,7 +169,7 @@ function StudentReportPage() {
               ))}
             </div>
             <div className="report__meta">
-              <ReportPeriod month={month} />
+              <ReportPeriod period={report.period} />
               {report.is_current_month && <div>{'Месяц ещё идёт — данные на сегодня'}</div>}
             </div>
           </div>
@@ -177,10 +181,10 @@ function StudentReportPage() {
               {/* Вывод одной фразой */}
               <div className={`report__verdict report__verdict--${report.level}`}>
                 <div className="report__verdict-title">
-                  {report.level === 'excellent' ? 'Месяц прошёл отлично'
-                    : report.level === 'good' ? 'Месяц прошёл хорошо'
+                  {report.level === 'excellent' ? (isMonth ? 'Месяц прошёл отлично' : 'Период прошёл отлично')
+                    : report.level === 'good' ? (isMonth ? 'Месяц прошёл хорошо' : 'Период прошёл хорошо')
                     : report.level === 'problems' ? 'Нужна помощь родителей'
-                    : 'В этом месяце уроков ещё не было — оценивать нечего'}
+                    : 'За этот период уроков не было — оценивать нечего'}
                   {report.level !== 'none' && <>: {'в норме'} {report.good} {'из'} {report.rated}</>}
                 </div>
                 {report.level !== 'none' && weak.length > 0 && (
@@ -192,8 +196,8 @@ function StudentReportPage() {
                 )}
               </div>
 
-              {/* Месяц в цифрах */}
-              <h3 className="report__h">{'Месяц в цифрах'}</h3>
+              {/* Период в цифрах */}
+              <h3 className="report__h">{isMonth ? 'Месяц в цифрах' : 'Период в цифрах'}</h3>
               <div className="report__tiles">
                 <div className="report__tile">
                   <b>{byKey.attendance.present} <small>{'из'} {byKey.attendance.total}</small></b>
@@ -205,7 +209,7 @@ function StudentReportPage() {
                 </div>
                 <div className="report__tile">
                   <b>{report.stars} <i className="report__stars">{'★'}</i></b>
-                  <span>{'звёзд получено за месяц'}</span>
+                  <span>{'звёзд получено за период'}</span>
                 </div>
                 <div className="report__tile">
                   <b>{byKey.lesson_score.avg ?? '—'}</b>
@@ -240,10 +244,10 @@ function StudentReportPage() {
                 </table>
               </div>
 
-              {/* Главное за месяц */}
+              {/* Главное за период */}
               {(hasProud || hasAttention) && (
                 <>
-                  <h3 className="report__h">{'Главное за месяц'}</h3>
+                  <h3 className="report__h">{'Главное за период'}</h3>
                   <div className="report__two">
                     {hasProud && (
                       <div className="report__note report__note--good">
@@ -274,8 +278,8 @@ function StudentReportPage() {
                 </>
               )}
 
-              {/* Уроки месяца */}
-              <h3 className="report__h">{'Уроки месяца'}</h3>
+              {/* Уроки периода */}
+              <h3 className="report__h">{'Уроки за период'}</h3>
               <div className="table-scroll">
                 <table className="table table--on-white">
                   <thead>

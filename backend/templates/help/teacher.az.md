@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=az sha1=a98d9a3a7daf6b1423474b5a314160f297c0a588 -->
+<!-- autoi18n: source=teacher.md lang=az sha1=1cdd93fd1524f40fa73ba9bf51d6d62697d54db4 -->
 # Platformada necə işləmək
 
 ## Qruplarım
@@ -6,6 +6,8 @@
 [Əsas səhifə](/dashboard) — sizin qruplar: ad, kurs, şagird sayı və əlaqə məlumatları. Qrupları **cədvəl** və ya **təqvim** şəklində bütün qrupların dərslərini bir anda görmək mümkündür. Orada həmçinin **arxiv** bağlanmış qruplar var.
 
 Qrupun üzərinə klikləyin, onu açmaq üçün.
+
+Başqa müəllimi əvəz etmisinizsə və ya qrupu təhvil verilməzdən əvvəl aparmısınızsa, aşağıda **Başqa qruplardakı dərslərim** bloku var: belə qrupda yalnız öz dərslərinizi görürsünüz. Dərsdə dərs gününün gecə yarısına qədər işləmək olar, sonra o yalnız baxış üçün qalır. Dərsi qrupun əsas müəllimi aparmırsa, siyahıda və təqvimdə müəllimin adı göstərilir.
 
 Şagirdlər ev tapşırıqlarına cavab göndəribsə, qrup rənglə seçilir və cavabların sayı ilə **Ev tapşırığı: yoxla** nişanı alır. Başlıqda **Ev tapşırığını yoxla** düyməsi görünür — o, ən köhnə yoxlanmamış cavabı olan dərsi açır.
 
@@ -105,15 +107,15 @@ Təqdim etmə müddətini hamıya eyni anda və ya ayrı-ayrılıqda bir tələb
 
 ### Tələbə üzrə hesabat
 
-Şagirdin adına klikləyin — valideynlər üçün aylıq hesabat açılacaq. Ay səhifənin yuxarısında seçilir, **Çap et** düyməsi hesabatı bir vərəqdə çap edir.
+Şagirdin adına klikləyin — valideynlər üçün hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (vərəqləmə ilə), **İlin əvvəlindən** — 1 sentyabrdan, **Təhsilin əvvəlindən** — şagirdin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap et** düyməsi hesabatı kağıza çıxarır. Keçən ayla müqayisə yalnız aylıq hesabatda var.
 
-- **Bir cümlə ilə nəticə** — ayın necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
-- **Ay rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
+- **Bir cümlə ilə nəticə** — dövrün necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
+- **Ay (dövr) rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
 - **İşlər necə gedir** — rəngli altı göstərici: dərslərə gəlirmi, vaxtında gəlirmi, dərsdə necə işləyir, ev tapşırıqlarını təslim edirmi və necə yerinə yetirir, imtahanları necə verir.
-- **Ayın əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
-- **Ayın dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+- **Dövrün əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
+- **Dövrün dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
 
-Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik kənarlaşma, qırmızı — valideynlərin köməyi lazımdır, boz — hələ məlumat yoxdur. Hesabata yalnız sizin qruplarınızın dərsləri düşür.
+Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik kənarlaşma, qırmızı — valideynlərin köməyi lazımdır, boz — hələ məlumat yoxdur. Hesabata yalnız sizin qruplarınızın dərsləri düşür. Hesabat dərsin jurnalından da açılır — şagirdin adına klikləməklə. Qrupda əsas müəllim deyilsinizsə, hesabatda yalnız sizin apardığınız dərslər olacaq.
 
 ## Profil
 

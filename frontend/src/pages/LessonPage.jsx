@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import DateTimePicker, { formatDateTime } from '../components/DateTimePicker';
 import { formatDuration, DEFAULT_DURATION_MIN } from '../utils/lessonTime';
@@ -558,8 +558,17 @@ function LessonPage() {
     );
   }
 
-  const lessonGroup = groups.find(g => g.id === lesson.group_id);
+  // Педагог, который в группе не основной (замена, уроки до передачи), своей группы
+  // в /groups/my не имеет — данные группы тогда берём из самого урока.
+  const lessonGroup = groups.find(g => g.id === lesson.group_id) || {
+    name: lesson.group_name, video_url: lesson.group_video_url,
+    telegram_chat_id: lesson.group_telegram, whatsapp: lesson.group_whatsapp,
+  };
   const groupName = lessonGroup?.name || `#${lesson.group_id}`;
+  // Права в уроке (backend/app/lesson_teacher.py): readOnly — только просмотр;
+  // canManage — расписание и состав урока (основной педагог группы и админ).
+  const readOnly = lesson.can_edit === false;
+  const canManage = lesson.can_manage !== false;
 
   return (
     <div className="page">
@@ -570,7 +579,10 @@ function LessonPage() {
           </button>
           <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
           {/* Персональный урок: метка с участниками, по клику — смена состава */}
-          <PersonalBadge lesson={lesson} onClick={() => setParticipantsOpen(true)} />
+          <PersonalBadge lesson={lesson} onClick={canManage ? () => setParticipantsOpen(true) : undefined} />
+          {lesson.teacher_name && (
+            <span className="badge badge--teacher badge--inline" data-tip={'Урок ведёт этот педагог'}>{lesson.teacher_name}</span>
+          )}
           {participantsOpen && (
             <ParticipantsModal
               lesson={lesson}
@@ -582,6 +594,7 @@ function LessonPage() {
           <span className="lesson-toolbar__date">
             {formatDateTime(dateValue) || '—'}
             {dateValue && ` · ${formatDuration(durationValue)}`}
+            {canManage && (
             <DateTimePicker
               value={dateValue}
               onChange={setDateValue}
@@ -593,7 +606,9 @@ function LessonPage() {
               duration={durationValue}
               onDurationChange={setDurationValue}
             />
+            )}
           </span>
+          {!readOnly && (
           <button
             type="button"
             className={`btn btn--sm${lesson.is_open ? '' : ' btn--muted'}`}
@@ -602,6 +617,8 @@ function LessonPage() {
           >
             {isTogglingOpen ? '...' : (lesson.is_open ? 'Закрыть' : 'Открыть')}
           </button>
+          )}
+          {canManage && (
           <button
             type="button"
             className="btn btn--sm btn--outline"
@@ -611,6 +628,7 @@ function LessonPage() {
           >
             <TrashIcon size={16} />
           </button>
+          )}
         </div>
         <div className="toolbar__filters">
           <button
@@ -631,9 +649,13 @@ function LessonPage() {
       </div>
 
       {error && <div className="error-text error-text--muted">{error}</div>}
+      {readOnly && (
+        <p className="hint-text">{'Только просмотр: урок в группе другого педагога, день урока прошёл.'}</p>
+      )}
 
       {view === 'lesson' && (
         <>
+          {!readOnly && (
           <div className="form-toolbar">
             <button type="button" className="btn btn--outline" onClick={() => setShowLibraryModal(true)}>
               {'Добавить из базы'}
@@ -664,6 +686,7 @@ function LessonPage() {
               {'+ Ссылка'}
             </button>
           </div>
+          )}
 
           {showLinkForm && (
             <div className="form-toolbar">
@@ -770,6 +793,7 @@ function LessonPage() {
                             <td>{item.added_by_name || '—'}</td>
                             <td className="table__col--date nowrap">{item.added_at ? new Date(item.added_at).toLocaleDateString('ru-RU') : '—'}</td>
                             <td className="table__col--delete">
+                              {!readOnly && (
                               <div className="icon-row">
                               {/* Редактор квиза; после сохранения/отмены вернёт в этот урок (?lessonId) */}
                               {item.resource_type === 'quiz' && (
@@ -789,6 +813,7 @@ function LessonPage() {
                                 ✕
                               </button>
                               </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -804,7 +829,8 @@ function LessonPage() {
       )}
 
       {view === 'students' && (
-        <div>
+        // Только просмотр: все поля и кнопки таблицы отключаются разом
+        <fieldset className="fieldset-plain" disabled={readOnly}>
           {marksLoading && <p className="text-muted">{'Загрузка...'}</p>}
           {marksError && <div className="error-text error-text--muted">{marksError}</div>}
 
@@ -887,7 +913,12 @@ function LessonPage() {
                         const hwRow = hwBoard.students.find(h => h.student_id === row.student_id);
                         return (
                           <tr key={row.student_id} className={hwRow?.answer.status === 'submitted' ? 'table__row--homework-pending' : undefined}>
-                            <td>{row.full_name}</td>
+                            <td>
+                              {/* Отчёт по ученику; «Назад» из него вернёт в этот урок */}
+                              <Link className="link" to={`/dashboard/students/${row.student_id}/report`} state={{ from: `/dashboard/lessons/${lessonId}` }} data-tip="Отчёт по ученику">
+                                {row.full_name}
+                              </Link>
+                            </td>
                             <td>
                               <div className="attendance-group">
                                 {ATTENDANCE_STATUS_BUTTONS.map(btn => (
@@ -975,7 +1006,7 @@ function LessonPage() {
 
             </>
           )}
-        </div>
+        </fieldset>
       )}
 
       <label className="field-label field-label--top-gap">
@@ -985,7 +1016,7 @@ function LessonPage() {
           value={lessonComment}
           onChange={e => setLessonComment(e.target.value)}
           onBlur={handleCommitComment}
-          disabled={isSavingComment}
+          disabled={isSavingComment || readOnly}
           placeholder={'Заметки педагога по уроку в целом — что обсудили, на что обратить внимание в следующий раз...'}
         />
         {isSavingComment && <span className="hint-text">{'Сохранение…'}</span>}

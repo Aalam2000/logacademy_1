@@ -594,6 +594,7 @@ function AdminPage() {
                           className="input input--min160"
                           value={editingGroupDraft.teacher_id}
                           onChange={e => setEditingGroupDraft({ ...editingGroupDraft, teacher_id: e.target.value })}
+                          data-tip={'Смена педагога действует с сегодняшнего дня: прошедшие уроки остаются за тем, кто их вёл. Замена на отдельные уроки — кнопка «Педагог уроков» на странице группы'}
                         >
                           <option value="">{'— Педагог —'}</option>
                           {teachersForGroups.map(tc => <option key={tc.id} value={tc.id}>{tc.full_name || tc.username}</option>)}

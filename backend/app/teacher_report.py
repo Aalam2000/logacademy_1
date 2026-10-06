@@ -1,4 +1,6 @@
-"""Отчёт по педагогу за месяц — для руководителя (раздел «Учителя» у админа).
+"""Отчёт по педагогу за период — для руководителя (раздел «Учителя» у админа).
+Периоды — report_common.Period: месяц, с начала учебного года, с начала
+преподавания, произвольный.
 
 Показывает не только «сколько отработано» (уроки и часы), но и «как
 отработано» — показатели, которые педагог не выставляет себе сам:
@@ -20,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .attendance import PRESENT, ABSENT, attendance_slots, summarize
 from .homework_status import awaiting_review
 from .lesson_lock import BAKU_TZ, aware, baku_day
-from .report_common import avg as _avg, month_bounds, pct as _pct, status_max, status_min, summarize_indicators
+from .report_common import Period, avg as _avg, pct as _pct, status_max, status_min, summarize_indicators
 from .models import (
     Group, GroupMember, HomeworkAnswer, HomeworkTask, Lesson, LessonFeedback,
     LessonMark, User, UserSession,
@@ -49,28 +51,41 @@ def _status_max(value: Optional[float], key: str) -> str:
     return status_max(value, NORMS[key])
 
 
-async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> dict:
-    start, end = month_bounds(month)
-    prev_start, _ = month_bounds((start - timedelta(days=1)).strftime("%Y-%m"))
+async def build_teacher_report(db: AsyncSession, teacher: User, period: Period) -> dict:
     now = datetime.now(BAKU_TZ)
-    period_end = min(end, now)   # текущий месяц ещё идёт — считаем по сегодня
+    start, end = period.start, period.end
+    if start is None:
+        # «С начала преподавания» — с первого урока педагога
+        first = (await db.execute(
+            select(func.min(Lesson.date)).where(Lesson.teacher_id == teacher.id)
+        )).scalar()
+        start = aware(first) if first else now
+    period_end = min(end, now)   # период ещё идёт — считаем по сегодня
 
+    # Уроки считаются тому, кто их вёл (Lesson.teacher_id, app/lesson_teacher.py):
+    # замены и уроки до передачи группы — не основному педагогу группы.
+    # Показатели по ученикам группы (удержание, очередь ДЗ, платформа, риск
+    # ухода) — только по группам, где педагог основной (gids).
+    lessons = (await db.execute(
+        select(Lesson).where(Lesson.teacher_id == teacher.id, Lesson.date >= start, Lesson.date < end)
+        .order_by(Lesson.date)
+    )).scalars().all()
     groups = {
-        g.id: g for g in (await db.execute(select(Group).where(Group.teacher_id == teacher.id))).scalars().all()
+        g.id: g for g in (await db.execute(select(Group).where(
+            (Group.teacher_id == teacher.id) | Group.id.in_(list({l.group_id for l in lessons}))
+        ))).scalars().all()
     }
-    gids = list(groups.keys())
+    gids = [gid for gid, g in groups.items() if g.teacher_id == teacher.id]
     base = {
         "teacher": {"id": teacher.id, "full_name": teacher.full_name or teacher.username},
-        "month": month,
+        "month": period.month,
+        "period": period.out(start),
         "norms": {k: v[0] for k, v in NORMS.items()},
     }
-    if not gids:
+    if not groups:
         return {**base, "empty": True}
 
     # ---------- Уроки месяца ----------
-    lessons = (await db.execute(
-        select(Lesson).where(Lesson.group_id.in_(gids), Lesson.date >= start, Lesson.date < end).order_by(Lesson.date)
-    )).scalars().all()
     lesson_ids = [l.id for l in lessons]
     due = [l for l in lessons if aware(l.date) <= now]   # уже должны были пройти
 
@@ -98,7 +113,7 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
     not_held = [l for l in planned_due if l.id not in held_ids]
 
     # ---------- Посещаемость ----------
-    slots = await attendance_slots(db, gids, lesson_ids=lesson_ids) if lesson_ids else []
+    slots = await attendance_slots(db, list(groups), lesson_ids=lesson_ids) if lesson_ids else []
     attendance_pct = summarize(slots).pct
 
     # ---------- Удержание ----------
@@ -156,16 +171,19 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
         hw_queue["oldest_days"] = max(0, (now - aware(queue[0][0])).days)
         hw_queue["group"] = groups[queue[0][1]].name
 
-    # ---------- Экзамены: этот месяц и прошлый ----------
+    # ---------- Экзамены: за период; сравнение с прошлым месяцем — только у месячного отчёта ----------
     exam_now = _avg([s for scores in exam_scores.values() for s in scores])
-    prev_rows = (await db.execute(
-        select(Lesson.group_id, LessonMark.exam_score)
-        .join(Lesson, Lesson.id == LessonMark.lesson_id)
-        .where(
-            Lesson.group_id.in_(gids), Lesson.date >= prev_start, Lesson.date < start,
-            LessonMark.exam_score.isnot(None),
-        )
-    )).all()
+    prev_rows = []
+    previous = period.previous_month()
+    if previous:
+        prev_rows = (await db.execute(
+            select(Lesson.group_id, LessonMark.exam_score)
+            .join(Lesson, Lesson.id == LessonMark.lesson_id)
+            .where(
+                Lesson.teacher_id == teacher.id, Lesson.date >= previous[0], Lesson.date < previous[1],
+                LessonMark.exam_score.isnot(None),
+            )
+        )).all()
     exam_prev = _avg([score for _, score in prev_rows])
     exam_delta = round(exam_now - exam_prev, 1) if (exam_now is not None and exam_prev is not None) else None
 
@@ -224,8 +242,8 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
     for gid, g in groups.items():
         g_lessons = [l for l in lessons if l.group_id == gid]
         g_students = sum(1 for m, _, _ in members if m.group_id == gid and m.status == "active")
-        if g.status != "active" and not g_lessons:
-            continue  # архивная группа без уроков в этом месяце
+        if (g.status != "active" or g.teacher_id != teacher.id) and not g_lessons:
+            continue  # архивная или чужая группа без его уроков в этом месяце
         g_exam = _avg([s for l in g_lessons for s in exam_scores.get(l.id, [])])
         g_prev = _avg(prev_by_group.get(gid, []))
         by_group.append({
@@ -242,7 +260,7 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
 
     # ---------- Риск ухода: N пропусков подряд на последних уроках ----------
     at_risk = []
-    active_gids = [gid for gid, g in groups.items() if g.status == "active"]
+    active_gids = [gid for gid in gids if groups[gid].status == "active"]
     if active_gids and active_students:
         all_slots = await attendance_slots(db, active_gids, student_ids=active_students)
         dates = dict((await db.execute(
@@ -264,8 +282,8 @@ async def build_teacher_report(db: AsyncSession, teacher: User, month: str) -> d
     return {
         **base,
         "empty": False,
-        "is_current_month": end > now,
-        "groups": [g.name for g in groups.values() if g.status == "active"],
+        "is_current_month": period.kind == "month" and end > now,
+        "groups": [groups[gid].name for gid in gids if groups[gid].status == "active"],
         "students": len(active_students),
         **verdict,
         "work": {
