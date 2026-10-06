@@ -100,8 +100,7 @@
     padding: var(--space-4);
   }
   .page--md,
-  .page--wide,
-  .page--group {
+  .page--wide {
     max-width: 100%;
   }
 

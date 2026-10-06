@@ -31,9 +31,6 @@
   max-width: 800px;
   margin: 0 auto; /* AddQuizPage */
 }
-.page--group {
-  max-width: 960px; /* GroupPage */
-}
 .page-title {
   font-size: var(--font-xl);
   font-weight: var(--weight-black);

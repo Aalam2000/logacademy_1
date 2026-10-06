@@ -405,11 +405,11 @@ function GroupPage() {
     }
   };
 
-  if (loading) return <div className="page page--group">{'Загрузка...'}</div>;
+  if (loading) return <div className="page">{'Загрузка...'}</div>;
 
   if (!group) {
     return (
-      <div className="page page--group">
+      <div className="page">
         <button className="btn btn--outline" onClick={() => navigate('/dashboard')}>
           {'Назад'}
         </button>
@@ -421,7 +421,7 @@ function GroupPage() {
   }
 
   return (
-    <div className="page page--group">
+    <div className="page">
       {/* Шапка группы в одну строку: «Назад», название/курс/педагог — слева; контакты и значки (настройки, QR, ученики) — справа */}
       <div className="group-header">
         <div className="group-header__left">
