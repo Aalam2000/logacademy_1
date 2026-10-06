@@ -373,14 +373,27 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: var(--space-4);   /* окно не прилипает к краям экрана */
+  box-sizing: border-box;
 }
+/* Окно не выше экрана: заголовок и кнопки на месте, длинное содержимое
+   прокручивается внутри (.modal-body) */
 .modal-window {
   width: 100%;
   max-width: 420px;
+  max-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   background: var(--color-white);
   border-radius: var(--radius-md);
   padding: var(--space-6);
   box-shadow: var(--shadow-md);
+}
+.modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .modal-window--wide {
   max-width: 560px;
@@ -392,9 +405,11 @@
   text-align: center;
 }
 .modal-title {
+  flex: none;
   margin: 0 0 var(--space-4) 0;
 }
 .modal-actions {
+  flex: none;
   margin-top: var(--space-5);
   display: flex;
   justify-content: flex-end;

@@ -115,8 +115,8 @@
   .modal-window,
   .modal-window--wide,
   .modal-window--xwide {
-    max-width: calc(100vw - 32px);
-    margin: 16px;
+    max-width: 100%;
+    padding: var(--space-4);
   }
 
   /* --- Тулбар переносится --- */

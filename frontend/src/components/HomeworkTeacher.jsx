@@ -92,6 +92,7 @@ export function HomeworkAddModal({ lessonId, student, deadline, onChanged, onClo
           onChange={setDeadlineValue}
           onCommit={saveDeadline}
           hourOnly
+          floating
           placeholder={'Дедлайн'}
           disabled={busy}
         />
