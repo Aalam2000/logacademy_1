@@ -84,7 +84,8 @@
   - `git reset --hard origin/<branch>`
   - `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
   - `docker image prune -f`, `docker volume prune -f`
-  - `docker builder prune -af --reserved-space 2gb` — build cache is capped by size (2 GB), not by age
+  - `docker builder prune -af --filter "until=72h"` — removes only build cache unused for 3 days; layers of the current build are never removed
+  - prints a warning if the disk is 80% full or more
   - `df -h /` — prints disk usage at the end
 
 ### Server log limits (one-time setup on a new server)
