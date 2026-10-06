@@ -123,7 +123,7 @@ const MOBILE_FORMATS = {
 };
 const MOBILE_NAV = { previous: '‹', next: '›' };
 
-const personalNames = (l) => (l.is_personal && l.participants?.length ? ` (${l.participants.map(p => p.full_name).join(', ')})` : '');
+const personalNames = (l) => (l.is_personal && l.participants?.length ? `${l.participants.map(p => p.full_name).join(', ')} — ` : '');
 
 // isDisabled(lesson) — урок показан, но не открывается (у студента: закрыт педагогом)
 function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month', highlight = TEACHER_HIGHLIGHT, isDisabled, isLight = TEACHER_LIGHT }) {
@@ -144,8 +144,8 @@ function Calendar({ lessons, onSelectLesson, getEventColor, defaultView = 'month
     .map(l => {
       return {
         id: l.id,
-        // 👤 — персональный урок (у педагога — с именами участников)
-        title: `${highlight(l)}${l.is_personal ? '👤 ' : ''}${l.group_name ? `${l.group_name}: ${l.title}` : l.title}${personalNames(l)}`,
+        // 👤 — персональный урок (у педагога — с именами участников перед названием)
+        title: `${highlight(l)}${l.is_personal ? '👤 ' : ''}${l.group_name ? `${l.group_name}: ` : ''}${personalNames(l)}${l.title}`,
         start: new Date(l.date),
         end: lessonEnd(l), // реальная длительность — растягивается в «Неделе»/«Дне»
         resource: l,
