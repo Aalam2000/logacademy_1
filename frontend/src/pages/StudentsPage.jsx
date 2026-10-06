@@ -92,6 +92,16 @@ function StudentsPage() {
       ).sort((a, b) => a[1].localeCompare(b[1]))
     : [];
 
+  // Курсы в фильтре — только те, по которым есть группы в области видимости:
+  // у педагога это его группы, у админа — все или группы выбранного педагога / «Моё».
+  const scopeGroups = groups.filter(g => {
+    if (!isAdmin) return true;
+    if (mine) return g.teacher_id === user?.id;
+    return !teacherId || String(g.teacher_id) === String(teacherId);
+  });
+  const scopeCourseIds = new Set(scopeGroups.map(g => g.course_id));
+  const courseOptions = courses.filter(c => scopeCourseIds.has(c.id));
+
   // Группы в выпадающем списке сужаем по уже выбранным Теме/Преподу.
   const groupOptions = groups.filter(g => {
     if (courseId && String(g.course_id) !== String(courseId)) return false;
@@ -159,7 +169,7 @@ function StudentsPage() {
             value={courseId}
             onChange={v => { setCourseId(v); setGroupId(''); }}
             placeholder={'Тема — все'}
-            options={courses.map(c => ({ value: c.id, label: c.title }))}
+            options={courseOptions.map(c => ({ value: c.id, label: c.title }))}
           />
           <Dropdown
             value={groupId}

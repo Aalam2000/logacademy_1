@@ -29,14 +29,18 @@ async def _get_owned_group(db: AsyncSession, group_id: int, current_user: User) 
     return group
 
 
-# Список курсов — доступен teacher (и admin), read-only.
-# Отдельно от /admin/courses, который остаётся только для admin.
+# Список курсов, read-only: педагогу — только курсы его групп (чужие курсы
+# ему не отдаём вообще), админу — все. Отдельно от /admin/courses, который
+# остаётся только для admin.
 @router.get("/courses", response_model=list[CourseOut])
 async def get_courses_for_teacher(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_teacher)
 ):
-    result = await db.execute(select(Course))
+    query = select(Course)
+    if current_user.role != "admin":
+        query = query.where(Course.id.in_(select(Group.course_id).where(Group.teacher_id == current_user.id)))
+    result = await db.execute(query.order_by(Course.title))
     return result.scalars().all()
 
 
