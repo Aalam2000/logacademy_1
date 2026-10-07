@@ -40,7 +40,7 @@ function StudentHomeworkStrip({ user }) {
         )}
         {debts.count > 1 && <>{'. '}{'Всего не сдано'}{': '}{debts.count}</>}
       </b>
-      <Link className="link" to={`/dashboard/student-lessons/${debts.lesson_id}`}>{'Открыть урок'}{' →'}</Link>
+      <Link className="link" to={`/dashboard/student-lessons/${debts.lesson_id}?tab=homework`}>{'Открыть урок'}{' →'}</Link>
     </div>
   );
 }

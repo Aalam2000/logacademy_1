@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { PersonalBadge } from '../components/PersonalLesson';
 import LessonFeedback from '../components/LessonFeedback';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import api from '../api/auth';
 import { TYPE_META, formatSize, subtypeLabel, resourceKey, needsPdfPreview, isPresentation, openSlides } from '../utils/libraryItems';
 import { extractErrorMessage } from '../utils/errors';
@@ -27,6 +27,12 @@ function StudentLessonPage() {
   // Вкладки: Материалы | ДЗ | Диалог (набросок «В»). Отметки за урок
   // (посещаемость, оценки, звёзды) ученик смотрит в разделе «Успеваемость».
   const [tab, setTab] = useState('materials');
+  // Ссылка «Открыть урок» из полосы несданных ДЗ ведёт сразу на вкладку ДЗ (?tab=homework).
+  // location.key меняется при каждом переходе — срабатывает и когда урок уже открыт.
+  const location = useLocation();
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tab') === 'homework') setTab('homework');
+  }, [location.key, location.search]);
   const [items, setItems] = useState([]);
   const [homework, setHomework] = useState({ tasks: [], answer: { status: 'none', files: [] } });
   const [newMessages, setNewMessages] = useState(0);
