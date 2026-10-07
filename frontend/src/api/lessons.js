@@ -100,3 +100,8 @@ export function saveLessonMarksBulk(lessonId, items) {
 export function getMyStars() {
   return api.get('/lessons/student/stars').then(res => res.data);
 }
+
+// Несданные ДЗ студента (полоса под шапкой) → { count, overdue, lesson_id, lesson_title, deadline }
+export function getMyHomeworkDebts() {
+  return api.get('/lessons/student/homework-debts').then(res => res.data);
+}

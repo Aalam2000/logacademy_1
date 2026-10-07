@@ -11,7 +11,7 @@ from .academy import lesson_word
 from ..lesson_lock import BAKU_TZ, is_date_locked
 from ..attendance import PRESENT, attendance_slots
 from ..lesson_lock import aware
-from ..homework_status import awaiting_review
+from ..homework_status import awaiting_review, student_homework_debts
 from ..lesson_teacher import can_edit_lesson, can_view_lesson, is_group_teacher
 from ..personal import (
     is_participant, lesson_student_ids, lesson_students_condition, participant_names,
@@ -950,6 +950,26 @@ async def get_student_stars(
         select(func.coalesce(func.sum(LessonMark.stars), 0)).where(LessonMark.student_id == current_user.id)
     )).scalar()
     return MyStarsOut(stars=int(total or 0))
+
+
+# Несданные ДЗ студента — полоса под шапкой его кабинета (правило —
+# homework_status.student_homework_debts). ДОЛЖЕН идти раньше маршрутов с /{lesson_id}.
+class MyHomeworkDebtsOut(BaseModel):
+    count: int = 0
+    overdue: bool = False
+    lesson_id: Optional[int] = None
+    lesson_title: Optional[str] = None
+    deadline: Optional[datetime] = None
+
+
+@router.get("/student/homework-debts", response_model=MyHomeworkDebtsOut)
+async def get_student_homework_debts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Только для студента")
+    return await student_homework_debts(db, current_user.id)
 
 
 # Три вида оценок студента (за урок / за ДЗ / экзаменационная) — каждая со

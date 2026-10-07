@@ -59,11 +59,17 @@ export function getMyHomework(lessonId) {
 export function uploadMyAnswerFiles(lessonId, files) {
   const fd = new FormData();
   Array.from(files).forEach(f => fd.append('files', f));
-  return api.post(`${hw(lessonId)}/my/files`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => res.data);
+  return api.post(`${hw(lessonId)}/my/files`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => {
+    notifyHomeworkChanged(); // полоса «Не сдано ДЗ» в шапке студента гаснет сразу
+    return res.data;
+  });
 }
 
 export function deleteMyAnswerFile(lessonId, fileId) {
-  return api.delete(`${hw(lessonId)}/my/files/${fileId}`).then(res => res.data);
+  return api.delete(`${hw(lessonId)}/my/files/${fileId}`).then(res => {
+    notifyHomeworkChanged();
+    return res.data;
+  });
 }
 
 // --- Диалог в строке студента ---

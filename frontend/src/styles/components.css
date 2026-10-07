@@ -549,6 +549,21 @@
   font-size: var(--font-xl);
   line-height: 1;
 }
+/* Полоса под шапкой у студента: несданные ДЗ (StudentHomeworkStrip.jsx) — слева цвет, вправо в прозрачный */
+.hw-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--font-sm);
+  background: linear-gradient(to right, rgba(245, 158, 11, 0.55), rgba(245, 158, 11, 0) 75%);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.hw-strip--overdue {
+  background: linear-gradient(to right, rgba(224, 80, 80, 0.5), rgba(224, 80, 80, 0) 75%);
+}
 /* «Студенты», имя: последнее ДЗ не сдано — полоса под именем, слева цвет, вправо в прозрачный.
    Селектор .link.hw-debt — чтобы перебить background/padding у .link (layout.css грузится позже) */
 .link.hw-debt {

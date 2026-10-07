@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navigation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import StudentStars from '../components/StudentStars';
+import StudentHomeworkStrip from '../components/StudentHomeworkStrip';
 import { usePresencePing } from '../hooks/usePresencePing';
 import { useHomeworkRefresh } from '../hooks/useHomeworkRefresh';
 import { getHomeworkToReview } from '../api/groups';
@@ -90,6 +91,8 @@ function Dashboard() {
             </button>
           </div>
         </div>
+        {/* Только у студента и только когда есть несданные ДЗ */}
+        <StudentHomeworkStrip user={user} />
         <div className="dashboard-page-content">
           <Outlet />
         </div>

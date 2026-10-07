@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .lesson_lock import aware, baku_day
 from .models import GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson
-from .personal import participants_by_lesson
+from .personal import participants_by_lesson, visible_to_student
 
 
 def expired(deadline: Optional[datetime]) -> bool:
@@ -210,3 +210,45 @@ async def last_homework_debts(
         if overdue or sid not in out:
             out[sid] = "overdue" if overdue else "pending"
     return out
+
+
+async def student_homework_debts(db: AsyncSession, student_id: int) -> dict:
+    """Несданные ДЗ студента (полоса под шапкой его кабинета).
+
+    Уроки — те же, что студент видит на Главной: открытые уроки его активных
+    групп, персональные — только свои. Долг — ответа нет или ДЗ возвращено на
+    доработку; просрочен — срок сдачи прошёл. Показываем один урок: просроченный
+    (самый давний), иначе с ближайшим сроком, иначе самый ранний."""
+    empty = {"count": 0, "overdue": False, "lesson_id": None, "lesson_title": None, "deadline": None}
+    group_ids = [row[0] for row in (await db.execute(
+        select(GroupMember.group_id).where(GroupMember.student_id == student_id, GroupMember.status == "active")
+    )).all()]
+    if not group_ids:
+        return empty
+    lessons = {l.id: l for l in (await db.execute(
+        select(Lesson).where(
+            Lesson.group_id.in_(group_ids), Lesson.is_open == True,  # noqa: E712
+            visible_to_student(student_id),
+        )
+    )).scalars().all()}
+
+    far = datetime.max.replace(tzinfo=timezone.utc)
+    when = lambda l: aware(l.date) if l.date else far
+    debts = []  # (просрочен, урок, срок)
+    for lesson_id, hw in (await student_homework(db, list(lessons), student_id)).items():
+        if hw["status"] not in ("pending", "expired", "returned"):
+            continue
+        overdue = hw["status"] == "expired" or expired(hw["deadline"])
+        debts.append((overdue, lessons[lesson_id], hw["deadline"]))
+    if not debts:
+        return empty
+
+    late = [d for d in debts if d[0]]
+    if late:
+        overdue, lesson, deadline = min(late, key=lambda d: (when(d[1]), d[1].id))
+    else:
+        overdue, lesson, deadline = min(debts, key=lambda d: (aware(d[2]) if d[2] else far, when(d[1]), d[1].id))
+    return {
+        "count": len(debts), "overdue": overdue, "lesson_id": lesson.id,
+        "lesson_title": lesson.title, "deadline": deadline,
+    }
