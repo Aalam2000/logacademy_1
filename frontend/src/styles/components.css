@@ -549,8 +549,9 @@
   font-size: var(--font-xl);
   line-height: 1;
 }
-/* «Студенты», имя: последнее ДЗ не сдано — полоса под именем, слева цвет, вправо в прозрачный */
-.hw-debt {
+/* «Студенты», имя: последнее ДЗ не сдано — полоса под именем, слева цвет, вправо в прозрачный.
+   Селектор .link.hw-debt — чтобы перебить background/padding у .link (layout.css грузится позже) */
+.link.hw-debt {
   display: inline-block;
   padding-bottom: 4px;
   background: linear-gradient(to right, var(--hw-debt-color), transparent) left bottom / 100% 4px no-repeat;
