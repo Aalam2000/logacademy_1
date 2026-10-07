@@ -8,12 +8,15 @@
     ученикам группы слот не создаётся, пропуск им не ставится.
 Статус слота: in_person / online / excused — как отмечено педагогом; всё
 остальное (ничего не отмечено, отметки нет вовсе, absent) — пропуск.
+Пропуск обычного урока, закрытый доп. уроком, — made_up (_close_made_up): он
+виден в отчётах, но, как и уважительная причина, ни в число пропусков, ни в
+процент посещаемости не входит.
 
 Уроки до блокировки в посещаемость не входят вообще — их ещё можно отметить.
 Отсюда берут цифры: «Студенты» (students.py), отчёт по ученику (student_report.py), «Преподаватели»
 (admin.py), «Успеваемость» и «моя отметка» студента (lessons.py).
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
@@ -27,6 +30,7 @@ from .personal import participants_by_lesson
 PRESENT = {"in_person", "online"}
 EXCUSED = "excused"
 ABSENT = "absent"
+MADE_UP = "made_up"  # пропуск, закрытый доп. уроком
 
 
 @dataclass(frozen=True)
@@ -34,7 +38,7 @@ class AttendanceSlot:
     student_id: int
     lesson_id: int
     group_id: int
-    status: str  # in_person | online | excused | absent
+    status: str  # in_person | online | excused | absent | made_up
 
 
 @dataclass
@@ -42,10 +46,11 @@ class AttendanceSummary:
     present: int = 0
     excused: int = 0
     absent: int = 0
+    made_up: int = 0
 
     @property
     def pct(self) -> Optional[float]:
-        # Уважительная причина не портит процент — не входит ни в числитель, ни в знаменатель
+        # Уважительная причина и закрытый доп. уроком пропуск не портят процент — не входит ни в числитель, ни в знаменатель
         counted = self.present + self.absent
         return round(self.present / counted * 100, 1) if counted else None
 
@@ -54,6 +59,8 @@ class AttendanceSummary:
             self.present += 1
         elif status == EXCUSED:
             self.excused += 1
+        elif status == MADE_UP:
+            self.made_up += 1
         else:
             self.absent += 1
 
@@ -121,7 +128,51 @@ async def attendance_slots(
             if status not in PRESENT and status != EXCUSED:
                 status = ABSENT
             slots.append(AttendanceSlot(sid, lesson_id, gid, status))
-    return slots
+    lesson_dates = {lid: d for rows in lessons_by_group.values() for lid, d in rows}
+    return await _close_made_up(db, slots, lesson_dates, personal)
+
+
+async def _close_made_up(
+    db: AsyncSession, slots: list[AttendanceSlot], lesson_dates: dict, personal: set[int],
+) -> list[AttendanceSlot]:
+    """Пропуски, закрытые доп. уроком: absent -> made_up.
+
+    Посещённый (очно/онлайн) и уже закончившийся (начало + длительность)
+    персональный урок закрывает все пропуски ученика на обычных уроках этой
+    группы с датой раньше этого персонального урока. Пропуск персонального
+    урока не закрывается. Ищем по всей группе, а не по фильтру lesson_ids."""
+    pairs = {(s.student_id, s.group_id) for s in slots if s.status == ABSENT and s.lesson_id not in personal}
+    if not pairs:
+        return slots
+
+    now = datetime.now(timezone.utc)
+    attended: dict[tuple[int, int], datetime] = {}  # последний посещённый доп. урок
+    for sid, gid, lesson_date, duration_min in (await db.execute(
+        select(LessonMark.student_id, Lesson.group_id, Lesson.date, Lesson.duration_min)
+        .join(Lesson, Lesson.id == LessonMark.lesson_id)
+        .where(
+            Lesson.group_id.in_({gid for _, gid in pairs}), Lesson.is_personal == True,  # noqa: E712
+            Lesson.date.isnot(None),
+            LessonMark.student_id.in_({sid for sid, _ in pairs}),
+            LessonMark.attendance_status.in_(PRESENT),
+        )
+    )).all():
+        when = aware(lesson_date)
+        if when + timedelta(minutes=duration_min or 0) > now:
+            continue  # доп. урок ещё не закончился
+        if (sid, gid) not in attended or when > attended[(sid, gid)]:
+            attended[(sid, gid)] = when
+    if not attended:
+        return slots
+
+    def closed(s: AttendanceSlot) -> bool:
+        last = attended.get((s.student_id, s.group_id))
+        return (
+            last is not None and s.status == ABSENT and s.lesson_id not in personal
+            and aware(lesson_dates[s.lesson_id]) < last
+        )
+
+    return [replace(s, status=MADE_UP) if closed(s) else s for s in slots]
 
 
 async def missed_last_lesson(
@@ -130,10 +181,8 @@ async def missed_last_lesson(
     """Ученики с незакрытым пропуском последнего урока (красное кольцо в «Студентах»).
 
     Последний урок — самый поздний обычный (не персональный) урок группы, уже
-    вошедший в посещаемость. Пропуск — статус absent; уважительная причина не
-    считается. Закрыт — ученик был (очно/онлайн) на любом персональном уроке этой
-    группы позже пропущенного, и время этого урока уже закончилось (начало +
-    длительность); связи «доп. урок ↔ пропущенный» в базе нет.
+    вошедший в посещаемость. Кольцо — статус absent: уважительная причина и
+    пропуск, закрытый доп. уроком (made_up), его не дают.
     Групп несколько — достаточно незакрытого пропуска в одной."""
     group_ids, student_ids = list(group_ids), list(student_ids)
     if not group_ids or not student_ids:
@@ -153,36 +202,10 @@ async def missed_last_lesson(
         return set()
 
     last_ids = [lesson_id for _, lesson_id in last_by_group.values()]
-    missed = [
-        (slot.student_id, slot.group_id)
+    return {
+        slot.student_id
         for slot in await attendance_slots(db, list(last_by_group), student_ids, last_ids)
         if slot.status == ABSENT
-    ]
-    if not missed:
-        return set()
-
-    # Последнее посещённое персональное занятие — по ученику и группе
-    attended: dict[tuple[int, int], datetime] = {}
-    now = datetime.now(timezone.utc)
-    for sid, gid, lesson_date, duration_min in (await db.execute(
-        select(LessonMark.student_id, Lesson.group_id, Lesson.date, Lesson.duration_min)
-        .join(Lesson, Lesson.id == LessonMark.lesson_id)
-        .where(
-            Lesson.group_id.in_({gid for _, gid in missed}), Lesson.is_personal == True,  # noqa: E712
-            Lesson.date.isnot(None),
-            LessonMark.student_id.in_({sid for sid, _ in missed}),
-            LessonMark.attendance_status.in_(PRESENT),
-        )
-    )).all():
-        when = aware(lesson_date)
-        if when + timedelta(minutes=duration_min or 0) > now:
-            continue  # доп. урок ещё не закончился
-        if (sid, gid) not in attended or when > attended[(sid, gid)]:
-            attended[(sid, gid)] = when
-
-    return {
-        sid for sid, gid in missed
-        if (sid, gid) not in attended or attended[(sid, gid)] <= last_by_group[gid][0]
     }
 
 

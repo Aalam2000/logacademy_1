@@ -25,7 +25,7 @@ function indicatorRow(ind, norms, lessons) {
         q: 'Ходит ли на уроки?',
         hint: missed.length > 0
           ? <>{'Пропущены уроки'}: {datesOf(missed)}</>
-          : 'Пропуски по уважительной причине не считаются',
+          : 'Пропуски по уважительной причине и закрытые дополнительным уроком не считаются',
         value: ind.total ? <>{ind.present} {'из'} {ind.total}</> : '—',
         norm: 'без пропусков',
       };
@@ -81,11 +81,11 @@ function indicatorRow(ind, norms, lessons) {
 function Attendance({ lesson }) {
   const status = lesson.attendance;
   if (!status) return <span className="text-muted">{'—'}</span>;
-  const dot = status === 'absent' ? 'bad' : status === 'excused' ? 'none' : 'good';
+  const dot = status === 'absent' ? 'bad' : (status === 'excused' || status === 'made_up') ? 'none' : 'good';
   return (
     <>
       <span className={`report__dot report__dot--${dot}`} />
-      {status === 'in_person' ? 'был' : status === 'online' ? 'онлайн' : status === 'excused' ? 'уважительная причина' : 'пропуск'}
+      {status === 'in_person' ? 'был' : status === 'online' ? 'онлайн' : status === 'excused' ? 'уважительная причина' : status === 'made_up' ? 'пропуск закрыт доп. уроком' : 'пропуск'}
       {lesson.is_late && <>{', '}{'опоздал'}</>}
     </>
   );

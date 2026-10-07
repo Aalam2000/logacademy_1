@@ -6,6 +6,7 @@ import { StudentContactIcons } from '../components/ContactIcons';
 import Dropdown from '../components/Dropdown';
 import Calendar, { GROUP_COLORS } from '../components/Calendar';
 import { getMyLessons } from '../api/lessons';
+import { useHomeworkRefresh } from '../hooks/useHomeworkRefresh';
 import IconButton from '../components/IconButton';
 
 function GroupsPage() {
@@ -66,9 +67,12 @@ function GroupsPage() {
     // eslint-disable-next-line
   }, [teacherId, mine]);
 
-  const loadGroups = async () => {
-    setLoading(true);
-    setError('');
+  // silent — фоновое обновление отметок о ДЗ: без «Загрузка...» и без сообщения об ошибке
+  const loadGroups = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
       const params = {};
       if (isAdmin && mine) params.mine = true;
@@ -80,11 +84,12 @@ function GroupsPage() {
       setGroups(groupsRes.data);
       setLessons(lessonsRes);
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Не удалось загрузить группы');
+      if (!silent) setError(err?.response?.data?.detail || 'Не удалось загрузить группы');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+  useHomeworkRefresh(() => loadGroups(true));
 
   const courseName = (courseId) =>
     courses.find(c => c.id === courseId)?.title || '—';

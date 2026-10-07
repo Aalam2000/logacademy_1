@@ -1,6 +1,7 @@
 // ДЗ, схема v2 (backend/app/routers/homework.py, claude/homework-plan.md).
 import api from './auth';
 import { needsPdfPreview } from '../utils/libraryItems';
+import { notifyHomeworkChanged } from '../hooks/useHomeworkRefresh';
 
 const hw = (lessonId) => `/lessons/${lessonId}/homework`;
 
@@ -42,7 +43,10 @@ export function deleteHomeworkTask(lessonId, taskId) {
 // Одна оценка на всё ДЗ студента в уроке. Поставить: {grade: 90};
 // принять без оценки: {accepted: true}; вернуть на доработку: {grade: null, accepted: false}
 export function reviewHomework(lessonId, studentId, { grade = null, accepted = false }) {
-  return api.put(`${hw(lessonId)}/answers/${studentId}/review`, { grade, accepted }).then(res => res.data);
+  return api.put(`${hw(lessonId)}/answers/${studentId}/review`, { grade, accepted }).then(res => {
+    notifyHomeworkChanged(); // шапка и списки обновляются сразу, не дожидаясь опроса
+    return res.data;
+  });
 }
 
 // --- Студент ---

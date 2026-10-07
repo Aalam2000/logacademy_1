@@ -5,9 +5,8 @@ import Navigation from '../components/Navigation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import StudentStars from '../components/StudentStars';
 import { usePresencePing } from '../hooks/usePresencePing';
+import { useHomeworkRefresh } from '../hooks/useHomeworkRefresh';
 import { getHomeworkToReview } from '../api/groups';
-
-const HOMEWORK_FLAG_REFRESH_MS = 60 * 1000;
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -15,18 +14,18 @@ function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   usePresencePing(user); // учёт времени в системе (отчёт «Посещения» у админа)
 
-  // Флаг «Проверь ДЗ» у педагога: обновляется при переходе между страницами и раз в минуту
+  // Флаг «Проверь ДЗ» у педагога: обновляется при переходе между страницами, раз в 15 секунд
+  // и сразу после проверки ДЗ (hooks/useHomeworkRefresh.js)
   const { pathname } = useLocation();
   const isTeaching = user?.role === 'teacher' || user?.role === 'admin';
   const [homework, setHomework] = useState({ count: 0, lesson_id: null });
   useEffect(() => {
     if (!isTeaching) return undefined;
     let alive = true;
-    const load = () => getHomeworkToReview().then(data => { if (alive) setHomework(data); }).catch(() => {});
-    load();
-    const timer = setInterval(load, HOMEWORK_FLAG_REFRESH_MS);
-    return () => { alive = false; clearInterval(timer); };
+    getHomeworkToReview().then(data => { if (alive) setHomework(data); }).catch(() => {});
+    return () => { alive = false; };
   }, [isTeaching, pathname]);
+  useHomeworkRefresh(() => { getHomeworkToReview().then(setHomework).catch(() => {}); }, isTeaching);
 
   const roleBadgeClass = user?.role
     ? `badge badge--role badge--inline badge--${user.role}`

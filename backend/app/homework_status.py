@@ -15,7 +15,9 @@ from typing import Iterable, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson
+from .lesson_lock import aware, baku_day
+from .models import GroupMember, HomeworkAnswer, HomeworkAnswerFile, HomeworkTask, Lesson
+from .personal import participants_by_lesson
 
 
 def expired(deadline: Optional[datetime]) -> bool:
@@ -122,4 +124,89 @@ async def student_homework(db: AsyncSession, lesson_ids: Iterable[int], student_
             "grade": answer.grade if answer else None,
             "deadline": effective_deadline(tasks),
         }
+    return out
+
+
+async def last_homework_debts(
+    db: AsyncSession, group_ids: Iterable[int], student_ids: Iterable[int],
+) -> dict[int, str]:
+    """Долг по последнему ДЗ (подсветка имени в «Студентах»): student_id → pending | overdue.
+
+    Последнее ДЗ — самый поздний уже начавшийся урок группы, где ученику выдано
+    задание (общее или персональное). Урок до дня вступления в группу и
+    персональный урок без этого ученика не в счёт. pending — ответа нет или ДЗ
+    возвращено на доработку; overdue — то же, но срок сдачи прошёл. Ответ прислан,
+    оценён или принят — долга нет. Групп несколько — берётся худшее."""
+    group_ids, student_ids = list(group_ids), list(student_ids)
+    if not group_ids or not student_ids:
+        return {}
+
+    now = datetime.now(timezone.utc)
+    lessons = [
+        row for row in (await db.execute(
+            select(Lesson.id, Lesson.group_id, Lesson.date, Lesson.is_personal)
+            .where(Lesson.group_id.in_(group_ids), Lesson.date.isnot(None))
+        )).all()
+        if aware(row[2]) <= now
+    ]
+    if not lessons:
+        return {}
+    tasks_by_lesson: dict[int, list[HomeworkTask]] = {}
+    for t in (await db.execute(
+        select(HomeworkTask).where(HomeworkTask.lesson_id.in_([row[0] for row in lessons]))
+    )).scalars().all():
+        tasks_by_lesson.setdefault(t.lesson_id, []).append(t)
+    if not tasks_by_lesson:
+        return {}
+
+    # Уроки с заданиями — от поздних к ранним, по группам
+    by_group: dict[int, list] = {}
+    for lesson_id, gid, lesson_date, is_personal in sorted(lessons, key=lambda r: (aware(r[2]), r[0]), reverse=True):
+        if lesson_id in tasks_by_lesson:
+            by_group.setdefault(gid, []).append((lesson_id, lesson_date, is_personal))
+    participants = await participants_by_lesson(
+        db, [lid for rows in by_group.values() for lid, _, personal in rows if personal]
+    )
+
+    # Последний урок с ДЗ для каждой пары (ученик, группа)
+    last: list[tuple[int, int, list[HomeworkTask]]] = []
+    for gid, sid, joined_at in (await db.execute(
+        select(GroupMember.group_id, GroupMember.student_id, GroupMember.joined_at).where(
+            GroupMember.group_id.in_(list(by_group)), GroupMember.student_id.in_(student_ids),
+            GroupMember.status == "active",
+        )
+    )).all():
+        joined_day = baku_day(joined_at) if joined_at else None
+        for lesson_id, lesson_date, is_personal in by_group[gid]:
+            if joined_day and baku_day(lesson_date) < joined_day:
+                break  # дальше только более ранние уроки
+            if is_personal and sid not in participants.get(lesson_id, ()):
+                continue
+            tasks = [t for t in tasks_by_lesson[lesson_id] if task_is_for(t, sid)]
+            if tasks:
+                last.append((sid, lesson_id, tasks))
+                break
+    if not last:
+        return {}
+
+    answers = {(a.lesson_id, a.student_id): a for a in (await db.execute(select(HomeworkAnswer).where(
+        HomeworkAnswer.lesson_id.in_({lid for _, lid, _ in last}),
+        HomeworkAnswer.student_id.in_({sid for sid, _, _ in last}),
+    ))).scalars().all()}
+    with_files: set[int] = set()
+    if answers:
+        with_files = {row[0] for row in (await db.execute(
+            select(HomeworkAnswerFile.answer_id)
+            .where(HomeworkAnswerFile.answer_id.in_([a.id for a in answers.values()])).distinct()
+        )).all()}
+
+    out: dict[int, str] = {}
+    for sid, lesson_id, tasks in last:
+        answer = answers.get((lesson_id, sid))
+        status = answer_status(tasks, answer, bool(answer and answer.id in with_files))
+        if status not in ("pending", "expired", "returned"):
+            continue
+        overdue = status == "expired" or expired(effective_deadline(tasks))
+        if overdue or sid not in out:
+            out[sid] = "overdue" if overdue else "pending"
     return out

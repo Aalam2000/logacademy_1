@@ -14,6 +14,7 @@ import DateTimePicker from '../components/DateTimePicker';
 import { PersonalBadge, ParticipantsPicker } from '../components/PersonalLesson';
 import LessonTeacherModal from '../components/LessonTeacherModal';
 import { getMyGroups, getCourses } from '../api/groups';
+import { useHomeworkRefresh } from '../hooks/useHomeworkRefresh';
 import {
   getGroupLessons, createLesson, generateSchedule,
   fillGroupSchedule, deleteGroupLessons, markLessonHoliday, openGroupLessonsRange,
@@ -116,6 +117,9 @@ function GroupPage() {
     load();
     // eslint-disable-next-line
   }, [gid, reloadKey]);
+
+  // Отметки о непроверенном ДЗ у уроков — тихо, без «Загрузка...»
+  useHomeworkRefresh(() => { getGroupLessons(gid).then(setLessons).catch(() => {}); });
 
   const group = groups.find(g => g.id === gid);
   // Педагог в группе не основной: видит только свои уроки, без управления группой

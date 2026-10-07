@@ -221,7 +221,12 @@ function StudentsPage() {
                 <tr key={s.id}>
                   <td>
                     {/* Отчёт по ученику за месяц — для родителей (StudentReportPage.jsx) */}
-                    <Link className="link" to={`/dashboard/students/${s.id}/report`} data-tip="Отчёт по ученику">
+                    <Link
+                      className={`link${s.homework_debt ? ` hw-debt hw-debt--${s.homework_debt}` : ''}`}
+                      to={`/dashboard/students/${s.id}/report`}
+                      data-tip={s.homework_debt === 'overdue' ? 'Не сдал последнее ДЗ — срок прошёл'
+                        : s.homework_debt === 'pending' ? 'Ещё не сдал последнее ДЗ' : 'Отчёт по ученику'}
+                    >
                       {s.full_name}
                     </Link>
                   </td>

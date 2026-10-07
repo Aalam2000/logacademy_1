@@ -15,6 +15,7 @@ import { subscribeLessonMarksUpdated } from '../utils/lessonMarksChannel';
 import { HomeworkAddModal, HomeworkFlags, HomeworkCheckView, personalOrCommonDeadline } from '../components/HomeworkTeacher';
 import { DialogCell } from '../components/LessonDialog';
 import { getHomeworkBoard } from '../api/homework';
+import { useHomeworkRefresh } from '../hooks/useHomeworkRefresh';
 import { uploadMaterial } from '../api/materials';
 
 // 409 от бэкенда при контроле дублей: code=duplicate — вернуть existing_id;
@@ -181,6 +182,8 @@ function LessonPage() {
       setMarksError(extractErrorMessage(err, 'Не удалось загрузить домашние задания'));
     }
   };
+  // Новые решения учеников появляются в журнале сами
+  useHomeworkRefresh(() => { getHomeworkBoard(lessonId).then(setHwBoard).catch(() => {}); });
 
   const loadItems = async () => {
     setItemsLoading(true);

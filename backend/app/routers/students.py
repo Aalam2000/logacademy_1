@@ -11,6 +11,7 @@ from ..usages import ensure_not_used
 from ..attendance import attendance_slots, missed_last_lesson, summarize_by_student
 from ..core.security import get_password_hash
 from ..database import get_db
+from ..homework_status import last_homework_debts
 from ..schemas import NewPasswordIn
 from ..dependencies import require_admin, require_teacher
 from ..phones import checked_student_phone, normalize_phone, PHONE_FORMAT_ERROR, PHONE_REQUIRED_ERROR
@@ -48,6 +49,8 @@ class StudentStatsOut(BaseModel):
     unexcused_absences: int = 0
     # Пропустил последний урок и не был после него на доп. уроке (attendance.missed_last_lesson)
     missed_last_lesson: bool = False
+    # Долг по последнему выданному ДЗ: pending | overdue | None (homework_status.last_homework_debts)
+    homework_debt: Optional[str] = None
     late_count: int = 0
     # Для колонок «Телефон» и «Родитель» в таблице «Студенты»
     phone: Optional[str] = None
@@ -223,6 +226,7 @@ async def list_students(
 
     stats = await _compute_stats(db, student_ids, group_ids)
     missed_last = await missed_last_lesson(db, group_ids, student_ids)
+    homework_debts = await last_homework_debts(db, group_ids, student_ids)
 
     # Последний вход — начало самой свежей сессии ученика (app/presence.py)
     logins_result = await db.execute(
@@ -245,6 +249,7 @@ async def list_students(
             parent_phone=u.get("parent_phone"),
             last_login_at=last_logins.get(sid),
             missed_last_lesson=sid in missed_last,
+            homework_debt=homework_debts.get(sid),
             groups=[StudentGroupOut(**{k: v for k, v in g.items() if k in ("id", "name", "teacher_id", "teacher_name")}) for g in student_groups[sid]],
             **_stats_summary(stats[sid]),
         ))

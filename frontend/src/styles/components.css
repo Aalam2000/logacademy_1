@@ -549,6 +549,14 @@
   font-size: var(--font-xl);
   line-height: 1;
 }
+/* «Студенты», имя: последнее ДЗ не сдано — полоса под именем, слева цвет, вправо в прозрачный */
+.hw-debt {
+  display: inline-block;
+  padding-bottom: 4px;
+  background: linear-gradient(to right, var(--hw-debt-color), transparent) left bottom / 100% 4px no-repeat;
+}
+.hw-debt--pending { --hw-debt-color: var(--color-warning); }
+.hw-debt--overdue { --hw-debt-color: var(--color-danger); }
 /* «Студенты», колонка «Пропуски»: незакрытый пропуск последнего урока */
 .absence-ring {
   display: inline-flex;

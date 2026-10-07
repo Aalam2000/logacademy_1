@@ -232,6 +232,7 @@ _STATUS_LABELS = {
     "online": "Онлайн",
     "excused": "Ув.прич",
     "absent": "Пропуск",
+    "made_up": "Пропуск закрыт",
 }
 
 

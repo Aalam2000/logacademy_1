@@ -1,4 +1,4 @@
-<!-- autoi18n: source=student.md lang=az sha1=cb478b214cf53675f5baf373fee31581cf002d57 -->
+<!-- autoi18n: source=student.md lang=az sha1=119bb52445a841b49c4a81ba63d0597b138601f5 -->
 # Platformada necə işləmək
 
 ## Ana səhifə — mənim dərslərim
@@ -7,8 +7,8 @@
 
 Dərsləri iki yolla izləmək olar:
 
-- **Cədvəl** — müəllim tərəfindən açılmış dərslərin siyahısı. Bu günkü dərs "Bu gün" ilə işarələnib.
-- **Təqvim** — qrupun bütün dərsləri tarixlər üzrə. Boz dərslər müəllim hələ açmamışdır.
+- **Cədvəl** — müəllim tərəfindən açılmış dərslərin siyahısı. Bu günün dərsi "Bu gün" ilə işarələnib.
+- **Təqvim** — qrupun bütün dərsləri tarixlər üzrə. Boz dərslər müəllim hələ açmayıb.
 
 Sizdən nəsə tələb olunan dərs işarələnib:
 
@@ -20,15 +20,15 @@ Dərsi açmaq üçün üzərinə klikləyin.
 
 ## Dərs
 
-Dərs başlayanda yuxarıda sağda **«Dərs necə idi?»** sualı və üç smaylik görünür: yaşıl — xoşuma gəldi, sarı — normal, qırmızı — xoşuma gəlmədi. Onlardan birini basın. Qiyməti dəyişmək olar. Müəllim kimin hansı smayliki qoyduğunu görmür.
+Dərs başladıqda, yuxarı sağda **"Dərsi necə bəyəndin?"** sualı və üç smileyk görünür: yaşıl — bəyəndim, sarı — normal, qırmızı — bəyənmədim. Onlardan birinə klikləyin. Qiyməti dəyişmək mümkündür. Müəllim kiminsə hansı smileyk qoyduğunu görmür.
 
-👤 nişanlı dərs — fərdi dərsdir: onu yalnız siz və müəllimin dəvət etdiyi şəxslər görür.
+👤 işarəsi olan dərs — fərdi: onu yalnız siz və müəllimin dəvət etdiyi şəxslər görür.
 
-Aşağıda üç sekme: **Materiallar**, **Ev tapşırığı** və **Dialoq**. Sekmedəki rəqəm orada sizi nəsə gözlədiyini bildirir.
+Aşağıda üç sekme var: **Materiallar**, **Ev tapşırığı** və **Dialoq**. Sekmədəki rəqəm, orada sizi nəyinsə gözlədiyini bildirir.
 
 ### Materiallar
 
-Dərs üçün fayllar və bağlantılar. Adın üzərinə klikləyin — material yeni sekmədə açılacaq. Siyahının altında — müəllimin dərs haqqında qeydləri.
+Dərs üçün fayllar və bağlantılar. Adına klikləyin — material yeni sekmədə açılacaq. Siyahının altında — müəllimin dərs haqqında qeydləri.
 
 ### Ev tapşırığı — ev tapşırığı
 
@@ -48,9 +48,9 @@ Cavabın statusu:
 
 Müəllimlə bu dərs üzrə yazışma. Mesaj yazın və göndərin. Öz mesajınızı düzəldə bilərsiniz — **Dəyişdir** düyməsi.
 
-## Mənimsəmə
+## Uğur
 
-[Mənimsəmə](/dashboard/performance) bölməsində — dərslər, ev tapşırıqları və imtahanlar üzrə bütün qiymətləriniz, eləcə də qayıblar. Hər dərs üzrə qeydlərə burada baxın — dərsin öz səhifəsində onlar yoxdur.
+[Uğur](/dashboard/performance) bölməsində — dərslər, ev tapşırıqları və imtahanlar üzrə bütün qiymətləriniz, eləcə də davamiyyət. Hər dərs üçün qiymətləri burada görün — dərsin öz səhifəsində yoxdur. İcazəsiz keçməyi bağlamaq olar: əgər ondan sonra əlavə (şəxsi) dərsdə olmusunuzsa, o "İcazəsiz keçmə bağlandı" kimi qeyd olunur və hesabda nəzərə alınmır.
 
 ## Profil
 

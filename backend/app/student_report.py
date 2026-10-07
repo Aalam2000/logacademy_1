@@ -17,7 +17,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .attendance import ABSENT, EXCUSED, PRESENT, attendance_slots
+from .attendance import ABSENT, EXCUSED, MADE_UP, PRESENT, attendance_slots
 from .homework_status import student_homework
 from .lesson_lock import BAKU_TZ, aware, baku_day
 from .models import GroupMember, Lesson, LessonMark, User
@@ -132,7 +132,7 @@ async def build_student_report(
             "title": l.title,
             "group": group_names.get(l.group_id),
             "is_personal": bool(l.is_personal),
-            "attendance": attendance,            # in_person | online | excused | absent | None — ещё не отмечено
+            "attendance": attendance,            # in_person | online | excused | absent | made_up | None — ещё не отмечено
             "is_late": bool(mark and mark.is_late and was_present),
             "score": mark.score if mark else None,
             "exam_score": mark.exam_score if mark else None,
@@ -145,6 +145,7 @@ async def build_student_report(
     present = sum(1 for r in rows if r["attendance"] in PRESENT)
     absent = sum(1 for r in rows if r["attendance"] == ABSENT)
     excused = sum(1 for r in rows if r["attendance"] == EXCUSED)
+    made_up = sum(1 for r in rows if r["attendance"] == MADE_UP)   # закрыты доп. уроком — в норму не входят
     late = sum(1 for r in rows if r["is_late"])
     scores = [r["score"] for r in rows if r["score"] is not None]
 
@@ -172,7 +173,7 @@ async def build_student_report(
 
     indicators = [
         {"key": "attendance", "status": status_max(absent, NORMS["attendance"]) if (present + absent) else "none",
-         "present": present, "total": present + absent, "absent": absent, "excused": excused},
+         "present": present, "total": present + absent, "absent": absent, "excused": excused, "made_up": made_up},
         {"key": "late", "status": status_max(late, NORMS["late"]) if present else "none", "count": late},
         {"key": "lesson_score", "status": status_min(avg(scores), NORMS["lesson_score"]), "avg": avg(scores)},
         {"key": "hw_submitted", "status": status_max(hw_missed, NORMS["hw_submitted"]) if hw_total else "none",

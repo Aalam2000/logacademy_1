@@ -17,6 +17,7 @@ const GRADE_KINDS = [
 const ABSENCE_LABELS = {
   absent: 'Пропуск',
   excused: 'По уважительной причине',
+  made_up: 'Пропуск закрыт дополнительным уроком',
 };
 
 function StudentPerformancePage() {
