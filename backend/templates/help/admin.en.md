@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=en sha1=3facc5c5d48557a8e070b3d2b9c80b3e73e83117 -->
+<!-- autoi18n: source=admin.md lang=en sha1=70491ba903ee0fe1febbec1825459ce7e1e67881 -->
 # How to work on the platform
 
 The administrator sees everything that the teacher sees — but for all groups and all teachers — and additionally manages users, courses, and groups.
@@ -7,17 +7,17 @@ The administrator sees everything that the teacher sees — but for all groups a
 
 On the [Main](/dashboard) — all groups of the platform. Filter by teacher or **My** — only the groups where you are a teacher. Groups can be viewed as a **table** or **calendar** of lessons, and there is also an **archive**.
 
-Click on a group — its page will open: settings, QR for student registration, composition, schedule, and lessons. Working with a group and lessons is the same as for a teacher: lessons, journal, homework, quizzes, dialogue with students.
+Click on a group — its page will open: settings, QR for student registration, composition, schedule, and lessons. Working with a group and lessons is the same as for the teacher: lessons, journal, homework, quizzes, dialogue with students.
 
-### Lesson teacher
+### Lesson Teacher
 
-A group has a main teacher, and each lesson has its own: usually the same person, but another teacher can be assigned to one or several lessons. On the group page click **Lesson teacher** and choose the teacher, the first lesson and the last one.
+A group has a main teacher, and each lesson has its own: usually the same, but for one or several lessons, another can be assigned. On the group page, click **Lesson Teacher** and select the teacher, from which lesson and to which.
 
-- **Substitution** — choose one or several lessons. The group's main teacher stays the same. The substitute sees only these lessons and works in each one until midnight of the lesson day; after that the lesson stays view-only for them.
-- **Group handover** — choose the lesson from which the group passes on and “to the end”. The teacher becomes the main teacher: gets the whole group and all its lessons, and new lessons are created under them. The previous teacher sees only the lessons they taught and cannot change anything in them.
-- **Who taught before** — if the group has already been handed over, assign the previous teacher to the lessons they taught.
+- **Replacement** — select one or several lessons. The main teacher of the group does not change. The replacing teacher sees only these lessons and works in each until midnight of the lesson day, then the lesson remains for them to view.
+- **Transfer of the group** — select the lesson from which the group is transferred, and "until the end." The teacher becomes the main one: receives the entire group and all its lessons, new lessons are created for them. The previous teacher sees only the lessons they taught and cannot change anything in them.
+- **Who taught before** — if the group has already been transferred, assign the previous teacher to the lessons they taught.
 
-Only the group's main teacher can delete or move a lesson and change its participants. They also check the homework. In reports and in the “Teachers” section a lesson is counted for the teacher recorded on it.
+Only the main teacher of the group can delete or move a lesson and change its participants. They also check the homework. In reports and in the "Teachers" section, the lesson is credited to the one who is recorded as its teacher.
 
 ## Admin
 
@@ -27,94 +27,96 @@ In the [Admin](/dashboard/admin) section, there are four tabs.
 
 User list: name, login, phone.
 
-- **+ Add teacher** / **+ Add administrator** — new user with a login and password; they can log in immediately.
+- **+ Add Teacher** / **+ Add Administrator** — new user with a login and password; they can log in immediately.
 - Click on the row — data can be changed.
 - Deletion: the system will show what is associated with the user and ask for confirmation.
 
 ### Courses
 
-Course name and description. **+ Add course**, edit by clicking on the row, delete.
+Course title and description. **+ Add Course**, edit by clicking on the row, delete.
 
 ### Groups
 
 Name, course, sector, teacher, video conference, Telegram.
 
-- **+ Add group** — new group with a course and teacher.
-- Click on the row — data can be changed. Changing the teacher in the row takes effect from today: past lessons stay with whoever taught them.
-- **Group schedule** — open the group page.
-- **Send to archive** — the group is no longer active; it can be **returned** or **deleted permanently** from the archive.
+- **+ Add Group** — new group with a course and teacher.
+- Click on the row — data can be changed. Changing the teacher in the row takes effect from today: past lessons remain with the one who taught them.
+- **Group Schedule** — open the group page.
+- **Send to Archive** — the group is no longer active; it can be **returned** or **deleted permanently** from the archive.
 
-## Knowledge base
+## Knowledge Base
 
-In the [Knowledge base](/dashboard/materials), the administrator additionally has:
+In the [Knowledge Base](/dashboard/materials), the administrator additionally has:
 
-- **Upload course** — upload a folder with course materials as a lesson template: for each file, specify the course, direction, and lesson number.
-- Filters by course and sector and display of materials from lesson templates.
+- **Upload Course** — upload a folder with course materials as lesson templates: for each file, specify the course, direction, and lesson number.
+- Filters by course and sector and display materials from lesson templates.
 - **Approve** / **Block** template material — one by one or the entire course package at once.
 - Only the administrator can delete files and links; a quiz can be deleted by the administrator or its author. Material used in lessons must be unlinked first.
 
 ## Students
 
-In the [Students](/dashboard/students) section — all students of the platform: group, teacher, average grades for lessons, Homework and Exams, stars, absences, late arrivals, date of last login, phone, parent and contacts. Filters by teacher, course, and group, **My** — only your groups. Click a column name — the table will be sorted by it.
+In the [Students](/dashboard/students) section — all students on the platform: group, teacher, average grades for lessons, Homework and Exams, stars, absences, tardies, last login date, phone, parent, and contacts. Filters by teacher, course, and group, **My** — only your groups. Click on the column title — the table will be sorted by it.
 
-### How to add a student
+A red ring around the number of absences means the student missed the last group lesson and has not attended a personal lesson afterward. The ring appears the day after the lesson and disappears when the student attends a personal lesson or comes to the next group lesson; an absence for a valid reason does not trigger the ring.
+
+### How to Add a Student
 
 1. Click **+ Student**.
-2. Fill in the first and last name, phone, login and password. The login and password must then be given to the student.
-3. Enter the parent's name and phone.
-4. Select a group and click **Save**. The student will appear in the group right away and will be able to log in.
+2. Fill in the first name and last name, phone number, username, and password. The username and password should be passed on to the student later.
+3. Enter the parent's name and phone number.
+4. Select a group and click **Save**. The student will immediately appear in the group and will be able to log in.
 
-### How to change a student's details
+### How to Change Student Data
 
-Click the **pencil** icon in the student's row. In the window you can change the name, phone, email, Telegram, WhatsApp, and the parent's name and phone. The login cannot be changed.
+Click the **pencil** icon in the student's row. In the window, you can change the name, phone number, email, Telegram, WhatsApp, parent's name, and parent's phone number. The username cannot be changed.
 
-### Rules for phones
+### Phone Rules
 
-- The student's phone is required. A red dash in the “Phone” column of the list means it is not filled in; the system will ask such a student to enter the phone at login.
-- The same phone cannot belong to two users. If the system says the phone already exists, the student has already been added — find them in the list.
-- If the child has no phone of their own, enter the parent's phone in both fields: “Student's phone” and “Parent's phone”.
-- The parent's phone may repeat: brothers and sisters share it.
-- The number can be entered as +994 50 123 45 67 or 050 123 45 67; a number from another country — with a plus and the country code.
+- The student's phone number is mandatory. A red dash in the "Phone" column means it is not filled; the system will ask for the phone number when the student logs in.
+- The same phone number cannot be used by two users. If the system responds that the phone number already exists, it means the student is already registered — find them in the list.
+- If the child does not have their own phone, enter the parent's phone number in both fields: "Student's Phone" and "Parent's Phone."
+- The parent's phone number can be repeated: siblings share one.
+- The number can be entered as +994 50 123 45 67 or 050 123 45 67; a number from another country should include the plus sign and country code.
 
-### Other actions
+### Other Actions
 
-- **Change password** (key) — if the student forgot the password. The system will show the new password on the screen; it must be passed on to the student.
-- **Delete** (trash can) — the system will show what is linked to the student and ask for confirmation.
-- To move a student to another group or unenroll them — on the group page, the **Students** icon.
+- **Change Password** (key) — if the student forgot their password. The new password will be displayed on the screen, and it should be communicated to the student.
+- **Delete** (trash can) — the system will show what is associated with the student and will ask for confirmation.
+- Transfer the student to another group or expel them — on the group page, click the **Students** icon.
 
-### Student report
+### Student Report
 
-Click the student's name — the report for parents will open. The period is selected at the top of the page: **Month** (with paging), **Since start of year** — from September 1, **Since start of studies** — from the student's first lesson, **Period** — any two dates. The **Print** button prints the report. Comparison with the previous month is available only in the monthly report.
+Click on the student's name — a report for parents will open. The period is selected at the top of the page: **Month** (with scrolling), **Since the Beginning of the Year** — from September 1, **Since the Start of Learning** — from the student's first lesson, **Period** — any two dates. The **Print** button outputs the report on paper. Comparison with the previous month is only available in the monthly report.
 
-- **One-sentence conclusion** — how the period went and what is worth paying attention to.
-- **The month (period) in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
-- **How things are going** — six color-coded indicators: whether the student attends lessons, arrives on time, how they work in class, whether homework is submitted and how well it is done, and how exams are going.
-- **Highlights of the period** — what to be proud of and what to pay attention to.
-- **Lessons of the period** — for each lesson: attendance, grade, homework, and stars.
+- **Summary in One Sentence** — how the period went and what to pay attention to.
+- **Month (Period) in Numbers** — attended lessons, submitted homework, stars, and average grade for lessons.
+- **How Things Are Going** — six indicators with colors: whether they attend lessons, whether they arrive on time, how they perform in class, whether they submit and how they complete homework, how they take exams.
+- **Main Points for the Period** — what can be proud of and what to pay attention to.
+- **Lessons for the Period** — for each lesson: attendance, grade, homework, and stars.
 
-Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet.
+Green color — everything is fine, yellow — slight deviation, red — parents' help is needed, gray — no data yet.
 
 ## Teachers
 
-In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, lessons held, attendance, and average grade. Groups and students are counted by the groups where they are the main teacher; lessons, attendance and grade — by the lessons they taught themselves, including substitutions.
+In the [Teachers](/dashboard/teachers) section — a summary for each teacher: how many groups and students, conducted lessons, attendance, and average score. Groups and students are counted based on the groups where they are the main teacher; lessons, attendance, and scores are based on the lessons they conducted themselves, including replacements.
 
-### Teacher report
+### Teacher Report
 
-Click on a teacher — the report will open. The period is selected at the top of the page: **Month** (with paging), **Since start of year** — from September 1, **Since start of teaching** — from the teacher's first lesson, **Period** — any two dates. The **Print** button prints the report. Comparison with the previous month is available only in the monthly report.
+Click on the teacher — the report will open. The period is selected at the top of the page: **Month** (with scrolling), **Since the beginning of the year** — from September 1, **Since the beginning of teaching** — from the teacher's first lesson, **Period** — any two dates. The **Print** button outputs the report on paper. Comparison with the previous month is only available in the monthly report.
 
-- **One-sentence conclusion** — how the period went and which indicators need attention.
-- **Amount of work** — scheduled lessons held, personal lessons, hours, and lessons not held. A lesson counts as held if it is open and at least one student attended.
-- **Quality of work** — eight indicators with a target and a color: attendance, whether students stay, whether the journal is filled in on time, whether homework is assigned and checked quickly, whether exam results are growing, whether students use the platform, and how they rate lessons with smileys.
-- **By group** — the same key figures for each of the teacher's groups.
-- **What to pay attention to** — specific cases: unchecked works, students with three absences in a row, students who left and the reason, lessons not held.
+- **Summary in one phrase** — how the period was worked and which indicators require attention.
+- **How much was worked** — conducted lessons according to the schedule, personal lessons, hours, and canceled lessons. A lesson is considered conducted if at least one student was present.
+- **How it was worked** — eight indicators with norms and colors: attendance, whether students remain, whether the journal is filled out on time, whether homework is assigned and checked quickly, whether exam results are improving, whether students use the platform, and how they rate the lessons with emojis.
+- **By groups** — the same key figures for each group of the teacher.
+- **What to pay attention to** — specific cases: ungraded assignments, students with three consecutive absences, students who have left and the reason, canceled lessons.
 
-Green — the target is met, yellow — a small deviation, red — below target, gray — no data yet.
+Green color — norm met, yellow — slight deviation, red — below norm, gray — no data yet.
 
-Lesson grades and stars are not included in the report: the teacher assigns them, so they cannot be used to judge the quality of the teacher's work.
+Grades for lessons and stars are not included in the report: they are assigned by the teacher themselves, so they cannot be used to judge the quality of their work.
 
-## Visits
+## Attendance
 
-In the [Visits](/dashboard/activity) section:
+In the [Attendance](/dashboard/activity) section:
 
 - **Today in the system** — who logged in today; "now" — active in the last minutes.
 - Report for the period (today, 7 or 30 days) for teachers, students, and administrators: how many days logged in, time in the system, last activity — in total or by days.

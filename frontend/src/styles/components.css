@@ -549,6 +549,18 @@
   font-size: var(--font-xl);
   line-height: 1;
 }
+/* «Студенты», колонка «Пропуски»: незакрытый пропуск последнего урока */
+.absence-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.9em;
+  height: 1.9em;
+  padding: 0 .3em;
+  border: 2px solid var(--color-danger);
+  border-radius: 999px;
+  box-sizing: border-box;
+}
 .table__row--clickable {
   cursor: pointer;
 }

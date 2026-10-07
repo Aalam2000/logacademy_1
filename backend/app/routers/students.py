@@ -8,7 +8,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..usages import ensure_not_used
-from ..attendance import attendance_slots, summarize_by_student
+from ..attendance import attendance_slots, missed_last_lesson, summarize_by_student
 from ..core.security import get_password_hash
 from ..database import get_db
 from ..schemas import NewPasswordIn
@@ -46,6 +46,8 @@ class StudentStatsOut(BaseModel):
     max_exam_score: Optional[int] = None
     stars_total: int = 0                    # сумма звёзд за уроки
     unexcused_absences: int = 0
+    # Пропустил последний урок и не был после него на доп. уроке (attendance.missed_last_lesson)
+    missed_last_lesson: bool = False
     late_count: int = 0
     # Для колонок «Телефон» и «Родитель» в таблице «Студенты»
     phone: Optional[str] = None
@@ -220,6 +222,7 @@ async def list_students(
     }
 
     stats = await _compute_stats(db, student_ids, group_ids)
+    missed_last = await missed_last_lesson(db, group_ids, student_ids)
 
     # Последний вход — начало самой свежей сессии ученика (app/presence.py)
     logins_result = await db.execute(
@@ -241,6 +244,7 @@ async def list_students(
             parent_name=u.get("parent_name"),
             parent_phone=u.get("parent_phone"),
             last_login_at=last_logins.get(sid),
+            missed_last_lesson=sid in missed_last,
             groups=[StudentGroupOut(**{k: v for k, v in g.items() if k in ("id", "name", "teacher_id", "teacher_name")}) for g in student_groups[sid]],
             **_stats_summary(stats[sid]),
         ))

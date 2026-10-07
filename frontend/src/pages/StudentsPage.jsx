@@ -233,7 +233,11 @@ function StudentsPage() {
                   <td>{s.avg_hw_score ?? '—'}</td>
                   <td>{s.avg_exam_score ?? '—'}</td>
                   <td className="table__cell--center">{s.stars_total ?? 0}</td>
-                  <td>{s.unexcused_absences}</td>
+                  <td>
+                    {s.missed_last_lesson
+                      ? <span className="absence-ring" data-tip="Пропустил последний урок">{s.unexcused_absences}</span>
+                      : s.unexcused_absences}
+                  </td>
                   <td>{s.late_count}</td>
                   <td className="nowrap">{formatLogin(s.last_login_at)}</td>
                   <td className={`nowrap${s.phone ? '' : ' cell-missing'}`}>{s.phone || '—'}</td>

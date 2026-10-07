@@ -1,122 +1,124 @@
-<!-- autoi18n: source=teacher.md lang=az sha1=1cdd93fd1524f40fa73ba9bf51d6d62697d54db4 -->
+<!-- autoi18n: source=teacher.md lang=az sha1=c95d8ec6facfe5f81c8b806ecf81e29844aaaede -->
 # Platformada necə işləmək
 
-## Qruplarım
+## Mənim qruplarım
 
-[Əsas səhifə](/dashboard) — sizin qruplar: ad, kurs, şagird sayı və əlaqə məlumatları. Qrupları **cədvəl** və ya **təqvim** şəklində bütün qrupların dərslərini bir anda görmək mümkündür. Orada həmçinin **arxiv** bağlanmış qruplar var.
+[Əsas səhifədə](/dashboard) — sizin qruplar: ad, kurs, şagird sayı və əlaqə məlumatları. Qrupları **cədvəl** və ya **təqvim** şəklində bütün qrupların dərslərini bir yerdə görə bilərsiniz. Orada həmçinin **arxiv** bağlanmış qruplar var.
 
 Qrupun üzərinə klikləyin, onu açmaq üçün.
 
-Başqa müəllimi əvəz etmisinizsə və ya qrupu təhvil verilməzdən əvvəl aparmısınızsa, aşağıda **Başqa qruplardakı dərslərim** bloku var: belə qrupda yalnız öz dərslərinizi görürsünüz. Dərsdə dərs gününün gecə yarısına qədər işləmək olar, sonra o yalnız baxış üçün qalır. Dərsi qrupun əsas müəllimi aparmırsa, siyahıda və təqvimdə müəllimin adı göstərilir.
+Əgər siz başqa bir müəllimi əvəz etmişsinizsə və ya qrupu onun ötürülməsindən əvvəl idarə etmisinizsə, aşağıda **Mənim dərslərim digər qruplarda** bloku var: belə bir qrupda yalnız öz dərslərinizi görürsünüz. Dərsdə işləmək dərs gününün gecəsi yarısına qədər mümkündür, sonra o, baxış üçün qalır. Qrupun əsas müəllimi olmayan dərsdə müəllimin adı siyahıda və təqvimdə göstərilir.
 
-Şagirdlər ev tapşırıqlarına cavab göndəribsə, qrup rənglə seçilir və cavabların sayı ilə **Ev tapşırığı: yoxla** nişanı alır. Başlıqda **Ev tapşırığını yoxla** düyməsi görünür — o, ən köhnə yoxlanmamış cavabı olan dərsi açır.
+Əgər şagirdlər ev tapşırıqlarına cavab göndəriblərsə, qrup işıqlandırılır və **Ev tapşırığı: yoxlamaq** ilə birlikdə cavab sayı ilə işarələnir. Üst hissədə **Ev tapşırığını yoxla** düyməsi görünür — bu, ən köhnə yoxlanmamış cavabın olduğu dərsi açır.
 
 ## Qrup
 
-Qrup səhifəsinin yuxarı hissəsində — nişanlar, hər birinin adı üzərinə gətirəndə görünür:
+Qrup səhifəsinin yuxarı hissəsində — ikonlar, hər birinin adı üzərinə gəldikdə görünür:
 
-- **Qrup ayarları** (dişli çarx) — ad, Telegram, WhatsApp, videokonfrans linki və dərsin standart müddəti;
-- **Qeydiyyat üçün QR** — şagirdlərin qrupda özləri qeydiyyatdan keçməsi üçün link və QR-kod; orada həmçinin dərhal şagird əlavə etmək mümkündür, istifadəçi adı və şifrə ilə;
-- **Şagirdlər** (sayı olan adamcıqlar) — qrupun tərkibi və telefonlar: axtarışla şagird əlavə etmək, onun və valideynin məlumatlarını **dəyişmək**, xaric etmək (səbəbini göstərməklə) və ya arxivdən qaytarmaq. «Telefon» sütununda qırmızı tire — telefon doldurulmayıb.
+- **Qrupun parametrləri** (dişli) — ad, Telegram, WhatsApp, videokonfrans linki və dərsin standart müddəti;
+- **Qeydiyyat üçün QR** — şagirdlərin qrupa özləri qeydiyyatdan keçməsi üçün link və QR-kod; orada həmçinin dərhal şagirdi istifadəçi adı və şifrə ilə əlavə etmək mümkündür;
+- **Şagirdlər** (şəxsiyyət simvolları ilə) — qrupun tərkibi və telefonlar: şagirdi axtarışla əlavə etmək, **məlumatlarını** və valideynin məlumatlarını **dəyişdirmək**, xaric etmək (səbəbini göstərməklə) və ya arxivdən qaytarmaq. "Telefon" sütununda qırmızı xətt — telefon doldurulmayıb.
 
-### Qrupun Dərsləri
+### Qrupun dərsləri
 
-Dərslər **cədvəl** və ya **təqvim** şəklində görünür — solda iki nişan. Filtr — bu gündən, həftənin əvvəlindən, ayın əvvəlindən və ya hamısı.
+Dərslər **cədvəl** və ya **təqvim** şəklində görünür — solda iki ikon. Filtr — bu gündən, həftənin əvvəlinə, ayın əvvəlinə və ya hamısı.
 
-- **+ Dərs** — bir dərs yaratmaq: tarix, vaxt, müddət və lazım olsa, öz adı.
-- **Cədvəl və materiallar** (plyuslu təqvim) — eyni anda çox sayda dərs yaratmaq: ilk dərsin tarixi, vaxtı, müddəti, həftənin günləri, dərs sayı. Materialları kurs şablonundan və ya digər qrupdan götürmək mümkündür. Dərslər artıq varsa, burada tarixləri saxlayıb yalnız materialları çəkmək olar.
-- **Dərsləri aç** (qıfıl) — nömrələr üzrə bir neçə dərsi şagirdlərə birdən açmaq.
+- **+ Dərs** — bir dərs yaratmaq: tarix, vaxt, müddət və lazım gələrsə, öz adı.
+- **Cədvəl və materiallar** (artı ilə təqvim) — eyni anda çox sayda dərs yaratmaq: ilk dərsin tarixi, vaxtı, müddəti, həftənin günləri, dərslərin sayı. Materialları kurs şablonundan və ya digər qrupdan götürmək mümkündür. Əgər dərslər artıq varsa, burada tarixləri saxlamaq və yalnız materialları çəkmək mümkündür.
+- **Dərsləri açmaq** (kilid) — şagirdlərə eyni anda bir neçə dərsi nömrələri ilə açmaq.
 - **Bayram kimi qeyd etmək** — bu tarixdə dərs keçirilmir: o və bütün sonrakı dərslər cədvəldə irəliləyir.
 
 ### Fərdi dərs
 
-Qrupun bir və ya bir neçə şagirdi üçün əlavə məşğələ. **+ Dərs** pəncərəsində **Fərdi dərs** qutusunu işarələyin və şagirdləri seçin.
+Bir və ya bir neçə şagird üçün əlavə məşğələ. **+ Dərs** pəncərəsində **Fərdi dərs** seçimini işarələyin və şagirdləri qeyd edin.
 
-- Belə dərsi yalnız seçilmiş şagirdlər görür. Digərlərinə o göstərilmir və onlara qayıb yazılmır.
-- Dərslər siyahısında və təqvimdə o, iştirakçıların adları ilə 👤 nişanı ilə qeyd olunub.
-- Materiallar, ev tapşırıqları, qiymətlər və ulduzlar adi dərsdəki kimi işləyir.
-- İştirakçıların tərkibi dərs səhifəsində dəyişdirilir — 👤 nişanını basın.
-- Belə dərsin səhifəsindəki **Dərsdən** düyməsi qrupun istənilən keçmiş dərsinin bütün materiallarını ona əlavə edir: fayllar, keçidlər və quizlər. Şagirdin buraxdığı dərslər siyahıda rənglə seçilir.
-- Dərs bağlı yaradılır: onu dərs səhifəsində açın. «Dərsləri aç», «Cədvəl və materiallar» və «Bayram kimi qeyd etmək» düymələri fərdi dərslərə toxunmur.
+- Belə bir dərsi yalnız seçilmiş şagirdlər görür. Digərlərinə göstərilmir və onlara davam etmə qeydi qoyulmur.
+- Dərslər siyahısında və təqvimdə iştirakçıların adları ilə 👤 nişanı ilə qeyd olunur.
+- Materiallar, ev tapşırıqları, qiymətlər və ulduzlar adi dərs kimi işləyir.
+- İştirakçıların tərkibi dərs səhifəsində dəyişir — 👤 nişanına basın.
+- Belə bir dərs səhifəsində **Dərsdən** düyməsi, qrupun keçmiş dərslərindən bütün materialları əlavə edir: fayllar, bağlantılar və quizlər. Şagirdin qaçırdığı dərslər siyahıda işarələnir.
+- Dərs bağlanmış şəkildə yaradılır: onu dərs səhifəsində açın. "Dərsləri aç", "Cədvəl və materiallar" və "Bayram kimi qeyd et" düymələri fərdi dərslərə təsir etmir.
 
-Yoxlanmamış Ev tapşırığına cavabları olan dərs "Ev tapşırığı: yoxlamaq" ilə qeyd olunur.
+Təsdiqlənməmiş cavabları olan Ev tapşırığı "Ev tapşırığı: yoxlamaq" ilə qeyd olunur.
 
 ## Dərs
 
 Dərsin yuxarı hissəsində:
 
-- **Aç / Bağla** — şagirdlərin dərsə giriş imkanı. Bağlı dərsi şagirdlər görmür. Gələn ilk şagirdi qeyd edən kimi dərs özü açılır.
+- **Aç / Bağla** — şagirdlərin dərsə giriş imkanı. Bağlı dərsi şagirdlər görmür. Dərs, ilk gələn şagirdi qeyd etdiyiniz anda açılır.
 - 📅 — dərsin tarixini, vaxtını və müddətini dəyişmək.
 - Dərsin silinməsi.
 
-Dərsdə iki sekme var: **Dərs** və **Tələbələr**.
+Dərsin iki sekmesi var: **Dərs** və **Tələbələr**.
 
-### Dərs Tabı — materiallar
+### "Dərs" sekmesi — materiallar
 
-- **Baza daxil et** — [Bilik bazasından](/dashboard/materials) materialları seçin.
-- **+ Fayl**, **+ Link** — öz faylınızı və ya linkinizi əlavə edin.
-- **+ quiz** — bu dərs üçün birbaşa quiz yaradın.
+- **Bilik bazasından əlavə et** — [Bilik bazasından](/dashboard/materials) materialları seçin.
+- **+ Fayl**, **+ Bağlantı** — öz faylınızı və ya bağlantınızı əlavə edin.
+- **+ Quiz** — bu dərs üçün birbaşa quiz yaradın.
 - **Ayrıl** — materialı dərsdən çıxarın (Bilik bazasından silinmir).
 
-Material adın üzərinə klikləməklə yeni bir tabda açılır.
+Material adının üzərinə klikləməklə yeni bir sekmədə açılır.
 
-Aşağıda — **dərsə şərh**: dərs haqqında qeydlər — nələri müzakirə etdik, nələrə diqqət yetirmək lazımdır. Tələbələr də bunu dərs səhifəsində görürlər.
+Aşağıda — **dərsə şərh**: dərs haqqında qeydlər — nələri müzakirə etdik, nəyə diqqət yetirmək lazımdır. Şagirdlər də bunu dərs səhifəsində görür.
 
-### Tələbələr Tabı — jurnal
+### Tələbələr sekmesi — jurnal
 
-Hər bir tələbə üçün:
+Hər bir şagird üçün:
 
-- **Davamiyyət** — Gəldi, Onlayn və ya Üzrlü səbəb; ayrıca — Gecikdi. **Hamısı gəldi** düyməsi hamısını eyni anda işarələyir.
+- **Davamiyyət** — Gəldi, Onlayn və ya Üzrlü səbəb; ayrıca — Gecikdi. **Hamısı gəldi** düyməsi hamısını eyni anda qeyd edir.
 - **Qiymət**, **İmtahan**, **Ulduzlar** (üçədək).
-- **Ev tapşırığı** və **Cavab** — verilmiş tapşırıq və tələbənin cavabı.
-- **Dialoq** — bu dərs üzrə tələbə ilə yazışma.
+- **Ev tapşırığı** və **Cavab** — verilmiş tapşırıq və şagirdin cavabı.
+- **Dialoq** — bu dərs üzrə şagirdlə yazışma.
 
-Bakıda gecə yarısından sonra dərsin davamiyyətini və qiymətini dəyişmək mümkün deyil (yox olan üçün üzrlü səbəb qeyd edilə bilər), dərsi köçürmək və ya silmək olmaz. İmtahan, ulduzlar, Ev tapşırığı və dialoq dəyişdirilə bilər.
+Bakı vaxtı ilə gecə yarısından sonra davamiyyət və dərs üçün qiyməti dəyişmək mümkün deyil (yox olan üçün üzrlü səbəb qeyd edilə bilər), dərsi köçürmək və ya silmək olmaz. İmtahan, ulduzlar, ev tapşırığı və dialoq dəyişdirilə bilər.
 
 ### Ev tapşırığı
 
-- **+ Ev tapşırığı hamıya** — bütün qrupa tapşırıq verin: öz kompüterinizdən və ya Bilik bazasından fayl, təqdim etmə müddəti.
-- **+ Ev tapşırığı** tələbə sətirində — bu tələbəyə şəxsi tapşırıq.
-- **Ev tapşırığını yoxla** — jurnal yoxlama üçün yenidən qurulur: tələbənin cavabını açın, 0-dan 100-ə qədər qiymət verin, qiymətsiz qəbul edin və ya düzəliş üçün geri qaytarın. "Əvvəlki / Növbəti" düymələri ilə tələbələr arasında rahatlıqla keçid edə bilərsiniz.
+- **+ Ev tapşırığı hamıya** — bütün qrupa tapşırıq vermək: öz kompüterinizdən fayl və ya Bilik bazasından, təqdim etmə müddəti.
+- **+ Ev tapşırığı** şagirdin sətirində — bu şagird üçün fərdi tapşırıq.
+- **Ev tapşırığını yoxla** — jurnal yoxlama üçün yenidən qurulur: şagirdin cavabını açın, 0-dan 100-ə qədər qiymət verin, qiymətsiz qəbul edin və ya yenidən işləmək üçün qaytarın. **Əvvəlki / Növbəti** düymələri ilə şagirdlər arasında rahatlıqla keçid edə bilərsiniz.
 
-Təqdim etmə müddətini hamıya eyni anda və ya ayrı-ayrılıqda bir tələbəyə dəyişmək mümkündür.
+Təqdim etmə müddətini hamıya eyni anda və ya ayrı-ayrı şagirdlərə dəyişmək mümkündür.
 
-## quizlər
+## Quizlər
 
 **+ Quiz** dərsdə və ya **+ Quiz yarat** [Bilik bazasında](/dashboard/materials).
 
 - **Flash** — sual-cavab; **Live** — real vaxtda səsvermə.
-- Sualları özünüz yaza bilərsiniz və ya **Köməkçi**-dən istifadə edə bilərsiniz: o, dərs mövzusu və materialları üzrə hər hansı bir AI üçün sorğu toplayacaq, AI-nin cavabı isə quiz-i dolduracaq.
-- Live-quiz quiz səhifəsindən keçirilir: şagirdlər link vasitəsilə qoşulurlar, siz **Keçir** düyməsini basırsınız və sualları irəliləyirsiniz. **İmtahan** seçsəniz, nəticə dərs jurnalında qiymət olaraq qeyd olunacaq.
+- Sualları özünüz yaza bilərsiniz və ya **Köməkçidən** istifadə edə bilərsiniz: o, dərs mövzusu və materialları üzrə hər hansı bir AI üçün sorğu toplayacaq, AI-nin cavabı quizə doldurulacaq.
+- Live-quiz quiz səhifəsindən keçirilir: şagirdlər link vasitəsilə qoşulurlar, siz **Keçir** düyməsini basırsınız və sualları irəliləyirsiniz. **İmtahan** qeyd etsəniz, nəticə dərs jurnalında qiymət olaraq qeyd olunacaq.
 
 ## Bilik bazası
 
-[Bilik bazasında](/dashboard/materials) — dərslərə əlavə edilə bilən ümumi fayllar, linklər və quizlər, həmçinin Ev tapşırığı kimi təqdim edilə bilənlər. Burada öz faylınızı yükləyə, link əlavə edə və ya quiz yarada bilərsiniz. **Mənim** filtri yalnız sizin materiallarınızı göstərir; **Dərslərdə** sütunu isə materialın istifadə edildiyi yerləri göstərir.
+[**Bilik bazası**](/dashboard/materials) — ümumi fayllar, bağlantılar və quizlər, dərslərə əlavə edilə bilən və Ev tapşırığı kimi verilə bilən. Burada öz faylınızı yükləyə, bağlantı əlavə edə və ya quiz yarada bilərsiniz. **Mənim** filtri yalnız sizin materiallarınızı göstərir; **Dərslərdə** sütunu — materialın harada istifadə edildiyini göstərir.
 
 ## Tələbələr
 
-[Tələbələr](/dashboard/students) bölməsində — bütün şagirdləriniz: qrup, dərslər üzrə orta qiymətlər, Ev tapşırıqları və imtahanlar, ulduzlar, qayıblar, gecikmələr, son giriş tarixi, telefon, valideyn və əlaqə məlumatları. Sütunun adına klikləyin — cədvəl həmin sütun üzrə sıralanacaq; təkrar klik sıranı dəyişir.
+[Tələbələr](/dashboard/students) bölməsində — bütün şagirdləriniz: qrup, dərslər üzrə orta qiymətlər, Ev tapşırıqları və İmtahanlar, ulduzlar, davamiyyət, gecikmələr, son giriş tarixi, telefon, valideyn və əlaqə məlumatları. Sütun adının üzərinə klikləyin — cədvəl ona görə sıralanacaq; təkrar klik sıralama qaydasını dəyişir.
 
-- **+ Tələbə** — yeni şagirdi birbaşa öz qrupunuza əlavə etmək: ad, login, şifrə, telefon, valideynin məlumatları.
-- **Tələbənin və valideynin məlumatları** (qələm) — adı, telefonu, email, messencerləri, valideynin adını və telefonunu dəyişmək.
-- **Şifrəni dəyiş** (açar) — şagird şifrəni unudubsa.
+Qırmızı halqa davamiyyət sayının ətrafında — şagird son dərsi qaçırıb və ondan sonra fərdi dərsdə olmayıb. Halqa dərsdən sonra növbəti gün görünür və şagird fərdi dərsdə iştirak etdikdə və ya növbəti qrup dərsinə gəldikdə itir; üzrlü səbəb ilə qaçırma halqa vermir.
 
-Şagirdin telefonu məcburidir və iki istifadəçidə təkrarlana bilməz. Uşağın öz telefonu yoxdursa, valideynin telefonunu yazın. Nömrəni +994 50 123 45 67 və ya 050 123 45 67 şəklində daxil etmək olar.
+- **+ Şagird** — yeni şagird əlavə etmək üçün dərhal sizin qrupa: ad, istifadəçi adı, şifrə, telefon, valideyn məlumatları.
+- **Şagird və valideyn məlumatları** (qələm) — ad, telefon, email, messencerlər, valideynin adı və telefonunu dəyişmək.
+- **Şifrəni dəyişmək** (açar) — əgər şagird şifrəsini unutmuşsa.
 
-Şagirdlər hər dərsi smayliklə qiymətləndirir (yaşıl, sarı, qırmızı). Kimin hansı smayliki qoyduğunu siz görmürsünüz: beləcə uşaqlar düzünü cavablandırır.
+Şagirdin telefonu mütləqdir və iki istifadəçidə eyni ola bilməz. Əgər uşağın öz telefonu yoxdursa, valideynin telefonunu yazın. Nömrəni +994 50 123 45 67 və ya 050 123 45 67 kimi daxil edə bilərsiniz.
 
-### Tələbə üzrə hesabat
+Şagirdlər hər dərsi smiley ilə qiymətləndirirlər (yaşıl, sarı, qırmızı). Hər kəsin hansı smiley qoyduğunu siz görmürsünüz: beləliklə, uşaqlar dürüst cavab verirlər.
 
-Şagirdin adına klikləyin — valideynlər üçün hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (vərəqləmə ilə), **İlin əvvəlindən** — 1 sentyabrdan, **Təhsilin əvvəlindən** — şagirdin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap et** düyməsi hesabatı kağıza çıxarır. Keçən ayla müqayisə yalnız aylıq hesabatda var.
+### Şagird üzrə hesabat
 
-- **Bir cümlə ilə nəticə** — dövrün necə keçdiyi və nəyə diqqət yetirmək lazım olduğu.
-- **Ay (dövr) rəqəmlərlə** — iştirak edilmiş dərslər, təslim edilmiş ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
-- **İşlər necə gedir** — rəngli altı göstərici: dərslərə gəlirmi, vaxtında gəlirmi, dərsdə necə işləyir, ev tapşırıqlarını təslim edirmi və necə yerinə yetirir, imtahanları necə verir.
-- **Dövrün əsas nəticələri** — nə ilə fəxr etmək olar və nəyə diqqət yetirmək lazımdır.
-- **Dövrün dərsləri** — hər dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+Şagirdin adına klikləyin — valideynlər üçün hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (sürüşdürmə ilə), **İldən başlayaraq** — 1 sentyabrdan, **Təhsilə başlayaraq** — şagirdin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap** düyməsi hesabatı kağıza çıxarır. Keçən ay ilə müqayisə yalnız aylıq hesabatda var.
 
-Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik kənarlaşma, qırmızı — valideynlərin köməyi lazımdır, boz — hələ məlumat yoxdur. Hesabata yalnız sizin qruplarınızın dərsləri düşür. Hesabat dərsin jurnalından da açılır — şagirdin adına klikləməklə. Qrupda əsas müəllim deyilsinizsə, hesabatda yalnız sizin apardığınız dərslər olacaq.
+- **Bir cümlə ilə nəticə** — dövr necə keçdi və nəyə diqqət yetirmək lazımdır.
+- **Ay (dövr) rəqəmlərlə** — iştirak edilən dərslər, təqdim olunan ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
+- **İşlər necə gedir** — altı göstərici ilə rəng: dərslərə gedir, vaxtında gəlir, dərsdə necə işləyir, ev tapşırıqlarını təqdim edir və necə yerinə yetirir, imtahanları necə verir.
+- **Dövrün əsasları** — nəyə görə qürur duya bilərsiniz və nəyə diqqət yetirmək lazımdır.
+- **Dövr üzrə dərslər** — hər bir dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+
+Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik sapma, qırmızı — valideynlərin köməyinə ehtiyac var, boz — hələlik məlumat yoxdur. Hesabata yalnız sizin qruplarınızdakı dərslər daxil edilir. Hesabat dərs jurnalından da açılır — şagirdin adı ilə. Əgər qrupda siz əsas müəllim deyilsinizsə, hesabatda yalnız sizin apardığınız dərslər olacaq.
 
 ## Profil
 
-[Profil](/dashboard/profile) bölməsində parolu dəyişə bilərsiniz.
+[Vahid profil](/dashboard/profile) bölməsində parolu dəyişə bilərsiniz.

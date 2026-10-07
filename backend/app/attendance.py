@@ -14,6 +14,7 @@
 (admin.py), «Успеваемость» и «моя отметка» студента (lessons.py).
 """
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from sqlalchemy import select
@@ -121,6 +122,68 @@ async def attendance_slots(
                 status = ABSENT
             slots.append(AttendanceSlot(sid, lesson_id, gid, status))
     return slots
+
+
+async def missed_last_lesson(
+    db: AsyncSession, group_ids: Iterable[int], student_ids: Iterable[int],
+) -> set[int]:
+    """Ученики с незакрытым пропуском последнего урока (красное кольцо в «Студентах»).
+
+    Последний урок — самый поздний обычный (не персональный) урок группы, уже
+    вошедший в посещаемость. Пропуск — статус absent; уважительная причина не
+    считается. Закрыт — ученик был (очно/онлайн) на любом персональном уроке этой
+    группы позже пропущенного, и время этого урока уже закончилось (начало +
+    длительность); связи «доп. урок ↔ пропущенный» в базе нет.
+    Групп несколько — достаточно незакрытого пропуска в одной."""
+    group_ids, student_ids = list(group_ids), list(student_ids)
+    if not group_ids or not student_ids:
+        return set()
+
+    last_by_group: dict[int, tuple] = {}
+    for lesson_id, gid, lesson_date in (await db.execute(
+        select(Lesson.id, Lesson.group_id, Lesson.date).where(
+            Lesson.group_id.in_(group_ids), Lesson.is_personal == False,  # noqa: E712
+            Lesson.date.isnot(None), Lesson.date < lock_cutoff(),
+        )
+    )).all():
+        key = (aware(lesson_date), lesson_id)
+        if gid not in last_by_group or key > last_by_group[gid]:
+            last_by_group[gid] = key
+    if not last_by_group:
+        return set()
+
+    last_ids = [lesson_id for _, lesson_id in last_by_group.values()]
+    missed = [
+        (slot.student_id, slot.group_id)
+        for slot in await attendance_slots(db, list(last_by_group), student_ids, last_ids)
+        if slot.status == ABSENT
+    ]
+    if not missed:
+        return set()
+
+    # Последнее посещённое персональное занятие — по ученику и группе
+    attended: dict[tuple[int, int], datetime] = {}
+    now = datetime.now(timezone.utc)
+    for sid, gid, lesson_date, duration_min in (await db.execute(
+        select(LessonMark.student_id, Lesson.group_id, Lesson.date, Lesson.duration_min)
+        .join(Lesson, Lesson.id == LessonMark.lesson_id)
+        .where(
+            Lesson.group_id.in_({gid for _, gid in missed}), Lesson.is_personal == True,  # noqa: E712
+            Lesson.date.isnot(None),
+            LessonMark.student_id.in_({sid for sid, _ in missed}),
+            LessonMark.attendance_status.in_(PRESENT),
+        )
+    )).all():
+        when = aware(lesson_date)
+        if when + timedelta(minutes=duration_min or 0) > now:
+            continue  # доп. урок ещё не закончился
+        if (sid, gid) not in attended or when > attended[(sid, gid)]:
+            attended[(sid, gid)] = when
+
+    return {
+        sid for sid, gid in missed
+        if (sid, gid) not in attended or attended[(sid, gid)] <= last_by_group[gid][0]
+    }
 
 
 def summarize_by_student(slots: Iterable[AttendanceSlot]) -> dict[int, AttendanceSummary]:

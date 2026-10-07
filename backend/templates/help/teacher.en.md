@@ -1,4 +1,4 @@
-<!-- autoi18n: source=teacher.md lang=en sha1=1cdd93fd1524f40fa73ba9bf51d6d62697d54db4 -->
+<!-- autoi18n: source=teacher.md lang=en sha1=c95d8ec6facfe5f81c8b806ecf81e29844aaaede -->
 # How to work on the platform
 
 ## My groups
@@ -7,56 +7,56 @@ On the [Main](/dashboard) — your groups: name, course, number of students, and
 
 Click on a group to open it.
 
-If you substituted for another teacher or taught a group before it was handed over, there is a **My lessons in other groups** block below: in such a group you see only your own lessons. You can work in a lesson until midnight of the lesson day; after that it stays view-only. If a lesson is taught by someone other than the group's main teacher, the teacher's name is shown in the list and the calendar.
+If you replaced another teacher or led the group before its transfer, there is a block **My lessons in other groups** below: in such a group, you only see your lessons. You can work on a lesson until midnight of the lesson day, after which it remains for viewing. A lesson led by a teacher who is not the main teacher of the group shows the teacher's name in the list and calendar.
 
-If students have submitted homework answers, the group is highlighted and marked **Homework: check** with the number of answers. A **Check homework** button appears in the header — it opens the lesson with the oldest unchecked answer.
+If students have sent answers to homework assignments, the group is highlighted and marked **Homework: check** with the number of answers. A button **Check Homework** appears at the top — it opens the lesson with the oldest unchecked answer.
 
 ## Group
 
-At the top of the group page are icons; the name of each is shown on hover:
+At the top of the group page — icons, the name of each is visible on hover:
 
 - **Group settings** (gear) — name, Telegram, WhatsApp, link to the video conference, and default lesson duration;
-- **QR for registration** — link and QR code for students to register in the group themselves; you can also immediately add a student with a username and password;
-- **Students** (people with a number) — group composition and phones: add a student through search, **change** their details and the parent's details, unenroll (with a reason) or return from the archive. A red dash in the “Phone” column means the phone is not filled in.
+- **QR for registration** — link and QR code, through which students register themselves in the group; you can also immediately add a student with a login and password;
+- **Students** (little people with a number) — group composition and phone numbers: add a student through search, **edit** their data and parent data, expel (with a reason) or return from the archive. A red dash in the "Phone" column means the phone is not filled in.
 
 ### Group lessons
 
-Lessons are visible as a **table** or a **calendar** — two icons on the left. Filter — from today, from the beginning of the week, from the beginning of the month, or all.
+Lessons can be viewed as a **table** or a **calendar** — two icons on the left. Filter — from today, from the beginning of the week, from the beginning of the month, or all.
 
-- **+ Lesson** — create one lesson: date, time, duration and, if needed, its own name.
-- **Schedule and materials** (calendar with a plus) — create many lessons at once: date of the first lesson, time, duration, days of the week, number of lessons. Materials can be taken from the course template or from another group. If the lessons already exist, you can keep the dates here and only pull in the materials.
-- **Open lessons** (lock) — open several lessons to students at once by their numbers.
-- **Mark as holiday** — no lesson is held on this date: it and all subsequent lessons are shifted in the schedule.
+- **+ Lesson** — create one lesson: date, time, duration, and, if needed, your own title.
+- **Schedule and materials** (calendar with a plus) — create many lessons at once: date of the first lesson, time, duration, days of the week, number of lessons. Materials can be taken from the course template or from another group. If lessons already exist, you can leave the dates here and just pull in the materials.
+- **Open lessons** (lock) — open several lessons for students by numbers at once.
+- **Mark as a holiday** — no lesson is held on this date: it and all subsequent lessons are shifted in the schedule.
 
-### Personal lesson
+### Personal Lesson
 
-An extra class for one or several students of the group. In the **+ Lesson** window, tick **Personal lesson** and select the students.
+An additional class for one or several students of the group. In the **+ Lesson** window, check the **Personal Lesson** box and select the students.
 
-- Only the selected students see such a lesson. It is not shown to the others, and they are not marked absent.
-- In the lesson list and in the calendar it is marked with 👤 and the participants' names.
-- Materials, homework, grades and stars work as in a regular lesson.
-- The list of participants is changed on the lesson page — click the 👤 mark.
-- The **From a lesson** button on such a lesson's page adds all materials of any past lesson of the group: files, links and quizzes. Lessons the student missed are highlighted in the list.
-- The lesson is created closed: open it on the lesson page. The “Open lessons”, “Schedule and materials” and “Mark as holiday” buttons do not affect personal lessons.
+- Only the selected students can see this lesson. It is not shown to others, and they do not receive an absence mark.
+- In the list of lessons and in the calendar, it is marked with the 👤 label along with the names of the participants.
+- Materials, homework, grades, and stars work just like in a regular lesson.
+- The list of participants can be changed on the lesson page — click on the 👤 label.
+- The **From Lesson** button on the page of such a lesson adds all materials from any past lesson of the group: files, links, and quizzes. Lessons that the student missed are highlighted in the list.
+- The lesson is created as closed: open it on the lesson page. The buttons "Open Lessons," "Schedule and Materials," and "Mark as Holiday" do not affect personal lessons.
 
-A lesson with unchecked Homework answers is marked "Homework: check".
+A lesson with unverified answers to Homework is marked "Homework: check."
 
 ## Lesson
 
 At the top of the lesson:
 
-- **Open / Close** — students' access to the lesson. Closed lessons are not visible to students. The lesson opens by itself as soon as you mark the first student as present.
+- **Open / Close** — access for students to the lesson. Closed lessons are not visible to students. The lesson opens automatically as soon as you mark the first arriving student.
 - 📅 — change the date, time, and duration of the lesson.
 - Deleting the lesson.
 
 The lesson has two tabs: **Lesson** and **Students**.
 
-### Lesson Tab — Materials
+### Tab "Lesson" — materials
 
 - **Add from Knowledge Base** — select materials from the [Knowledge Base](/dashboard/materials).
 - **+ File**, **+ Link** — add your own file or link.
 - **+ Quiz** — create a quiz specifically for this lesson.
-- **Unpin** — remove the material from the lesson (it is not deleted from the Knowledge Base).
+- **Detach** — remove material from the lesson (it is not deleted from the Knowledge Base).
 
 The material opens in a new tab when clicking on the title.
 
@@ -66,18 +66,18 @@ At the bottom — **comment on the lesson**: notes about the lesson as a whole �
 
 For each student:
 
-- **Attendance** — Present, Online, or Valid reason; separately — Late. The **All present** button marks everyone at once.
+- **Attendance** — Came, Online or Valid reason; separately — Late. The **All present** button marks everyone at once.
 - **Grade**, **Exam**, **Stars** (up to three).
-- **Homework** and **Response** — the assigned task and the student's response.
+- **Homework** and **Answer** — assigned task and student's response.
 - **Dialogue** — correspondence with the student regarding this lesson.
 
-After midnight in Baku, attendance and the grade for the lesson can no longer be changed (a valid reason can be marked for an absent student), the lesson cannot be rescheduled or deleted. The exam, stars, homework, and dialogue can be changed.
+After midnight in Baku, attendance and grades for the lesson can no longer be changed (a valid reason can be marked for an absent student), the lesson cannot be rescheduled or deleted. Exam, stars, homework, and dialogue can be changed.
 
 ### Homework
 
-- **+ Homework to everyone** — assign a task to the whole group: a file from your computer or from the Knowledge Base, deadline.
+- **+ Homework to all** — assign a task to the entire group: a file from your computer or from the Knowledge base, deadline.
 - **+ Homework** in the student's row — a personal task for this student.
-- **Check Homework** — the journal is rearranged for checking: open the student's response, assign a grade from 0 to 100, accept without a grade, or return for revision. The "Previous / Next" buttons make it convenient to go through the students in order.
+- **Check Homework** — the journal is rearranged for checking: open the student's answer, assign a grade from 0 to 100, accept without a grade or return for revision. The "Previous / Next" buttons make it convenient to go through students in order.
 
 The deadline can be changed for everyone at once or for an individual student.
 
@@ -86,8 +86,8 @@ The deadline can be changed for everyone at once or for an individual student.
 **+ Quiz** in the lesson or **+ Create quiz** in the [Knowledge base](/dashboard/materials).
 
 - **Flash** — question-answer; **Live** — real-time voting.
-- Questions can be written by yourself or use the **Assistant**: it will gather a request for any AI on the topic and materials of the lesson, and the AI's answer will fill in the quiz.
-- The live quiz is conducted from the quiz page: students connect via the link, you click **Conduct** and lead the questions. If you mark **Exam**, the result will go as a grade in the lesson journal.
+- Questions can be written by yourself or use the **Assistant**: it will gather a request for any AI on the topic and materials of the lesson, and the AI's response will fill the quiz.
+- A live quiz is conducted from the quiz page: students connect via a link, you click **Conduct** and lead the questions. If you mark **Exam**, the result will go as a grade in the lesson journal.
 
 ## Knowledge base
 
@@ -95,27 +95,29 @@ In the [Knowledge base](/dashboard/materials) — general files, links, and quiz
 
 ## Students
 
-In the [Students](/dashboard/students) section — all your students: group, average grades for lessons, Homework and exams, stars, absences, late arrivals, date of last login, phone, parent and contacts. Click a column name — the table will be sorted by it; clicking again reverses the order.
+In the [Students](/dashboard/students) section — all your students: group, average grades for lessons, Homework and Exams, stars, absences, tardies, last login date, phone, parent, and contacts. Click on the column title — the table will be sorted by it; clicking again changes the order.
 
-- **+ Student** — add a new student straight to your group: name, login, password, phone, parent details.
-- **Student and parent details** (pencil) — change the name, phone, email, messengers, and the parent's name and phone.
-- **Change password** (key) — if the student forgot the password.
+The red ring around the number of absences indicates that the student missed the last group lesson and has not attended a personal lesson afterward. The ring appears the day after the lesson and disappears when the student attends a personal lesson or comes to the next group lesson; an absence for a Valid reason does not give a ring.
 
-The student's phone is required and cannot be repeated for two users. If the child has no phone of their own, enter the parent's phone. The number can be entered as +994 50 123 45 67 or 050 123 45 67.
+- **+ Student** — add a new student directly to your group: name, login, password, phone, parent details.
+- **Student and parent details** (pencil) — change name, phone, email, messengers, parent name, and phone.
+- **Change password** (key) — if the student forgot their password.
 
-Students rate each lesson with a smiley (green, yellow, red). You do not see who chose which smiley: this way children answer honestly.
+The student's phone is mandatory and cannot be duplicated among two users. If the child does not have their own phone, enter the parent's phone. The number can be entered as +994 50 123 45 67 or 050 123 45 67.
 
-### Student report
+Students rate each lesson with an emoji (green, yellow, red). You cannot see who rated which emoji: this way, children respond honestly.
 
-Click the student's name — the report for parents will open. The period is selected at the top of the page: **Month** (with paging), **Since start of year** — from September 1, **Since start of studies** — from the student's first lesson, **Period** — any two dates. The **Print** button prints the report. Comparison with the previous month is available only in the monthly report.
+### Student Report
 
-- **One-sentence conclusion** — how the period went and what is worth paying attention to.
-- **The month (period) in numbers** — lessons attended, homework submitted, stars, and the average grade for lessons.
-- **How things are going** — six color-coded indicators: whether the student attends lessons, arrives on time, how they work in class, whether homework is submitted and how well it is done, and how exams are going.
-- **Highlights of the period** — what to be proud of and what to pay attention to.
-- **Lessons of the period** — for each lesson: attendance, grade, homework, and stars.
+Click on the student's name to open the report for parents. The period is selected at the top of the page: **Month** (with scrolling), **Since the beginning of the year** — from September 1, **Since the beginning of training** — from the student's first lesson, **Period** — any two dates. The **Print** button outputs the report on paper. Comparison with the previous month is only available in the monthly report.
 
-Green — everything is fine, yellow — a small deviation, red — parents' help is needed, gray — no data yet. The report includes only the lessons of your groups. The report can also be opened from the lesson journal — by clicking the student's name. If you are not the main teacher of the group, the report contains only the lessons you taught.
+- **Summary in one phrase** — how the period went and what to pay attention to.
+- **Month (period) in numbers** — attended lessons, submitted homework, stars, and average grade for lessons.
+- **How things are going** — six indicators with color: attendance in lessons, punctuality, performance in lessons, submission and quality of homework, exam results.
+- **Main points for the period** — what can be proud of and what to pay attention to.
+- **Lessons for the period** — for each lesson: attendance, grade, homework, and stars.
+
+Green color — everything is fine, yellow — slight deviation, red — needs parental assistance, gray — no data yet. Only the lessons of your groups are included in the report. The report can also be opened from the lesson journal — by the student's name. If you are not the main teacher in the group, the report will only include the lessons you conducted.
 
 ## Profile
 
