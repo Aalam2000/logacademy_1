@@ -1,4 +1,4 @@
-<!-- autoi18n: source=admin.md lang=az sha1=7ea2bdd93a3af4d050b0c5f6e29c4fbfa5d96cea -->
+<!-- autoi18n: source=admin.md lang=az sha1=7d26cad2d0cb10c0c181b6996cc82e5363b198e1 -->
 # Platformada necə işləmək olar
 
 Administrator müəllimlərin gördüyü hər şeyi görür — amma bütün qruplar və bütün müəllimlər üzrə — və əlavə olaraq istifadəçiləri, kursları və qrupları idarə edir.
@@ -14,10 +14,10 @@ Qrupa klikləyin — onun səhifəsi açılacaq: parametrlər, şagirdlərin qey
 Qrupun əsas müəllimi var, hər dərsin isə öz müəllimi: adətən eyni, amma bir və ya bir neçə dərs üçün başqa müəllim təyin etmək mümkündür. Qrup səhifəsində **Dərslərin müəllimi** düyməsini basın və müəllimi seçin, hansı dərsdən və hansı dərsə qədər.
 
 - **Dəyişmə** — bir və ya bir neçə dərsi seçin. Qrupun əsas müəllimi dəyişmir. Dəyişən yalnız bu dərsləri görür və hər birində dərs günü gecə yarısına qədər işləyir, sonra dərs ona baxmaq üçün qalır.
-- **Qrupun ötürülməsi** — qrupun keçdiyi dərsi seçin və "sonuna qədər". Müəllim əsas olur: bütün qrupu və bütün dərsləri alır, yeni dərslər onun adına yaradılır. Əvvəlki müəllim yalnız öz apardığı dərsləri görür və onlarda heç nəyi dəyişmir.
+- **Qrupun ötürülməsi** — qrupun keçəcəyi dərsi seçin və "sonuna qədər". Müəllim əsas olur: bütün qrupu və bütün dərsləri alır, yeni dərslər onun adına yaradılır. Əvvəlki müəllim yalnız öz apardığı dərsləri görür və onlarda heç nəyi dəyişmir.
 - **Əvvəlki müəllim kim olub** — əgər qrup artıq ötürülmüşsə, əvvəlki müəllimi onun apardığı dərslərə təyin edin.
 
-Dərsi silmək və ya köçürmək və iştirakçılarını dəyişdirmək yalnız qrupun əsas müəllimi tərəfindən mümkündür. Ev tapşırıqlarını da o yoxlayır. Hesabatlarda və "Müəllimlər" bölməsində dərs, müəllim kimi qeyd olunan şəxsə aiddir.
+Dərsi silmək və ya köçürmək və onun iştirakçılarını dəyişdirmək yalnız qrupun əsas müəllimi tərəfindən mümkündür. Ev tapşırıqlarını da o yoxlayır. Hesabatlarda və "Müəllimlər" bölməsində dərs, müəllim kimi qeyd olunan şəxsə aiddir.
 
 ## Admin
 
@@ -29,7 +29,7 @@ Dərsi silmək və ya köçürmək və iştirakçılarını dəyişdirmək yaln�
 
 - **+ Müəllim əlavə et** / **+ Administrator əlavə et** — yeni istifadəçi giriş və şifrə ilə; o, dərhal daxil ola bilər.
 - Sətirə vurun — məlumatları dəyişmək mümkündür.
-- Silinmə: sistem istifadəçi ilə bağlı olanları göstərəcək və təsdiq istəyəcək.
+- Silinmə: sistem istifadəçi ilə bağlı olanları göstərəcək və təsdiq tələb edəcək.
 
 ### Kurslar
 
@@ -40,13 +40,13 @@ Kursun adı və təsviri. **+ Kurs əlavə et**, sətirə vurmaqla dəyişiklik,
 Ad, kurs, sektor, müəllim, videokonfrans, Telegram.
 
 - **+ Qrup əlavə et** — kurs və müəllim ilə yeni qrup.
-- Sətirə vurun — məlumatları dəyişmək mümkündür. Müəllimin dəyişdirilməsi sətirdə bu gündən etibarən qüvvəyə minir: keçmiş dərslər onları aparan müəllimə aiddir.
+- Sətirə vurun — məlumatları dəyişmək mümkündür. Müəllimin dəyişdirilməsi sətirdə bu gündən etibarən qüvvədədir: keçmiş dərslər onları aparan müəllimə aiddir.
 - **Qrup cədvəli** — qrup səhifəsini açın.
 - **Arxivə göndər** — qrup artıq aktiv deyil; arxivdən onu **geri qaytarmaq** və ya **tamamilə silmək** mümkündür.
 
 ## Bilik bazası
 
-[Bilgi bazası](/dashboard/materials) bölməsində administrator üçün əlavə:
+[Базе знаний](/dashboard/materials) bölməsində administrator üçün əlavə:
 
 - **Kurs yüklə** — dərs şablonu kimi kurs materialları ilə qovluğu yükləyin: hər bir fayl üçün kurs, istiqamət və dərs nömrəsi göstərilir.
 - Kurs və sektor üzrə filtr və dərs şablonlarından materialların göstərilməsi.
@@ -57,9 +57,11 @@ Ad, kurs, sektor, müəllim, videokonfrans, Telegram.
 
 [Tələbələr](/dashboard/students) bölməsində — platformanın bütün şagirdləri: qrup, müəllim, dərslər üzrə orta qiymətlər, Ev tapşırığı və imtahanlar, ulduzlar, buraxmalar, gecikmələr, son giriş tarixi, telefon, valideyn və əlaqələr. Müəllim, kurs və qrup üzrə filtr, **Mənim** — yalnız sizin qruplarınız. Sütun adının üzərinə vurun — cədvəl ona görə sıralanacaq.
 
-"Buraxmalar" sütununda — yalnız üzrlü səbəb olmadan bağlanmamış buraxmalar. Buraxmaların sayı ətrafında qırmızı halqa — şagird son dərsi buraxıb və ondan sonra fərdi dərsdə olmayıb. Halqa dərsdən sonraki gün görünür. O, fərdi dərs bitdikdən sonra və şagird orada "Gəldi" və ya "Onlayn" olaraq qeyd edildikdə, ya da şagird növbəti qrup dərsinə gəldikdə yox olur; üzrlü səbəb ilə buraxma halqa vermir.
+Adın altında olan rəngli zolaq — son verilmiş Ev tapşırığı üzrə borc: narıncı — şagird hələ cavab verməyib və ya Ev tapşırığı düzəliş üçün geri qaytarılıb, qırmızı — təqdim etmə müddəti keçib. Zolaq, şagird cavab göndərdikdə yox olur.
 
-Fərdi dərs buraxmaları bağlayır: o bitdikdə və şagird orada "Gəldi" və ya "Onlayn" olaraq qeyd edildikdə, bu şagirdin həmin günə qədərki adi dərslərdəki bütün buraxmaları bağlanmış sayılır. Bağlanmış buraxma şagirdin hesabatında qeyd ilə görünür, lakin buraxmaların sayına və davamiyyət faizinə daxil edilmir.
+"Buraxmalar" sütununda — yalnız üzrlü səbəb olmadan bağlanmamış buraxmalar. Buraxmaların sayının ətrafında qırmızı halqa — şagird son dərsi buraxıb və ondan sonra fərdi dərsdə olmayıb. Halqa dərsdən sonraki gün görünür. O, fərdi dərs bitdikdə və şagird orada "Gəldi" və ya "Onlayn" qeyd edildikdə, ya da şagird növbəti qrup dərsinə gəldikdə yox olur; üzrlü səbəb ilə buraxma halqa vermir.
+
+Fərdi dərs buraxmaları bağlayır: o bitdikdə və şagird orada "Gəldi" və ya "Onlayn" qeyd edildikdə, bu gündən əvvəlki bütün buraxmalar bağlanmış sayılır. Bağlanmış buraxma şagirdin hesabatında qeyd ilə görünür, lakin buraxmaların sayına və davamiyyət faizinə daxil edilmir.
 
 ### Şagird necə əlavə olunur
 
@@ -78,13 +80,13 @@ Fərdi dərs buraxmaları bağlayır: o bitdikdə və şagird orada "Gəldi" və
 - Eyni telefon iki istifadəçidə ola bilməz. Əgər sistem telefonun artıq olduğunu bildirirsə, deməli şagird artıq əlavə edilib — onu siyahıda tapın.
 - Əgər uşağın öz telefonu yoxdursa, valideynin telefonunu hər iki sahəyə yazın: "Şagirdin telefonu" və "Valideynin telefonu".
 - Valideynin telefonu təkrarlana bilər: qardaşlar və bacılar üçün bir dənədir.
-- Nömrəni +994 50 123 45 67 və ya 050 123 45 67 kimi daxil etmək olar; başqa ölkənin nömrəsi — plussuz və ölkə kodu ilə.
+- Nömrəni +994 50 123 45 67 və ya 050 123 45 67 kimi daxil edə bilərsiniz; başqa ölkənin nömrəsi — plussuz və ölkə kodu ilə.
 
 ### Digər əməliyyatlar
 
-- **Şifrəni dəyişmək** (açar) — əgər şagird şifrəsini unutmuşdursa. Yeni şifrəni sistem ekranda göstərəcək, onu şagirdə bildirmək lazımdır.
+- **Şifrəni dəyişmək** (açar) — əgər şagird şifrəsini unutmuşdursa. Yeni şifrə sistemdə ekranda göstəriləcək, onu şagirdə bildirmək lazımdır.
 - **Silmək** (tullantı) — sistem şagirdlə bağlı olanları göstərəcək və təsdiq tələb edəcək.
-- Şagirdi başqa qrupa köçürmək və ya xaric etmək — qrup səhifəsində, **Şagirdlər** ikonu.
+- Şagirdi başqa qrupa köçürmək və ya xaric etmək — qrup səhifəsində, **Şagirdlər** ikonasında.
 
 ### Şagird üzrə hesabat
 
@@ -93,28 +95,28 @@ Fərdi dərs buraxmaları bağlayır: o bitdikdə və şagird orada "Gəldi" və
 - **Bir cümlə ilə nəticə** — dövr necə keçdi və nəyə diqqət yetirmək lazımdır.
 - **Ay (dövr) rəqəmlərlə** — iştirak edilən dərslər, təqdim olunan ev tapşırıqları, ulduzlar və dərslər üzrə orta qiymət.
 - **İşlər necə gedir** — altı göstərici ilə: dərslərə gedir, vaxtında gəlir, dərsdə necə işləyir, ev tapşırıqlarını təqdim edir və necə yerinə yetirir, imtahanları necə verir.
-- **Dövrün əsasları** — nədən qürur duymalı və nəyə diqqət yetirməli.
-- **Dövr ərzində dərslər** — hər bir dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
+- **Dövrün əsasları** — nədən qürur duya bilərik və nəyə diqqət yetirmək lazımdır.
+- **Dövr üzrə dərslər** — hər bir dərs üzrə: iştirak, qiymət, ev tapşırığı və ulduzlar.
 
 Yaşıl rəng — hər şey qaydasındadır, sarı — kiçik sapma, qırmızı — valideynlərin köməyinə ehtiyac var, boz — hələlik məlumat yoxdur.
 
 ## Müəllimlər
 
-[ Müəllimlər ](/dashboard/teachers) bölməsində — hər bir müəllim haqqında xülasə: neçə qrup və şagird, keçirilmiş dərslər, davamiyyət və orta bal. Qruplar və şagirdlər onun əsas müəllim olduğu qruplar üzrə hesablanır; dərslər, davamiyyət və bal — onun özü tərəfindən keçirilən dərslər üzrə, əvəz etmələr də daxil olmaqla.
+[ Müəllimlər ](/dashboard/teachers) bölməsində — hər müəllim üçün xülasə: neçə qrup və şagird, keçirilmiş dərslər, davamiyyət və orta bal. Qruplar və şagirdlər onun əsas müəllim olduğu qruplar üzrə hesablanır; dərslər, davamiyyət və bal — onun özü tərəfindən keçirilmiş dərslər üzrə, əvəz etmələr daxil olmaqla.
 
 ### Müəllim üzrə hesabat
 
-Müəllimə klikləyin — hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (sürüşdürmə ilə), **İldən başlayaraq** — 1 sentyabrdan, **Tədrisə başlayaraq** — müəllimin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap** düyməsi hesabatı kağıza çıxarır. Keçən ay ilə müqayisə yalnız aylıq hesabatda var.
+Müəllimə klikləyin — hesabat açılacaq. Dövr səhifənin yuxarısında seçilir: **Ay** (sürüşdürmə ilə), **İldən başlayaraq** — 1 sentyabrdan, **Tədrisə başlayaraq** — müəllimin ilk dərsindən, **Dövr** — istənilən iki tarix. **Çap** düyməsi hesabatı kağızda çıxarır. Keçən ay ilə müqayisə yalnız aylıq hesabatda var.
 
 - **Bir cümlə ilə nəticə** — dövr necə keçdi və hansı göstəricilər diqqət tələb edir.
 - **Nə qədər işlənib** — cədvələ uyğun keçirilmiş dərslər, fərdi dərslər, saatlar və baş tutmayan dərslər. Keçirilmiş dərs, ən azı bir şagirdin iştirak etdiyi açıq dərs hesab olunur.
-- **Necə işlənib** — norma və rənglə birlikdə səkkiz göstərici: davamiyyət, şagirdlərin qalması, jurnalın vaxtında doldurulması, ev tapşırıqlarının verilməsi və tez yoxlanılması, imtahan nəticələrinin artması, şagirdlərin platformadan istifadəsi və dərsləri gülüş simvolları ilə qiymətləndirməsi.
-- **Qruplar üzrə** — müəllimin hər bir qrupu üzrə eyni əsas rəqəmlər.
-- **Nəyə diqqət yetirmək lazımdır** — konkret hallar: yoxlanılmamış işlər, ardıcıl üç buraxılışı olan şagirdlər, gedən şagirdlər və səbəbi, baş tutmayan dərslər.
+- **Necə işlənib** — norma və rənglə birlikdə səkkiz göstərici: davamiyyət, şagirdlərin qalması, jurnalın vaxtında doldurulması, ev tapşırıqlarının verilməsi və tez yoxlanılması, imtahan nəticələrinin artması, şagirdlərin platformadan istifadəsi və dərsləri smileylərlə necə qiymətləndirdikləri.
+- **Qruplar üzrə** — müəllimin hər qrupuna aid eyni əsas rəqəmlər.
+- **Nəyə diqqət yetirmək lazımdır** — konkret hallar: yoxlanılmamış işlər, ardıcıl üç buraxılışı olan şagirdlər, gedən şagirdlər və səbəb, baş tutmayan dərslər.
 
 Yaşıl rəng — norma yerinə yetirilib, sarı — kiçik sapma, qırmızı — normadan aşağı, boz — hələlik məlumat yoxdur.
 
-Dərs üçün qiymətlər və hesabatda ulduzlar yer almır: onları müəllim özü qoyur, buna görə də onun işinin keyfiyyəti haqqında mühakimə yürütmək olmaz.
+Dərs qiymətləri və hesabatdakı ulduzlar daxil deyil: onları müəllim özü qoyur, buna görə də onun işinin keyfiyyəti haqqında hökm vermək olmaz.
 
 ## Ziyarətlər
 
