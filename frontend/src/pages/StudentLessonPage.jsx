@@ -154,7 +154,7 @@ function StudentLessonPage() {
             <StudentGroupsBar groups={[{ id: lesson.group_id, name: lesson.group_name, video_url: lesson.group_video_url, telegram_chat_id: lesson.group_telegram, whatsapp: lesson.group_whatsapp }]} />
           )}
           <span className="lesson-toolbar__group">
-            {lesson.title}
+            <span className="lesson-toolbar__title">{lesson.title}</span>
             {lesson.date ? ` — ${new Date(lesson.date).toLocaleString('ru-RU')}` : ''}
             <PersonalBadge lesson={lesson} />
           </span>

@@ -178,6 +178,12 @@
   font-size: var(--font-sm);
   white-space: nowrap;
 }
+/* Название урока на странице урока — у педагога и у студента */
+.lesson-toolbar__title {
+  color: var(--color-text);
+  font-size: var(--font-lg);
+  font-weight: var(--weight-bold);
+}
 .questions-header {
   display: flex;
   justify-content: space-between;

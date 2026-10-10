@@ -580,6 +580,7 @@ function LessonPage() {
           <button className="btn btn--outline" onClick={() => navigate(`/dashboard/groups/${lesson.group_id}`)}>
             {'Назад'}
           </button>
+          <span className="lesson-toolbar__title">{lesson.title}</span>
           <span className="lesson-toolbar__group">{'Группа'}: {groupName}</span>
           {/* Персональный урок: метка с участниками, по клику — смена состава */}
           <PersonalBadge lesson={lesson} onClick={canManage ? () => setParticipantsOpen(true) : undefined} />
