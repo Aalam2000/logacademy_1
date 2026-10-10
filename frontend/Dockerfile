@@ -9,6 +9,9 @@ COPY . .
 # (envPrefix в vite.config.js), чтобы не менять docker-compose.prod.yml.
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
+# Внешний адрес сайта — для ссылок, которые отправляем наружу (ссылка родителя)
+ARG REACT_APP_PUBLIC_URL
+ENV REACT_APP_PUBLIC_URL=$REACT_APP_PUBLIC_URL
 RUN npm run build
 
 FROM nginx:alpine

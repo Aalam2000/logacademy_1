@@ -338,3 +338,17 @@ class Sector(Base):
     code = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)          # «Русский сектор»
     lesson_word = Column(String, nullable=False)   # «Урок» на языке сектора — для названий уроков
+
+
+# Личная ссылка родителя /p/<token> (routers/parent.py): принадлежит телефону
+# родителя — по ней видны все дети с этим телефоном в карточке. Одна действующая
+# ссылка на телефон; «Новая ссылка» отключает старую (revoked_at).
+class ParentLink(Base):
+    __tablename__ = "parent_links"
+    id = Column(Integer, primary_key=True)
+    parent_phone = Column(String, nullable=False, index=True)   # нормализован (app/phones.py)
+    token = Column(String(8), nullable=False, unique=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)

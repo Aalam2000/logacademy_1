@@ -9,6 +9,7 @@ import Modal from './Modal';
 import FormField from './FormField';
 import { getStudentProfile, updateStudentProfile, createStudent } from '../api/students';
 import { PHONE_PLACEHOLDER } from '../utils/phone';
+import ParentLinkBlock from './ParentLinkBlock';
 
 const EMPTY = {
   full_name: '', phone: '', email: '', telegram_username: '', whatsapp: '',
@@ -105,6 +106,8 @@ function StudentCardModal({ studentId, groups = [], defaultGroupId = '', onClose
             <FormField label={'Имя родителя'} value={draft.parent_name} onChange={set('parent_name')} />
             <FormField label={'Телефон родителя'} type="tel" placeholder={PHONE_PLACEHOLDER} value={draft.parent_phone} onChange={set('parent_phone')} />
           </div>
+          {/* Личная ссылка родителя: успеваемость без входа (routers/parent.py) */}
+          {!isNew && <ParentLinkBlock studentId={studentId} />}
 
           <h4 className="form-section">{'Группа'}</h4>
           {isNew ? (

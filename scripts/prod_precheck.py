@@ -1,6 +1,6 @@
 """Проверка прод-БД перед выкаткой миграций (ничего не меняет).
 
-Текущая выкатка: 0018_academy_sectors (данные академии и справочник секторов).
+Текущая выкатка: 0023_parent_links (личные ссылки родителей).
 Перед следующей выкаткой с миграциями — поправить EXPECTED_* ниже.
 
 Запуск на сервере (работает и на СТАРОМ образе бэкенда):
@@ -11,8 +11,8 @@ import asyncio
 from sqlalchemy import text
 from app.database import engine
 
-EXPECTED_REVISION = "0017_csp_reports"   # последняя уже выкаченная
-NEW_TABLES = ["academy", "sectors"]
+EXPECTED_REVISION = "0022_lesson_teacher"   # последняя уже выкаченная
+NEW_TABLES = ["parent_links"]
 NEW_COLUMNS = []
 NEW_INDEXES = []
 

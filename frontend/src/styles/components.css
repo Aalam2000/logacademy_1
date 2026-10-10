@@ -2454,3 +2454,181 @@ a.row-icon:hover {
   padding: 0;
   min-width: 0;
 }
+
+/* ===== Ссылка для родителя: блок в карточке ученика (ParentLinkBlock.jsx) ===== */
+.parent-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.parent-link a.btn {
+  text-decoration: none;
+}
+.parent-link__url {
+  font-family: monospace;
+  word-break: break-all;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border-light);
+}
+
+/* ===== Страница родителя /p/<токен> (ParentPage.jsx) — в первую очередь телефон ===== */
+.parent-page {
+  min-height: 100vh;
+  background: var(--color-bg-soft);
+  color: var(--color-text);
+}
+.parent-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-white);
+  border-bottom: 2px solid var(--color-primary-border);
+}
+.parent-header__brand {
+  font-weight: var(--weight-bold);
+  color: var(--color-primary);
+}
+.parent-header__title {
+  color: var(--color-muted);
+}
+.parent-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  box-sizing: border-box;
+}
+.parent-name {
+  margin: 0 0 var(--space-1);
+}
+.parent-groups {
+  margin: 0 0 var(--space-2);
+}
+/* Вкладки с именами детей — листаются пальцем, если не помещаются */
+.parent-kids {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: var(--space-3);
+}
+.parent-kid {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-weight: var(--weight-bold);
+  background: var(--color-white);
+  color: var(--color-text);
+  border: 2px solid var(--color-primary-border);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.parent-kid--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+.parent-tiles {
+  margin: var(--space-3) 0 var(--space-4);
+  gap: var(--space-2);
+}
+.parent-tiles .grade-tile {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-3);
+}
+.parent-tabs {
+  margin-bottom: var(--space-3);
+}
+.parent-lessons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.parent-lesson {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  font: inherit;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-white);
+  border: 1px solid var(--color-border-light);
+  border-left: 4px solid var(--color-primary-border);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.parent-lesson--static {
+  cursor: default;
+}
+.parent-lesson__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.parent-lesson__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.parent-lesson__more {
+  font-size: var(--font-sm);
+  color: var(--color-info);
+}
+.parent-section {
+  margin: var(--space-4) 0 var(--space-2);
+}
+.parent-section:first-of-type {
+  margin-top: 0;
+}
+.parent-files {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.parent-files li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  word-break: break-word;
+}
+.parent-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.parent-dialog {
+  max-height: none;
+}
+.parent-grade-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.parent-grade-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.parent-empty {
+  padding: var(--space-4);
+  background: var(--color-white);
+  border: 1px solid var(--color-border-light);
+}
+.parent-foot {
+  margin-top: var(--space-6);
+  font-size: var(--font-xs);
+  color: var(--color-muted);
+  text-align: center;
+}

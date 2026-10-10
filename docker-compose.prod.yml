@@ -38,6 +38,7 @@ services:
       context: ./frontend
       args:
         REACT_APP_API_URL: http://192.168.0.9/api
+        REACT_APP_PUBLIC_URL: https://quiz.logacademy.online
     restart: unless-stopped
     logging: *default-logging
     depends_on:

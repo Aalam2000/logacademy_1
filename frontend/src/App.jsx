@@ -18,6 +18,7 @@ import TeacherReportPage from './pages/TeacherReportPage';
 import StudentReportPage from './pages/StudentReportPage';
 import ActivityPage from './pages/ActivityPage';
 import JoinGroupPage from './pages/JoinGroupPage';
+import ParentPage from './pages/ParentPage';
 import QuizLiveHostPage from './pages/QuizLiveHostPage';
 import QuizLiveJoinPage from './pages/QuizLiveJoinPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -46,6 +47,8 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/join/:inviteCode" element={<JoinGroupPage />} />
+        {/* Родитель — по личной ссылке, без входа (routers/parent.py) */}
+        <Route path="/p/:token" element={<ParentPage />} />
         <Route path="/quiz-live/:code" element={<QuizLiveJoinPage />} />
         <Route path="/quiz-live/:code/host" element={
           <PrivateRoute>
